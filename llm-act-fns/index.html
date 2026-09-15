@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LLM 激活函数手册</title>
+<link rel="icon" href="favicon.ico?v=2" sizes="32x32">
+<link rel="icon" type="image/svg+xml" href="favicon.svg?v=2" sizes="any">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --ground:#f5f6f4; --surface:#ffffff; --surface-2:#eef0ec;
+  --ink:#161a1d; --ink-2:#4f575e; --ink-3:#7d858c;
+  --rule:#dde1dc; --rule-2:#c7ccc6;
+  --accent:#2f5d8a; --accent-soft:#e3ecf5;
+  --grid:#e6e8e3; --axis:#b9bfb8;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#4a3aa7; --s8:#e34948;
+  --div-neg:#2a78d6; --div-mid:#f0efec; --div-pos:#e34948;
+  --code-bg:#eef0ec;
+  --shadow:0 1px 2px rgba(22,26,29,.06), 0 6px 20px rgba(22,26,29,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#111413; --surface:#1a1e1c; --surface-2:#222724;
+    --ink:#e9ece7; --ink-2:#b4bab5; --ink-3:#848b86;
+    --rule:#2c312e; --rule-2:#3a403c;
+    --accent:#8ab6e3; --accent-soft:#1f2c3a;
+    --grid:#262b28; --axis:#4a504c;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+    --div-neg:#3987e5; --div-mid:#383835; --div-pos:#e66767;
+    --code-bg:#222724;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#111413; --surface:#1a1e1c; --surface-2:#222724;
+  --ink:#e9ece7; --ink-2:#b4bab5; --ink-3:#848b86;
+  --rule:#2c312e; --rule-2:#3a403c;
+  --accent:#8ab6e3; --accent-soft:#1f2c3a;
+  --grid:#262b28; --axis:#4a504c;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+  --div-neg:#3987e5; --div-mid:#383835; --div-pos:#e66767;
+  --code-bg:#222724;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  font-size:16.5px; line-height:1.85; padding-block:0 96px; padding-inline:20px;
+}
+a{color:var(--accent); text-decoration:none; border-bottom:1px solid color-mix(in srgb,var(--accent) 35%,transparent)}
+a:hover{border-bottom-color:var(--accent)}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.frame{max-width:1180px; margin:0 auto; display:grid; grid-template-columns:220px minmax(0,720px); gap:64px; justify-content:center}
+@media (max-width:1000px){ .frame{grid-template-columns:minmax(0,720px)} }
+
+/* masthead */
+.mast{grid-column:1/-1; padding-block:56px 40px; border-bottom:1px solid var(--rule-2); margin-bottom:40px}
+.mast .eyebrow{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); margin:0 0 14px}
+.mast h1{font-family:"Noto Serif SC","Songti SC","SimSun",serif; font-weight:700; font-size:clamp(34px,5vw,52px); line-height:1.2; margin:0 0 18px; text-wrap:balance; letter-spacing:-.01em}
+.mast p.lede{font-size:18px; color:var(--ink-2); max-width:44em; margin:0 0 26px; line-height:1.8}
+.mast .meta{display:flex; flex-wrap:wrap; gap:8px 28px; font-size:13.5px; color:var(--ink-3); font-family:"JetBrains Mono",ui-monospace,monospace}
+
+/* toc */
+.toc{position:sticky; top:28px; align-self:start; font-size:13.5px; line-height:1.6; max-height:calc(100dvh - 56px); overflow-y:auto; scrollbar-width:thin; overscroll-behavior:contain}
+.toc-toggle{display:none}
+.toc .t{font-family:"JetBrains Mono",ui-monospace,monospace; font-size:11.5px; letter-spacing:.14em; color:var(--ink-3); margin:0 0 12px}
+.toc ol{list-style:none; margin:0; padding:0; border-left:1px solid var(--rule-2)}
+.toc li a{display:block; padding:5px 8px 5px 14px; color:var(--ink-2); border:0; margin-left:-1px; border-left:2px solid transparent}
+.toc ol ol{border:0; margin:2px 0 7px}
+.toc ol ol a{padding-left:26px; font-size:12.5px; color:var(--ink-3)}
+.toc li a:hover{color:var(--ink)}
+.toc li a.in-section{color:var(--accent); font-weight:500}
+.toc li a.on{color:var(--accent); border-left-color:var(--accent)}
+article section,article h3,article [data-toc-target]{scroll-margin-top:24px}
+@media (max-width:1000px){
+  .toc{position:static; max-height:none; margin-bottom:24px}
+  .toc .t{display:none}
+  .toc-toggle{display:flex; align-items:center; justify-content:space-between; width:100%; padding:12px 14px; font:inherit; color:var(--ink); background:var(--surface); border:1px solid var(--rule-2); border-radius:6px; cursor:pointer}
+  .toc-toggle::after{content:'−'}
+  .toc-toggle[aria-expanded="false"]::after{content:'+'}
+  .toc > ol{margin-top:12px; max-height:60dvh; overflow-y:auto}
+  .toc-toggle[aria-expanded="false"] + ol{display:none}
+}
+
+/* article */
+article{min-width:0}
+section{margin-bottom:72px}
+h2{font-family:"Noto Serif SC","Songti SC",serif; font-weight:700; font-size:30px; line-height:1.3; margin:0 0 6px; text-wrap:balance; letter-spacing:-.005em}
+h2 .n{font-family:"JetBrains Mono",ui-monospace,monospace; font-weight:500; font-size:13px; color:var(--ink-3); letter-spacing:.1em; display:block; margin-bottom:10px}
+h3{font-family:"Noto Serif SC","Songti SC",serif; font-weight:600; font-size:21px; line-height:1.4; margin:40px 0 8px; text-wrap:balance}
+p{margin:0 0 1.15em}
+p.sub{color:var(--ink-2); font-size:17px; margin-bottom:1.6em}
+strong{font-weight:600}
+em{font-style:normal; color:var(--accent); font-weight:500}
+code{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.86em; background:var(--code-bg); padding:.1em .4em; border-radius:4px}
+.math-block{margin:8px 0 1.3em; overflow-x:auto; padding:6px 0}
+.math-note{margin:22px 0 28px; padding:14px 18px; border:1px solid var(--rule); border-radius:8px; background:var(--surface); font-size:15.5px}
+.math-note summary{cursor:pointer; font-weight:500; color:var(--accent)}
+.math-note summary:focus-visible{outline:2px solid var(--accent); outline-offset:4px}
+.math-note[open] summary{margin-bottom:16px}
+.math-note p:last-child{margin-bottom:0}
+mjx-container[display="true"]{margin:.4em 0 !important}
+.aside{border-left:3px solid var(--accent); background:var(--accent-soft); padding:14px 18px; margin:22px 0 28px; border-radius:0 8px 8px 0; font-size:15.5px; line-height:1.8}
+.aside p:last-child{margin-bottom:0}
+.aside .k{font-family:"JetBrains Mono",ui-monospace,monospace; font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); display:block; margin-bottom:4px}
+
+/* figures */
+figure{margin:26px 0 30px; background:var(--surface); border:1px solid var(--rule); border-radius:10px; padding:18px 18px 12px; box-shadow:var(--shadow)}
+figure .panels{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+@media (max-width:640px){ figure .panels{grid-template-columns:1fr} }
+figure .panel h4{margin:0 0 4px; font-size:13px; font-weight:500; color:var(--ink-2); font-family:"JetBrains Mono",ui-monospace,monospace; letter-spacing:.02em}
+figure .plotwrap > svg{width:100%; height:auto; display:block; touch-action:none}
+mjx-container svg{display:inline-block; width:auto; height:auto}
+figcaption{font-size:14px; color:var(--ink-2); line-height:1.7; margin-top:12px; padding-top:10px; border-top:1px solid var(--rule)}
+.legend{display:flex; flex-wrap:wrap; gap:6px 18px; font-size:13px; color:var(--ink-2); margin:6px 0 10px; font-family:"JetBrains Mono",ui-monospace,monospace}
+.legend span{display:inline-flex; align-items:center; gap:7px}
+.legend i{display:inline-block; width:18px; height:2px; background:var(--c); border-radius:2px}
+.legend i.dash{background:repeating-linear-gradient(90deg,var(--c) 0 5px,transparent 5px 8px)}
+.controls{display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center; font-size:13.5px; margin:4px 0 12px; color:var(--ink-2)}
+.controls label{display:inline-flex; align-items:center; gap:8px; cursor:pointer}
+.controls input[type=range]{width:150px; accent-color:var(--accent)}
+.controls input[type=checkbox]{accent-color:var(--c,var(--accent)); width:15px; height:15px}
+.controls .v{font-family:"JetBrains Mono",ui-monospace,monospace; min-width:3.2em; color:var(--ink); font-variant-numeric:tabular-nums}
+.controls .sw{display:inline-block; width:14px; height:3px; background:var(--c); border-radius:2px}
+.tip{position:absolute; pointer-events:none; background:var(--surface); border:1px solid var(--rule-2); box-shadow:var(--shadow); border-radius:6px; padding:6px 10px; font-size:12.5px; line-height:1.55; font-family:"JetBrains Mono",ui-monospace,monospace; color:var(--ink); white-space:nowrap; z-index:5; font-variant-numeric:tabular-nums}
+.tip b{font-weight:500; color:var(--ink-3)}
+.plotwrap{position:relative}
+.heat{display:grid; grid-template-columns:minmax(0,420px) auto; gap:20px; align-items:start;justify-content:start}
+@media (max-width:640px){ .heat{grid-template-columns:1fr} }
+.heat canvas{width:100%;height:auto;display:block;border-radius:4px;image-rendering:auto}
+.heat .plotwrap{min-width:0;padding-left:32px}
+.heat-x-ticks{display:flex;justify-content:space-between;margin-top:6px;font:11px "JetBrains Mono",ui-monospace,monospace;color:var(--ink-3)}
+.heat-x-label{text-align:center;margin-top:8px;font-size:12px;color:var(--ink-2)}
+.heat-y-ticks{position:absolute;left:0;top:0;bottom:0;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;width:25px;font:11px "JetBrains Mono",ui-monospace,monospace;color:var(--ink-3)}
+.heat-image{position:relative}
+.heat-y-ticks{left:-32px}
+.heat-axis-title{font-size:12px;color:var(--ink-2);margin-bottom:6px}
+.cbar{display:flex; flex-direction:column; align-items:center; gap:6px; font-family:"JetBrains Mono",ui-monospace,monospace; font-size:12px; color:var(--ink-2)}
+.cbar .bar{width:14px; height:200px; border-radius:3px; background:linear-gradient(to top,var(--div-neg),var(--div-mid),var(--div-pos))}
+
+.chart-status{font-size:12px;color:var(--ink-2);margin:8px 0}.chart-status:empty{display:none}.controls select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:4px} svg [tabindex]:focus{outline:2px solid var(--accent);outline-offset:3px}
+.glu-view-title{font-size:16px;font-weight:600;margin:20px 0 10px;color:var(--ink)}.glu-view-title:first-child{margin-top:0}
+/* tables */
+.tbl{overflow-x:auto; margin:22px 0 28px; border:1px solid var(--rule); border-radius:10px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; line-height:1.6}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+th{font-weight:500; color:var(--ink-3); font-size:12.5px; letter-spacing:.06em; font-family:"JetBrains Mono",ui-monospace,monospace; background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+td.m{font-family:"JetBrains Mono",ui-monospace,monospace; font-size:13px; white-space:nowrap}
+td .tag{display:inline-block; font-size:11.5px; font-family:"JetBrains Mono",ui-monospace,monospace; padding:1px 7px; border-radius:99px; border:1px solid var(--rule-2); color:var(--ink-2); margin-left:6px; vertical-align:1px}
+
+/* references */
+.refs{font-size:14px; color:var(--ink-2); line-height:1.75}
+.refs ol{padding-left:1.6em; margin:0}
+.refs li{margin-bottom:6px}
+.refs li::marker{font-family:"JetBrains Mono",ui-monospace,monospace; color:var(--ink-3)}
+
+@media (prefers-reduced-motion:no-preference){
+  .toc li a{transition:color .15s, border-color .15s}
+}
+</style>
+
+<div class="frame">
+  <header class="mast">
+    <p class="eyebrow">LLM Architecture Notes · 2026-09</p>
+    <h1>大模型里的激活函数：从 ReLU 到 SiTU-GLU</h1>
+    <p class="lede">本文介绍激活函数如何引入非线性、现代 LLM 为什么采用 SwiGLU，以及 clamp 和 soft-capping 如何限制激活值。每一节都将给出公式、导数、可交互的曲线图，以及设计动机和取舍。</p>
+  </header>
+
+  <nav class="toc" aria-label="目录">
+    <p class="t">目录</p>
+    <button class="toc-toggle" type="button" aria-expanded="true" aria-controls="toc-list">目录</button>
+    <ol id="toc-list">
+      <li><a href="#s0">引言</a>
+        <ol>
+          <li><a href="#where">激活函数在 LLM 里的位置</a></li>
+          <li><a href="#unit-input">一个神经元收到的是什么</a></li>
+          <li><a href="#four-regions">读图时要看的四个要素</a></li>
+        </ol>
+      </li>
+      <li><a href="#s1">总览</a>
+        <ol>
+          <li><a href="#logistic">Logistic sigmoid</a></li>
+          <li><a href="#normal-cdf">标准正态累积分布 $\Phi(x)$</a></li>
+        </ol>
+      </li>
+      <li><a href="#s2">Sigmoid 与 Tanh</a></li>
+      <li><a href="#s3">ReLU</a></li>
+      <li><a href="#s4">GELU</a>
+        <ol>
+          <li><a href="#gelu-approximations">两种近似</a></li>
+        </ol>
+      </li>
+      <li><a href="#s5">SiLU / Swish</a></li>
+      <li><a href="#s6">GLU 家族</a>
+        <ol>
+          <li><a href="#swiglu-channel">SwiGLU 中间通道</a></li>
+          <li><a href="#glu-gradients">分支梯度</a></li>
+          <li><a href="#glu-history">历史与实验</a></li>
+          <li><a href="#glu-parameters">参数量对齐</a></li>
+          <li><a href="#glu-implementation">工程实现</a></li>
+        </ol>
+      </li>
+      <li><a href="#s7">限制 GLU 的输出</a>
+        <ol>
+          <li><a href="#gpt-oss-clamp">gpt-oss: SwiGLU + clamp</a></li>
+          <li><a href="#deepseek-clamp">DeepSeek-V4: SwiGLU + clamp</a></li>
+          <li><a href="#situ-glu">Kimi K3: SiTU-GLU</a></li>
+        </ol>
+      </li>
+      <li><a href="#s8">Squared ReLU</a></li>
+      <li><a href="#s9">Softplus 及其角色</a></li>
+      <li><a href="#s10">开源模型对照表</a></li>
+      <li><a href="#s11">怎么选</a></li>
+      <li><a href="#s12">速查表与参考文献</a>
+        <ol>
+          <li><a href="#activation-reference">函数速查表</a></li>
+          <li><a href="#references">参考文献</a></li>
+        </ol>
+      </li>
+    </ol>
+  </nav>
+
+  <article>
+<section id="s0">
+  <h2><span class="n">01</span>引言</h2>
+  <p class="sub">先确定激活函数在模型中的位置、它的输入是什么，以及读每一张曲线图时要看的四个要素。</p>
+  <h3 id="where">激活函数在 LLM 里的位置</h3>
+  <p>一个 decoder block 由注意力和前馈网络（FFN）两部分组成。激活函数出现在 FFN 中间：输入先被升维，过一个逐元素的非线性，再被降回来（注意力里的 softmax 严格来说也是非线性，但它的角色是归一化权重，不是我们平时说的「激活函数」）。写成最朴素的形式就是</p>
+  <div class="math-block">$$\mathrm{FFN}(x) = \phi(xW_1 + b_1)\,W_2 + b_2,\qquad W_1\in\mathbb{R}^{d\times d_{ff}},\; W_2\in\mathbb{R}^{d_{ff}\times d}.$$</div>
+  <p>这一层通常占一个 dense 模型三分之二的参数，对于 MoE 模型，更是包含了几乎全部的参数。所以对激活函数的任何要求，最终都要回到三件事上：在同等算力下 loss 能不能更低；在几百亿到几万亿参数的规模下训练会不会不稳定；以及推理时这个逐元素操作能不能以轻量的方式融合进 GEMM 的 <a href="https://docs.nvidia.com/cutlass/latest/media/docs/cpp/gemm_api_3x.html">epilogue</a>（对矩阵乘法结果执行逐元素操作的阶段）中，不额外占带宽。</p>
+  <p>2017 年的原始 Transformer 用 ReLU，2018 年 BERT 和 GPT 换成 GELU，2020 年 Shazeer 证明门控形式的 GLU 能在同参数量下压低 loss ，之后 PaLM 和 Llama 把 SwiGLU 变成了事实标准。2025 到 2026 年的变化则来自另一个方向：模型大到一定程度之后，GLU 的乘积无界成了训练稳定性的隐患，于是 gpt-oss、DeepSeek-V4、Kimi K3 各自给它加了上界（clamp 或 soft-capping）；与此同时 NVIDIA 的 Nemotron 用回了 Squared ReLU。综合这些变化，激活函数的选择其实是在「表达力、稳定性、稀疏性、内核效率」四个目标之间取平衡，下面每一节都会回到这四个词。</p>
+
+  <h3 id="unit-input">一个神经元收到的是什么</h3>
+  <p class="sub">激活函数的输入是一个标量。本节说明这个标量从哪里来，$f(x)$ 和 $f'(x)$ 各自在前向传播与反向传播中承担什么。</p>
+  <p>上面的 FFN 公式对一个 token 的表示 $x\in\mathbb{R}^{d}$ 进行计算。中间层有 $d_{ff}$ 个神经元，第 $i$ 个神经元收到的数是</p>
+  <div class="math-block">$$z_i = x\,w_i + b_i ,$$</div>
+  <p>其中 $w_i$ 是 $W_1$ 的第 $i$ 列，$b_i$ 是 $b_1$ 的第 $i$ 个分量。$z_i$ 称为预激活值（pre-activation），它是 $x$ 在方向 $w_i$ 上的投影加上一个偏置，是一个实数。激活函数 $\phi$ 逐元素作用，所以它对第 $i$ 个神经元的计算只用到 $z_i$ 这一个数，不用到 $x$ 的其他分量，也不用到同一层其他神经元的 $z_j$。一个长度为 $T$ 的序列经过这一层时，会产生 $T\times d_{ff}$ 个这样的实数，$\phi$ 对每一个都独立地计算一次。</p>
+  <p>本文的曲线图把激活函数记作 $f$，横轴记作 $x$。对第 $i$ 个神经元而言，图中的 $x$ 就是它的预激活值 $z_i$，$f$ 就是公式里的 $\phi$。每张图都有 $f(x)$ 和 $f'(x)$ 两个面板，它们分别对应下面两件事。</p>
+  <p><strong>$f(x)$ 决定这个神经元在前向传播中贡献多少。</strong>FFN 的输出是</p>
+  <div class="math-block">$$\mathrm{FFN}(x)=\sum_{i=1}^{d_{ff}} f(z_i)\,W_2[i,:]+b_2 ,$$</div>
+  <p>也就是把 $W_2$ 的每一行按 $f(z_i)$ 加权后相加。$f(z_i)=0$ 时第 $i$ 行完全不参与，$f(z_i)$ 越大这一行的权重越大，$f(z_i)$ 为负时这一行以相反的方向参与。所以，看 $f(x)$ 面板的纵轴，就是在看「当预激活值取某个数时，这个神经元对应的 $W_2$ 行被放大多少倍」。</p>
+  <p><strong>$f'(x)$ 决定这个神经元在反向传播中传回多少梯度。</strong>记 loss 对 FFN 输出的梯度为 $\delta$。因为 $f$ 逐元素作用，它的 Jacobian 是对角矩阵，梯度传到 $z_i$ 时只乘一个标量 $f'(z_i)$：</p>
+  <div class="math-block">$$\frac{\partial L}{\partial z_i}=\bigl(\delta\,W_2[i,:]^{\top}\bigr)\,f'(z_i),\qquad \frac{\partial L}{\partial w_i}=x^{\top}\frac{\partial L}{\partial z_i},\qquad \frac{\partial L}{\partial x}=\sum_{i=1}^{d_{ff}}\frac{\partial L}{\partial z_i}\,w_i^{\top}.$$</div>
+  <p>$f'(z_i)$ 同时控制两条路径：一条是流向本神经元参数 $w_i$ 和 $b_i$ 的梯度，决定这个神经元是否会因这个 token 而更新；另一条是经过 $w_i$ 流回 $x$ 的梯度，决定这个神经元是否把误差信号传给更靠前的层。$f'(z_i)=0$ 时两条路径都被切断；$f'(z_i)$ 大于 1 时梯度被放大；$f'(z_i)$ 为负时梯度的符号被翻转。所以 $f'(x)$ 面板要和 $f(x)$ 面板一起看：前者说明这个神经元现在贡献多少，后者说明它还能不能被修正。</p>
+
+  <h3 id="four-regions">读图时要看的四个要素</h3>
+  <p class="sub">本文每张曲线图的图注都按同一顺序写：负半轴远端、零点、过渡区、正半轴远端。本节说明为什么是这四个位置，以及在每个位置要问什么问题。每个要素配一张对照图，图中的函数只是用来展示不同的可能形状，各函数的详细讨论在后面各节。</p>
+  <p>常见情况下，预激活值 $z_i$ 在训练中的分布大致以零为中心：多数落在原点附近的一个有限范围内，两侧各有一部分落在较远处。把横轴按此分成四段，每一段上都有一批神经元。在某一段上要问什么问题，取决于落在这一段的神经元会经历什么。</p>
+
+  <p><strong>要素一：负半轴远端（$x\to-\infty$）。</strong>落在这里的神经元收到的是与 $w_i$ 方向相反的强输入，按设计意图它们不应当响应。要问的第一个问题是 $f(x)$ 是否严格为零，还是只是趋近零。严格为零时，这个神经元对应的 $W_2$ 行完全不参与求和，推理时可以跳过这一行的计算，这是激活稀疏性的前提；只是趋近零时，仍有一个很小的输出通过，不能跳过。如果 $f(x)$ 趋近的不是零而是某个非零常数，还要考虑这个常数会以固定比例把 $W_2$ 的这一行加进输出。第二个问题是 $f'(x)$ 是否为零。为零时，落在这里的神经元不会因这个 token 得到任何更新；如果一个神经元对多数 token 都落在这里，它就不再更新，也没有机会回到别的区域。$f'(x)$ 很小但非零时，更新仍在进行，只是缓慢。所以在这一段要看 $f(x)$ 的极限值、它趋近极限的快慢，以及 $f'(x)$ 是否严格为零。</p>
+  <figure id="fig-intro-neg"><figcaption><p>淡色区域是负半轴远端。三条曲线展示三种不同的极限行为：ReLU 的输出与导数在整个负半轴严格为零；SiLU 的输出从负值一侧趋近零，导数也趋近零，但在有限输入下都不等于零；tanh 的输出趋近 −1 而不是零，导数趋近零。看 $f(x)$ 面板时比较三条曲线趋近的值，看 $f'(x)$ 面板时比较导数是严格为零还是仅仅很小。</p></figcaption></figure>
+
+  <p><strong>要素二：零点（$x=0$）。</strong>初始化时预激活值集中在零附近，训练全程也始终有大量神经元落在这里，它是「响应」与「不响应」的分界。要问三个问题。$f(0)$ 是多少：输入为零时是否输出零；如果输出一个非零常数，这个常数与输入无关，会固定地加进 $W_2$ 的求和。$f'(0)$ 是多少：零附近的小扰动以多大比例通过，这决定训练初期这一层近似于什么样的线性映射，也决定用作门控系数时零输入对应的信号被乘以多少。$f$ 在原点是否可导：如果不可导，数学上这一点的导数没有定义，实现时必须约定一个值，并且 $f'(x)$ 在这里跳变，一个神经元的预激活值从零的一侧跨到另一侧时，它收到的梯度会突然改变。</p>
+  <figure id="fig-intro-zero"><figcaption><p>只看原点附近。$f(x)$ 面板：ReLU 和 SiLU 在原点输出 0，sigmoid 在原点输出 0.5，这个 0.5 与输入无关。$f'(x)$ 面板：SiLU 在原点导数为 0.5，sigmoid 为 0.25，两者都连续；ReLU 的导数从左侧的 0 跳到右侧的 1，两个空心圆表示左右极限，原点本身没有导数。</p></figcaption></figure>
+
+  <p><strong>要素三：过渡区。</strong>这是 $f$ 从负半轴的行为切换到正半轴的行为所经过的输入范围，也是不同激活函数的曲线差异最大的地方。落在这里的神经元处于部分响应的状态，它们的输出和梯度都对输入的变化敏感。要问的问题是：过渡有多宽，宽度决定了有多少神经元处于部分响应的状态，过渡集中在一个点上时函数接近硬开关，过渡很宽时多数神经元都在部分响应；$f'(x)$ 是否连续，不连续意味着神经元跨过某个输入值时梯度跳变；$f$ 是否单调，$f'(x)$ 是否越过零或超过 1，如果 $f$ 在这一段有一个最低点，那么最低点左侧有一段区间 $f'(x)$ 为负，落在这里的神经元收到的梯度符号被翻转，如果 $f'(x)$ 超过 1，落在这里的神经元收到的梯度被放大。图中的色带标出过渡区的范围，色带的定义随函数改变，见各图图注。</p>
+  <figure id="fig-intro-trans"><figcaption><p>三种过渡方式。ReLU 的过渡集中在 x = 0 这一个点上，竖虚线标出这个位置，$f'(x)$ 在这里跳变。Sigmoid 的过渡分布在一段宽区间内，单调，导数连续且不超过 0.25。GELU 的过渡集中在色带范围内，导数连续，但函数在负半轴有一个最低点，最低点左侧导数为负，正半轴上导数一度超过 1，两个标记点分别标出导数的最小值与最大值。</p></figcaption></figure>
+
+  <p><strong>要素四：正半轴远端（$x\to+\infty$）。</strong>落在这里的神经元收到与 $w_i$ 方向一致的强输入，是完全响应的神经元，也是数值幅度最大的地方；模型规模增大之后，训练不稳定往往首先出现在这里。要问的第一个问题是 $f(x)$ 有没有上界。没有上界时，$W_2$ 的求和中可能出现很大的项，需要考虑数值范围和后续归一化能否承受；有上界时，不同的强输入给出近似相同的输出，它们之间的差异被压缩。第二个问题是 $f(x)$ 以什么速度增长：与 $x$ 同速、比 $x$ 快，还是趋于停止。第三个问题是 $f'(x)$ 的极限：趋近一个常数，意味着强输入的梯度按固定比例通过；趋近零，意味着强输入几乎收不到梯度；没有上界，意味着梯度随输入增大而增大。图中的虚线表示极限行为，不表示饱和从某个固定位置开始。</p>
+  <figure id="fig-intro-pos"><figcaption><p>淡色区域是正半轴远端。三条曲线展示三种增长方式：SiLU 的输出趋近 x，导数趋近 1，没有上界但增长速度不再增加；tanh 的输出趋近 1，导数趋近 0，有上界；ReLU² 的输出按 x² 增长，导数为 2x，输出和导数都没有上界，曲线在图内就已经超出纵轴范围。</p></figcaption></figure>
+
+  <p>后面每一节的图注都按这四段写，第 02 节的总览图把所有函数画在同一坐标系里，可以按这个顺序逐段比较。</p>
+  <div class="aside"><span class="k">阅读约定</span><p>本文的 $\sigma(x)=\dfrac{1}{1+e^{-x}}$ 表示 logistic sigmoid，$\Phi(x)$ 表示标准正态分布的累积分布函数，$\odot$ 表示逐元素乘。</p></div>
+</section>
+
+<section id="s1">
+  <h2><span class="n">02</span>总览</h2>
+  <p class="sub">比较各函数的输出、导数和极限行为。</p>
+  <figure id="fig-all"><figcaption><p><strong>勾选曲线进行比较，或用“重点查看”选择一个函数：</strong>该函数显示色带、参考线和关键点，其余曲线淡化。色带的含义随函数改变：ReLU 家族表示负半轴的输出为零的区域，其他函数表示各自定义的过渡范围。</p><p>读图时先看负半轴的输出与斜率，再看原点和过渡宽度，最后看大正输入是近似线性增长、饱和还是加速增长。详细定义见各函数专图。</p></figcaption></figure>
+  <h3 id="logistic">Logistic：把输入映射到 0 与 1 之间</h3>
+  <div class="math-block">$$\sigma(x)=\frac{1}{1+e^{-x}},\qquad \sigma'(x)=\sigma(x)\bigl(1-\sigma(x)\bigr).$$</div>
+  <figure id="fig-logistic"><figcaption><p><strong>当输入趋向负无穷：</strong>输出趋近 0，导数趋近 0，进入输出趋近 0 的饱和区。</p><p><strong>原点：</strong>输出 0.5，导数 0.25；零输入对应门控系数 0.5。</p><p><strong>过渡区：</strong>色带覆盖输出从 0.1 到 0.9 的范围，约 [−2.20, 2.20]，宽 4.39。曲线和导数都连续光滑。</p><p><strong>当输入趋向正无穷：</strong>输出趋近 1，导数趋近 0，进入输出趋近 1 的饱和区。水平虚线表示极限值，不表示饱和从某个固定位置开始。</p></figcaption></figure>
+  <h3 id="normal-cdf">$\Phi(x)$：标准正态分布的累积概率</h3>
+  <div class="math-block">$$\Phi(x)=\int_{-\infty}^{x}\frac{e^{-t^2/2}}{\sqrt{2\pi}}\,dt,\qquad \Phi'(x)=\varphi(x)=\frac{e^{-x^2/2}}{\sqrt{2\pi}}.$$</div>
+  <figure id="fig-normal-cdf"><figcaption><p><strong>当输入趋向负无穷：</strong>$\Phi(x)$ 趋近 0，导数趋近 0，门控系数趋近 0。</p><p><strong>原点：</strong>输出 0.5，导数约 0.399；导数就是标准正态密度，在这里最高。</p><p><strong>过渡区：</strong>色带覆盖输出从 0.1 到 0.9 的范围，约 [−1.28, 1.28]，宽 2.56。它比 logistic 的过渡更集中，但曲线仍处处光滑。</p><p><strong>当输入趋向正无穷：</strong>输出趋近 1，导数趋近 0。GELU 用 $x\Phi(x)$ 将这个有界 gate 与输入相乘，所以 GELU 自身的正半轴并不饱和。</p></figcaption></figure>
+</section>
+
+<section id="s2">
+  <h2><span class="n">03</span>Sigmoid 与 Tanh：门控与 soft-capping</h2>
+  <p class="sub">它们较少直接用作现代 LLM 的 FFN 激活函数，但常用于门控和限制输出范围。</p>
+  <div class="math-block">$$\begin{aligned}
+    \sigma(x)&=\frac{1}{1+e^{-x}},&\qquad \sigma'(x)&=\sigma(x)\bigl(1-\sigma(x)\bigr)\le\tfrac14;\\[8pt]
+    \tanh(x)&=2\sigma(2x)-1,&\qquad \tanh'(x)&=1-\tanh^2(x)\le 1.
+  \end{aligned}$$</div>
+  <figure id="fig-sig"><figcaption><p><strong>当输入趋向负无穷：</strong>Sigmoid 的输出趋近 0，用作门控时会使被乘的信号趋近零；Tanh 的输出趋近 −1，保留饱和的负信号。两者的导数都为正，并随输入趋向负无穷而趋近零：输出逐渐不再变化，局部梯度也越来越弱。</p>
+<p><strong>原点：</strong>Sigmoid 输出 0.5，导数为 0.25，用作门控时将信号乘以 0.5。可以通过调整后续线性层的 bias 来抵消这个常数分量；这里仅指将 Sigmoid 输出送入带 bias 的线性层、且需要抵消其常数基线的情况；若它直接乘在信号上做 gate，0.5 表示信号减半，不能普遍靠后续 bias 抵消，也不一定需要抵消。Tanh 输出 0，导数为 1，因此在零附近近似原样传递输入。</p>
+<p><strong>过渡区：</strong>两者都光滑、单调，导数连续。统一用“完成输出变化的 10% 到 90%”衡量：Sigmoid 约为 −2.20 到 2.20（宽 4.39），Tanh 约为 −1.10 到 1.10（宽 2.20，对应输出 −0.8 到 0.8）。相同输入尺度下，Tanh 的边界更集中、更陡，Sigmoid 更宽、更缓。图中淡色带和加粗的曲线段对应这两个范围，空心圆标出区间边界，水平虚线延伸至原点以便对照，标出饱和时趋近的值（线长不表示饱和区范围，饱和没有固定起点）；悬停或用 Tab 聚焦标记可读说明。</p>
+<p><strong>当输入趋向正无穷：</strong>两者的输出都趋近 1，导数都趋近零。强正信号被压到有限范围内；输入继续增大，输出也几乎不再增加。这适合使门控系数接近 1，或限制输出幅度，但会削弱大输入之间的差异。</p></figcaption></figure>
+  <p>在现代模型中，sigmoid 常用于门控：SiLU 本身就是 $x\,\sigma(x)$，DeepSeek-V3 的 MoE 路由用 sigmoid 给专家打分，Qwen3-Next 的 gated attention 在注意力输出后乘一个 sigmoid gate，Mamba 和 Gated DeltaNet 的遗忘 gate 也都是 sigmoid。它有界、单调、输出天然落在 $(0,1)$，这些性质便于将它用作乘法系数。但接近 0 或 1 时，梯度仍会因饱和而减小。</p>
+  <p>tanh 也用于 soft-capping。任何一个无界量 $z$ 都可以写成 $c\cdot\tanh(z/c)$，这样在 $|z|\ll c$ 时几乎是恒等映射，导数接近 1；在 $|z|\gg c$ 时被平滑地压到 $\pm c$ 以内。Gemma 2 用它处理 logits，Gemma 3 一度去掉，Gemma 4 又把最终 logits 的 soft-capping 加了回来（<code>final_logit_softcapping: 30.0</code>）；Kimi K3 用它处理 GLU 的两个分支，这个思路我们在第 08 节还会展开。相比 hard clamp，tanh soft-capping 的好处是导数处处连续，饱和区域的梯度不是直接归零，而是按 $1-\tanh^2$ 平滑衰减，在有限输入下，数学上的导数仍非零。</p>
+</section>
+
+<section id="s3">
+  <h2><span class="n">04</span>ReLU：计算开销与激活稀疏性</h2>
+  <p class="sub">它计算开销小，能让 FFN 的中间层出现大量精确为零的输出。这两点在 2024 年之后重新变得重要。</p>
+  <div class="math-block">$$\mathrm{ReLU}(x)=\max(0,x),\qquad \mathrm{ReLU}'(x)=\mathbb{1}[x>0].$$</div>
+  <figure id="fig-relu"><figcaption><p><strong>负半轴：</strong>输出和导数严格为零。淡色区域表示整个输出为零的区域，不是过渡区。</p><p><strong>原点：</strong>输出为 0；左侧斜率 0、右侧斜率 1，函数连续但不可导。导数图的空心圆表示左右极限，不代表原点的导数值。实现通常约定原点的反向值为 0。</p><p><strong>过渡区：</strong>没有有限宽度的过渡，切换集中在 x=0 的竖虚线上。两个导数分支分开绘制，不用斜线连接。</p><p><strong>正半轴：</strong>输出等于输入，导数恒为 1。信号近似线性增长，没有上界。</p></figcaption></figure>
+  <p>原始 Transformer 用的就是 ReLU，被 GELU 取代的直接原因是在同等设置下 loss 略高一些，间接原因是它在原点不光滑、负半轴梯度恒为零，训练早期一旦某个通道的激活值的输入整体偏负，它就再也不会被更新（具体参考：<a href="https://app.heptabase.com/p/card/78579053-4d9a-4387-b8ab-e53d245c2078">dead ReLU</a>）。对于 2018 年在几亿参数规模上做预训练的人来说，换成 GELU 收益虽小但稳定，于是 ReLU 就退出了主流 LLM。</p>
+  <p>稀疏推理研究重新关注了 ReLU。Apple 在「ReLU Strikes Back」这篇工作里指出，如果 FFN 用 ReLU，那么中间层的输出在大多数 token 上有九成以上是精确的零，而每个零对应着 $W_2$ 中一整行不需要读取、不需要参与乘法的权重。对于内存带宽受限的推理场景（尤其是端侧和 CPU offloading），这意味着 FFN 的实际计算量可以降到原来的三分之一左右，而且用 ReLU 重新微调一个 GELU 或 SiLU 模型（论文称之为 <a href="https://arxiv.org/abs/2310.04564">ReLUfication</a>，即将激活函数替换为 ReLU 后继续训练） 损失的精度并不多。后续的 TurboSparse 将这一方法扩展到门控结构，提出 <a href="https://arxiv.org/html/2406.05955v1#S3.SS2">dReLU</a>：对 gate projection 和 up projection 的输出分别应用 ReLU，再逐元素相乘，</p>
+  <div class="math-block">$$\mathrm{dReLU}(x)=\mathrm{ReLU}(xW_g)\odot\mathrm{ReLU}(xW_u),$$</div>
+  <p>在 Mixtral 这类模型上得到了接近 90% 的稀疏度。SiLU 和 GELU 的输出通常非零；ReLU 则在整个负半轴上输出严格为零，支持按零值跳过计算。</p>
+  <p>那为什么 2026 年最强的开源模型依然不用 ReLU？因为它们的瓶颈是训练时的 loss 和稳定性，不是端侧带宽；而 ReLU 在这两方面的劣势并没有消失。</p>
+</section>
+
+<section id="s4">
+  <h2><span class="n">05</span>GELU：定义、导数与常用近似</h2>
+  <p class="sub">把 dropout 和 ReLU 合并成一个确定性的函数。</p>
+  <div class="math-block">$$\mathrm{GELU}(x)=x\,\Phi(x)=x\int_{-\infty}^{x}\frac{1}{\sqrt{2\pi}}e^{-t^2/2}\,dt,\qquad \mathrm{GELU}'(x)=\Phi(x)+x\,\varphi(x),$$</div>
+  <p>其中 $\varphi$ 是标准正态密度。Hendrycks 和 Gimpel 的出发点是：ReLU 是把输入乘以 $\mathbb{1}[x>0]$，dropout 是把输入乘以一个伯努利随机变量，那么不妨把这个随机变量的概率设成与输入相关的 $\Phi(x)$，再对随机性取期望，得到的就是 $x\Phi(x)$。这样输入越大越可能被「保留」，越小越可能被「丢弃」，而整个过程是确定性且光滑的。</p>
+  <details class="math-note">
+    <summary>展开了解：为什么期望恰好是 $x\Phi(x)$？</summary>
+    <p>这里的随机操作只有两个结果：保留输入 $x$，或者把它置为 $0$。设 $B$ 是一个取值为 $0$ 或 $1$ 的随机变量，并规定</p>
+    <div class="math-block">$$P(B=1\mid x)=\Phi(x),\qquad P(B=0\mid x)=1-\Phi(x).$$</div>
+    <p>给定输入 $x$，输出就是 $xB$。对这次随机选择取期望：</p>
+    <div class="math-block">$$\mathbb E[xB\mid x]=\underbrace{x\cdot\Phi(x)}_{\text{保留时的输出}\times\text{概率}}+\underbrace{0\cdot\bigl[1-\Phi(x)\bigr]}_{\text{置零时的输出}\times\text{概率}}=x\,\Phi(x).$$</div>
+    <p>例如，若某个输入的保留概率为 $0.8$，那么平均输出就是 $0.8x$。ReLU 对应 $P(B=1\mid x)=\mathbb{1}[x>0]$，dropout 对应 $P(B=1\mid x)=p$ 且与 $x$ 无关；GELU 把这个概率改成随 $x$ 单调增加的 $\Phi(x)$，再取期望，就得到确定性的 $x\Phi(x)$。</p>
+  </details>
+  <figure id="fig-gelu"><figcaption><p><strong>当输入趋向负无穷：</strong>输出从负值一侧趋近零，导数也从负值一侧趋近零，幅度按高斯尾部快速衰减。强负输入几乎不输出信号，也几乎不传递梯度；虽然没有 ReLU 那样整段严格为零的区域，当输入为绝对值很大的负数时，输出和导数仍然接近零。</p>
+<p><strong>原点：</strong>输出为 0，导数为 0.5。零输入不产生输出，但原点附近的小扰动仍能通过，局部响应约为输入变化的一半。</p>
+<p><strong>过渡区：</strong>主要变化集中在约 −2 到 2（这是观察范围，不是严格的区间边界），曲线和导数都连续光滑。输出先在约 −0.75 处降到最低点 −0.17，再回升并穿过原点。注意函数最低点与导数最低点不同：导数在 −√2 处最低，约 −0.129；在 √2 处最高，约 1.129，随后回落。因此，导数为负的区间会改变反向传播梯度的符号，导数大于 1 的区间则会放大梯度。图中淡色带和加粗段表示这一观察范围，实心点标出原点和极值，箭头表示曲线向两侧延伸；负半轴的水平虚线表示输出趋近零，正半轴的斜虚线表示近似近似线性增长，导数图的水平虚线分别表示趋近 0 和 1；悬停或用 Tab 聚焦标记可读说明。标记针对精确 GELU，近似曲线用于对照。</p>
+<p><strong>当输入趋向正无穷：</strong>输出越来越接近输入本身，导数趋近 1。强正信号以近似线性的方式通过，没有上界，也其增长速度不会随输入持续增加。</p></figcaption></figure>
+  <h3 id="gelu-approximations">两个近似</h3>
+  <p>$\Phi(x)$ 可以通过误差函数 $\mathrm{erf}$ 计算。相比 ReLU，它的数值求值更复杂，因此也常使用近似形式；实际性能收益取决于硬件和实现。</p>
+  <details class="math-note">
+    <summary>展开了解：erf 是什么，计算机怎样计算它？</summary>
+    <p>误差函数（error function）的定义是</p>
+    <div class="math-block">$$\operatorname{erf}(x)=\frac{2}{\sqrt{\pi}}\int_0^x e^{-t^2}\,dt.$$</div>
+    <p>它表示曲线 $e^{-t^2}$ 从 0 到 $x$ 的有符号面积，再乘一个固定系数。“误差”这个名字与正态分布中的误差概率有关，并不是指神经网络的 loss。</p>
+    <p><strong>它与 $\Phi(x)$ 是同一种积分的不同写法。</strong>标准正态分布关于 0 对称，左半边面积为 $1/2$。先把积分拆在 0 处，再令 $u=t/\sqrt2$，就有</p>
+    <div class="math-block">$$\begin{aligned}
+      \Phi(x)&=\frac12+\frac{1}{\sqrt{2\pi}}\int_0^x e^{-t^2/2}\,dt\\[6pt]
+      &=\frac12+\frac{1}{\sqrt\pi}\int_0^{x/\sqrt2}e^{-u^2}\,du\\[6pt]
+      &=\frac12\left[1+\operatorname{erf}\left(\frac{x}{\sqrt2}\right)\right].
+    \end{aligned}$$</div>
+    <p>把积分写成 erf，并没有自动消除计算难度，<strong>实际求值通常依靠近似公式。</strong>数学库可以用多项式或两个多项式之比来逼近 erf，并按输入区间选择适合的公式，以控制误差。多项式又可以写成嵌套的乘加形式，例如</p>
+    <div class="math-block">$$a_0+a_1x+a_2x^2+a_3x^3=a_0+x\bigl(a_1+x(a_2+xa_3)\bigr).$$</div>
+    <p>这样只需有限次运算就能得到近似值，无须每次把积分面积切成大量小块逐一相加。这里的多项式只是计算方式的示例，具体系数、次数和区间由实现及精度要求决定。<a href="https://dlmf.nist.gov/7.24">NIST 的数值近似资料</a>列出了 erf 的多项式和有理函数近似方法。</p>
+    <p><strong>开销主要来自更多计算。</strong>ReLU 只需比较并选择，而 erf 的求值通常需要一组乘加及可能的区间判断等操作。FFN 的每个中间元素都要计算一次，大量重复后就可能影响速度；这并不意味着 erf 天然需要大量显存。tanh 近似能否更快，还要看硬件支持、精度和内核融合方式，不能只看公式长短。</p>
+  </details>
+  <p>一个是 tanh 近似：</p>
+  <div class="math-block">$$\mathrm{GELU}_{\tanh}(x)=\tfrac12 x\Bigl[1+\tanh\Bigl(\sqrt{\tfrac{2}{\pi}}\,(x+0.044715\,x^3)\Bigr)\Bigr],$$</div>
+  <p>BERT、GPT-2 以及现在的 Gemma 系列用的都是它。另一个常被叫作 Quick GELU：</p>
+  <div class="math-block">$$\mathrm{GELU}_{\text{quick}}(x)=x\,\sigma(1.702x).$$</div>
+  <p>系数 1.702 用来让 $\sigma(1.702x)$ 逼近 $\Phi(x)$。OpenAI 的 CLIP 用过，而 gpt-oss 的激活函数里那个 $\alpha=1.702$ 也是从这儿来的。</p>
+  <p>近似的存在带来一个工程的规则：<em>训练用哪个版本，推理就必须用哪个版本</em>。Gemma 刚开源时 Hugging Face 的实现用了精确 GELU，而官方权重是用 tanh 近似训的，两者在大多数位置只差万分之几，但一层层累积之后足以影响生成质量，最后是 transformers 专门加了 <code>gelu_pytorch_tanh</code> 才解决。做权重转换、写推理内核、做量化校准的时候，这是最常见的silent bug 之一。</p>
+</section>
+
+<section id="s5">
+  <h2><span class="n">06</span>SiLU / Swish：输入与 sigmoid 的乘积</h2>
+  <p class="sub">它的曲线与 GELU 接近，但只需要一次 sigmoid 和一次乘法。</p>
+  <div class="math-block">$$\mathrm{Swish}_\beta(x)=x\,\sigma(\beta x),\qquad \mathrm{Swish}_\beta'(x)=\sigma(\beta x)\bigl[1+\beta x\bigl(1-\sigma(\beta x)\bigr)\bigr].$$</div>
+  <p>$\beta=1$ 的特例叫 SiLU（Sigmoid Linear Unit），最早由 Elfwing 等人在强化学习的语境下提出；Google 的 Ramachandran 等人用自动搜索重新发现了它，并把 $\beta$ 设为可学参数，取名 Swish。现在 LLM 里说 SiLU、Swish 基本指同一个东西，$\beta$ 也基本都固定为 1。</p>
+  <figure id="fig-silu"><figcaption><p><strong>当输入趋向负无穷：</strong>固定 β>0 时，输出和导数都从负值一侧趋近零，绝对值很大的负输入对应的输出接近零。</p><p><strong>原点：</strong>输出为 0，导数为 0.5，不随 β 改变。函数最低点位于原点左侧，β=1 时约为 (−1.28, −0.28)。</p><p><strong>过渡区：</strong>色带以内部 sigmoid gate 的 10%–90% 定义，范围约 [−2.20/β, 2.20/β]。拖动 β，色带和最低点随曲线移动；β 越大，边界越集中。超出视野的范围会在图下提示。曲线与导数都连续光滑。</p><p><strong>当输入趋向正无穷：</strong>固定 β>0 时，输出逐渐接近 x，导数趋近 1。注意 β 很小时，在当前有限视野内可能仍主要呈现接近 x/2 的形状。</p></figcaption></figure>
+  <p>SiLU 的三个性质值得记住。第一，它是非单调的，在负半轴有一个局部最小值，这让网络可以输出小的负数而不是被截断，实践中这被认为对优化略有帮助。第二，它在原点附近近似线性，$\mathrm{SiLU}(x)\approx x/2 + x^2/4$，这意味着初始化时如果预激活值集中在零附近，FFN 在该输入范围内近似线性；训练稳定性还取决于初始化、归一化等设置。第三，它的导数只依赖 $\sigma(\beta x)$ 一个中间量，前向存下 $\sigma$ 值，反向就不需要重算任何超越函数，这一点可以减少反向传播中的重复计算，但保存中间值会占用显存。</p>
+  <p>它取代 GELU 的过程没有一篇决定性的论文，也受计算开销和实现方式影响：Shazeer 2020 的实验里 SwiGLU 和 GeGLU 的实验结果接近，而 SiLU 更轻量，PaLM 和 Llama 选了 SwiGLU，之后所有跟随 Llama 架构的模型也就沿用了下来。到 2026 年，SiLU 单独作为 FFN 激活的情况已经很少，它几乎总是用于 SwiGLU 的门控分支。</p>
+</section>
+
+<section id="s6">
+  <h2><span class="n">07</span>GLU 家族：门控前馈网络</h2>
+  <p class="sub">SwiGLU、GeGLU、ReGLU 的区别只是 gate 用什么函数；重要的是「gate 乘以线性分支」这个结构本身。</p>
+  <div class="math-block">$$\mathrm{GLU}_\phi(x)=\bigl(\phi(xW_g)\odot xW_u\bigr)W_d,\qquad W_g,W_u\in\mathbb{R}^{d\times d_{ff}},\; W_d\in\mathbb{R}^{d_{ff}\times d}.$$</div>
+  <p>输入 $x$ 先经过两个不同的线性投影，得到门控分支 $g=xW_g$ 和线性分支 $u=xW_u$。对 $g$ 应用激活函数，再与 $u$ 逐元素相乘，得到中间表示 $h=\phi(g)\odot u$；最后通过 $W_d$ 将中间表示投影为输出。SwiGLU、GeGLU、ReGLU 的区别，就在门控分支分别采用 SiLU、GELU、ReLU。</p>
+  <h3 id="swiglu-channel">先看 SwiGLU 的一个中间通道</h3>
+  <p>暂时不看最后的输出投影 $W_d$，只观察逐元素相乘这一步。取出一个通道后，$g$ 和 $u$ 都是一个数，这个通道的输出就是：</p>
+  <div class="math-block">$$h=\mathrm{SiLU}(g)\,u=g\,\sigma(g)\,u.$$</div>
+  <p>这里的门控系数不局限于 0 到 1。$\mathrm{SiLU}(g)$ 可以为负，也可以大于 1，因此它既能减小信号幅度，也能翻转符号或放大信号。下面的热力图展示 $g$、$u$ 不同组合产生的 $h$：横轴改变门控输入 $g$，纵轴改变待传递的数值 $u$。</p>
+  <figure id="fig-glu"><figcaption><p>横轴是门控输入 g，纵轴是线性分支 u；每个位置的颜色表示两者相乘后的输出 SiLU(g)·u。红色表示正输出，蓝色表示负输出，接近中性色表示输出接近零。</p><p>图中左侧颜色较浅，因为较大的负门控输入会减小输出幅度；右侧颜色更鲜明，因为正门控输入能放大线性分支。上、下两部分的颜色相反，反映 u 的符号变化。g=0 或 u=0 时输出为零。</p><p>移动指针可查看 g、u 和输出的具体数值。色标范围限制为 [−8, 8]，实际输出不受这个显示范围限制。</p></figcaption></figure>
+  <h3 id="glu-gradients">梯度：两个分支的梯度如何计算</h3>
+  <p>训练时两个分支都会更新。记 $g=xW_g$，$u=xW_u$，$h=\phi(g)\odot u$，上游梯度为 $\delta=\partial L/\partial h$。那么</p>
+  <div class="math-block">$$\frac{\partial L}{\partial u}=\delta\odot\phi(g),\qquad \frac{\partial L}{\partial g}=\delta\odot u\odot\phi'(g).$$</div>
+  <p>两条路径的梯度互为对方的函数：$u$ 的梯度被 gate 的输出 $\phi(g)$ 缩放， gate 的梯度被 $u$ 的大小缩放。这解释了 GLU 的一个训练特点，即 $g$ 和 $u$ 两个分支的数值尺度会互相放大，如果某个通道上两者同时变大，输出和梯度的幅度可能同时过大。在 SwiGLU 里 $\phi'(g)$ 在 $g$ 很大时趋近 1，$\phi(g)\approx g$，所以在较大的正输入区域，固定任一非零分支时，输出幅度可随另一分支近似线性地无界增长，这是 2025 年之后多个模型采用输出范围限制的动机之一。</p>
+  <p>从图中还能看出两个分支的multiplicative interaction：输出由门控分支和线性分支共同决定；当 $g$、$u$ 同时取很大的正值时，SwiGLU 的输出近似 $gu$。如果去掉非线性调制，两个线性投影的乘积 $(xW_g)_i(xW_u)_i$ 是输入的二次型；一般的 GLU 则包含非线性函数 $\phi$，更准确地说，它给 FFN 引入了multiplicative interaction。</p>
+  <h3 id="glu-history">从 GLU 到 SwiGLU：历史与实验</h3>
+  <p>门控线性单元最早由 Dauphin 等人在 2016 年提出，$\phi=\sigma$。Shazeer 在 2020 年的短文里系统地试了 $\phi$ 取 sigmoid、ReLU、GELU、Swish 以及Bilinear（省略激活函数）的版本，发现在 T5 的设定下 GeGLU 和 SwiGLU 的预训练困惑度和下游任务都明显好于普通的 ReLU 或 GELU FFN。论文没有给出这些变体效果更好的理论解释。</p>
+  <h3 id="glu-parameters">参数量的对齐：为什么 $d_{ff}$ 是 $\tfrac{8}{3}d$</h3>
+  <p>GLU 比普通 FFN 多一个矩阵。为了在同参数量下比较，Shazeer 把中间维度从 $4d$ 缩到 $\tfrac{2}{3}\cdot 4d=\tfrac{8}{3}d$，这样三个矩阵的总参数量 $3\cdot d\cdot\tfrac{8}{3}d=8d^2$ 恰好等于原来两个矩阵的 $2\cdot d\cdot 4d$。Llama 沿用了这个约定，并把结果向上取整到 256 的倍数：Llama 2 7B 的 $d=4096$，$\tfrac{8}{3}d\approx10923$，取整后是 11008。看到一个模型的 <code>intermediate_size</code> 大约是 <code>hidden_size</code> 的 2.7 倍，就可以判断它用的是 GLU 结构。不过这只是 Llama 一系的习惯，不是定律：Gemma 3 4B 的 <code>hidden_size</code> 是 2560，<code>intermediate_size</code> 是 10240，也就是 GeGLU 配 $4d$ 的宽度；Gemma 4 31B 同样是 5376 对 21504，比例不变。Google 从一开始就没有按同参数量去对齐。</p>
+  <h3 id="glu-implementation">工程形态</h3>
+  <p>实际实现里 $W_g$ 和 $W_u$ 几乎总是被拼成一个 $d\times 2d_{ff}$ 的矩阵一次算完，激活函数和逐元素乘写在 GEMM 的 epilogue 里，或者由一个专门的 fused kernel 完成，这样中间结果可以减少中间结果写入显存后再读取的次数。vLLM、SGLang、FlashInfer 这类推理框架都有 <code>silu_and_mul</code>、<code>gelu_and_mul</code> 之类的算子，名字直接对应 SwiGLU 和 GeGLU。在训练侧，反向传播需要 $\phi(g)$、$\phi'(g)$ 和 $u$，通常只存 $g$ 和 $u$，在反向时重算 $\phi$，通过重计算减少保存激活值所需的显存。</p>
+</section>
+
+<section id="s7">
+  <h2><span class="n">08</span>限制 GLU 的输出：2025–2026 年的共同选择</h2>
+  <p class="sub">gpt-oss、DeepSeek-V4、Kimi K3 三家用了三种不同的办法解决同一个问题：SwiGLU 的乘积无界。</p>
+  <p>问题的表现是训练后期或者模型规模增大之后，FFN 中间层偶尔会出现极大的激活值，这类大幅值激活可能引发 loss spike（训练损失突然增大）；<a href="https://arxiv.org/abs/2402.17762">文献中的 massive activations</a> 指部分维度的激活幅度远高于其他维度，不能仅凭数值大就认定是训练异常。在 MoE 里情况更糟：Kimi K3 从 896 个专家里每次只激活 16 个，每个专家只处理很小一部分 token，参数更新的方差大，个别专家的 $g$、$u$ 同时偏大并不罕见。既然 $\phi(g)\cdot u$ 没有固定的幅度上界，那限制其中一个或两个分支的数值范围就是最直接的办法。</p>
+  <h3 id="gpt-oss-clamp">gpt-oss：hard clamp 加偏置</h3>
+  <div class="math-block">$$h=\bigl(\tilde g\,\sigma(1.702\,\tilde g)\bigr)\odot\bigl(\tilde u+1\bigr),\qquad \tilde g=\min(g,7),\quad \tilde u=\mathrm{clip}(u,-7,7).$$</div>
+  <p>OpenAI 2025 年 8 月开源的 gpt-oss 做了三处改动。 gate 分支用的是 quick GELU 形式的 $\alpha=1.702$，并且只在上方截断到 7（该分支的输出在输入趋向负无穷时趋近零，因此没有设置下限）；线性分支两侧都截到 $\pm7$；线性分支还加了一个常数 1。加 1 后，输出可展开为 $\phi(\tilde g)\odot\tilde u+\phi(\tilde g)$；当 $\tilde u=0$ 时，输出仍为 $\phi(\tilde g)$。这三处改动都是逐元素的，对内核几乎没有额外成本。Hugging Face 上的 <code>config.json</code> 里对应的字段是 <code>hidden_act: "silu"</code> 和 <code>swiglu_limit: 7.0</code>，transformers 的 <code>modeling_gpt_oss.py</code> 里的实现只有四行：<code>gate.clamp(max=limit)</code>、<code>up.clamp(-limit, limit)</code>、<code>glu = gate * sigmoid(gate * 1.702)</code>、<code>(up + 1) * glu</code>。</p>
+  <h3 id="deepseek-clamp">DeepSeek-V4：SwiGLU clamping</h3>
+  <p>DeepSeek-V4 的技术报告在「训练稳定性」一章里单独列出了 SwiGLU clamping，作为 loss spike 缓解手段之一。transformers 里 <code>modeling_deepseek_v4.py</code> 的采用与 gpt-oss 相同的 clamp 方式： gate 分支 <code>clamp(max=limit)</code>，线性分支 <code>clamp(-limit, limit)</code>，然后 <code>act_fn(gate) * up</code>；区别是没有那个「加 1」，阈值由 <code>swiglu_limit</code> 控制。DeepSeek-V4-Pro 的 <code>config.json</code> 里就是 <code>hidden_act: "silu"</code>、<code>swiglu_limit: 10.0</code>，384 个路由专家取 top-6 外加 1 个共享专家。同一份配置里还有一个值得留意的字段 <code>expert_dtype: "fp4"</code>，专家权重是以 4 比特存的；激活值有了明确的上界之后，低比特下的数值范围会好控制得多，这和第 12 节里「有界激活对量化更友好」是同一件事。同一份报告还把 MoE 路由的打分函数从 V3 的 sigmoid 换成了 $\sqrt{\mathrm{softplus}(\cdot)}$（配置字段 <code>scoring_func: "sqrtsoftplus"</code>，负载均衡 <code>topk_method: "noaux_tc"</code>），这一改动虽然不在 FFN 里，但同样是在挑一个「非负、单调、增长可控」的函数，我们在第 10 节讨论 softplus 时再回来看。</p>
+  <h3 id="situ-glu">Kimi K3：SiTU-GLU，用 tanh 做 soft-capping</h3>
+  <div class="math-block">$$\mathrm{SiTU\text{-}GLU}(x)=\Bigl[\beta_1\tanh\bigl(\tfrac{g}{\beta_1}\bigr)\odot\sigma(g)\Bigr]\odot\Bigl[\beta_2\tanh\bigl(\tfrac{u}{\beta_2}\bigr)\Bigr],\qquad \beta_1=4,\;\beta_2=25.$$</div>
+  <p>Moonshot 对两个分支都使用 tanh soft-capping。 gate 分支里 SiLU 的那个 $x$ 换成了 $\beta_1\tanh(x/\beta_1)$，于是 gate 的输出被限制在 $(-\beta_1,\beta_1)$；线性分支同样用 tanh 压到 $(-\beta_2,\beta_2)$；乘积的绝对值上界就是 $\beta_1\beta_2=100$。在原点附近 $\beta\tanh(x/\beta)\approx x$，所以对于相对于阈值较小的输入它和 SwiGLU 几乎完全一样，主要在输入绝对值较大时发生变化。相比hard clamp，tanh soft-capping 的导数处处连续，饱和区域梯度是按 $1-\tanh^2$ 衰减而不是直接归零，这保留了连续变化的梯度；代价是每个元素多两次 tanh，不过在 MoE 专家这种带宽受限的算子里实际开销还取决于硬件和内核实现。Kimi K3 的 <code>config.json</code> 里可以直接看到这三个值：<code>hidden_act: "situ"</code>、<code>activation_situ_beta: 4.0</code>、<code>activation_situ_linear_beta: 25.0</code>，以及 <code>num_experts: 896</code>、<code>num_experts_per_token: 16</code>。</p>
+  <figure id="fig-cap"><figcaption><p><strong>当输入趋向负无穷：</strong>三种 gate 的输出与导数都趋近零，但具体衰减形状不同。</p><p><strong>原点与过渡区：</strong>三者输出均为 0，斜率均为 0.5；淡色带用标准 SiLU 内部 gate 的 10%–90% 区间作参照，各曲线并非完全相同。</p><p><strong>大正输入如何限制：</strong>标准 SiLU 继续近似线性增长。当前图中的 gpt-oss 先令 c=min(g,7)，再计算 cσ(1.702c)，所以 g>7 后输出恒定约为 7、导数严格为零；g=7 处不可导，导数分支用空心圆分开表示。</p><p><strong>平滑饱和：</strong>SiTU 的输出逐渐趋近 4，导数连续趋近零，没有hard clamp的折点。图中同时标出零附近的过渡过程与 g=7 的截断位置；水平参考线表示输出上限或导数极限。</p></figcaption></figure>
+  <div class="aside"><span class="k">设计判断</span><p>阈值的位置比截断的形状更重要。在 $\beta$ 或 clamp 阈值远大于正常激活范围时，三种方案对大多数元素的影响可能较小，具体比例取决于激活分布，区别主要出现在激活值绝对值较大的区域；所以阈值要根据实际激活分布来定，阈值过小可能限制表达能力，过大则难以有效限制极端激活值。另外，这种截断是训练时就要有的，给一个已经训好的 SwiGLU 模型事后加 clamp 等于换了一个函数，需要重新校准。</p></div>
+</section>
+
+<section id="s8">
+  <h2><span class="n">09</span>Squared ReLU：正半轴上的二次激活</h2>
+  <p class="sub">GLU 在两个分支之间引入乘法。Squared ReLU 则直接对正输入求平方，使用普通 FFN 的输入、输出两个投影矩阵。</p>
+  <h3>Squared ReLU</h3>
+  <div class="math-block">$$\mathrm{ReLU}^2(x)=\max(0,x)^2,\qquad \bigl(\mathrm{ReLU}^2\bigr)'(x)=2\max(0,x).$$</div>
+  <p>它来自 Google 2021 年的 Primer，那篇工作用进化搜索在 Transformer 的计算图上找改进，找到的两个最稳定的收益之一就是把 FFN 的 ReLU 平方。它的导数是 $2\max(0,x)$，在原点连续（值为零），比 ReLU 光滑了一阶；正半轴是二次增长，大的输入会被进一步放大，这在功能上与 GLU 的乘积类似，但只需要普通 FFN 的两个矩阵。NVIDIA 从 Nemotron-4 开始一直用它，Nemotron-H 和 2025 年底的 Nemotron 3 系列的 MoE 专家都是 Squared ReLU 配 sigmoid 路由，Nemotron 3 Nano 的配置里写作 <code>mlp_hidden_act: "relu2"</code>，128 个路由专家取 top-6，外加 1 个共享专家。它同时保留了 ReLU 的精确零，所以可以采用基于零激活值的稀疏推理方法。</p>
+  <figure id="fig-relu2"><figcaption><p><strong>负半轴：</strong>输出和导数严格为零，淡色背景表示输出为零的区域。</p><p><strong>原点：</strong>输出和导数都为 0，导数左右连续；但二阶导数左右不同。相比 ReLU，它在原点的左右导数相同。</p><p><strong>过渡区：</strong>没有单独一段有限宽度的过渡区间，正半轴的斜率从原点开始持续增加，因此不用过渡色带。</p><p><strong>正半轴：</strong>输出为 x²，导数为 2x。图中 x=2 时输出和斜率都是 4；ReLU 在同一位置的输出是 2、斜率是 1。平方激活会进一步放大大输入，也放大对应的梯度。</p></figcaption></figure>
+  <p>它的局限也来自二次增长：没有任何上界，正半轴的导数随输入线性变大，对预激活值的尺度非常敏感。工程上通常靠 RMSNorm 控制输入的数值尺度，再依赖较小的初始化和learning rate warmup；从 Nemotron 系列多年一直沿用这个选择来看，这些问题在他们的训练配置下是可控的。</p>
+</section>
+
+<section id="s9">
+  <h2><span class="n">10</span>Softplus：它出现的地方都需要一个正数</h2>
+  <p class="sub">作为隐藏层激活它从来没流行过，但它是 ReLU 的光滑版，也是产生「保证为正」的量的标准工具。</p>
+  <div class="math-block">$$\mathrm{softplus}(x)=\log\bigl(1+e^{x}\bigr),\qquad \mathrm{softplus}'(x)=\sigma(x).$$</div>
+  <figure id="fig-softplus"><figcaption><p><strong>当输入趋向负无穷：</strong>输出从正值一侧趋近零，导数也趋近零；有限输入下输出始终为正。</p><p><strong>原点：</strong>输出 ln 2≈0.693，导数为 0.5。它并不经过坐标原点。</p><p><strong>过渡区：</strong>导数恰好是 sigmoid。色带表示斜率从 0.1 增加到 0.9 的范围，约 [−2.20, 2.20]；输出单调增加，曲线与导数都光滑，没有局部最低点。</p><p><strong>当输入趋向正无穷：</strong>输出从上方接近 y=x，导数趋近 1。它对大正输入近似线性，没有上界。</p></figcaption></figure>
+  <p>它在现代架构里出现在三类位置。第一类是状态空间模型的步长：Mamba 用 $\Delta=\mathrm{softplus}(\cdot)$ 生成离散化步长，因为 $\Delta$ 必须为正，而且在大部分范围内希望它近似线性、在负半轴平滑地趋于零而不是hard clamp。第二类是可学参数的约束，比如各种需要「非负标量」的场景。第三类是 2026 年新出现的用法，DeepSeek-V4 把 MoE 路由的专家路由得分从 sigmoid 换成了 $\sqrt{\mathrm{softplus}(\cdot)}$：sigmoid 有上界 1，专家得分在饱和后无法再区分，而 softplus 无上界、开方后增长又比线性慢，既保留了大分数之间的差异，又不至于让路由权重过于集中。</p>
+  <p>数值上要注意 $\log(1+e^x)$ 在 $x$ 很大时会溢出，标准实现是当 $x$ 超过某个阈值（PyTorch 默认 20）时直接返回 $x$，或者写成 $\max(x,0)+\log(1+e^{-|x|})$ 这种稳定形式。</p>
+</section>
+
+<section id="s10">
+  <h2><span class="n">11</span>2025–2026 年代表性开源模型用了什么</h2>
+  <p class="sub">按发布时间排列。「FFN 激活」一栏指 dense 层或 MoE 专家内部的激活函数，不含注意力和路由。</p>
+  <div class="tbl"><table>
+    <thead><tr><th>模型</th><th>发布</th><th>FFN 激活</th><th>值得注意的地方</th></tr></thead>
+    <tbody>
+      <tr><td>DeepSeek-V3 / R1</td><td class="m">2024-12 / 2025-01</td><td>SwiGLU</td><td>MoE 路由用 sigmoid 打分而非 softmax，配合无辅助 loss 的负载均衡；后来的 V3.1、V3.2 沿用。</td></tr>
+      <tr><td>Gemma 3</td><td class="m">2025-03</td><td>GeGLU<span class="tag">gelu_pytorch_tanh</span></td><td>Google 的模型一直用 GELU gate，且是 tanh 近似版本；$d_{ff}=4d$。Gemma 2 曾在 logits 上用 tanh soft-capping，Gemma 3 的配置里两个 softcapping 字段都是 null。</td></tr>
+      <tr><td>Llama 4</td><td class="m">2025-04</td><td>SwiGLU</td><td>Llama 系列从第一代起就是 SwiGLU，$d_{ff}\approx\tfrac{8}{3}d$ 向上取整到 256 的倍数。</td></tr>
+      <tr><td>Qwen3 / Qwen3-Next / Qwen3.5</td><td class="m">2025-04 起</td><td>SwiGLU</td><td><code>hidden_act: silu</code>。Qwen3-Next 起在注意力输出后加 sigmoid gate （gated attention），Gated DeltaNet 与门控注意力 3:1 混合（<code>full_attention_interval: 4</code>）。</td></tr>
+      <tr><td>Kimi K2</td><td class="m">2025-07</td><td>SwiGLU</td><td>DeepSeek-V3 式架构，1T 参数。</td></tr>
+      <tr><td>gpt-oss 20B / 120B</td><td class="m">2025-08</td><td>SwiGLU 变体</td><td>$\alpha=1.702$， gate 分支上截断 7，线性分支 clip 到 $\pm7$ 并加 1；<code>swiglu_limit: 7.0</code>。</td></tr>
+      <tr><td>Nemotron 3 Nano / Super</td><td class="m">2025-12 / 2026</td><td>Squared ReLU</td><td>Mamba-2 与注意力混合的 MoE，专家用 $\mathrm{ReLU}^2$（<code>mlp_hidden_act: relu2</code>），路由用 sigmoid；延续 Nemotron-4 和 Nemotron-H 的选择。</td></tr>
+      <tr><td>Cohere Tiny Aya</td><td class="m">2026-02</td><td>SwiGLU</td><td>3.35B dense，多语言小模型。</td></tr>
+      <tr><td>DeepSeek-V4</td><td class="m">2026</td><td>SwiGLU + clamping</td><td>与 gpt-oss 相同的 clamp 方式、无「加 1」，<code>swiglu_limit: 10.0</code>；路由打分 <code>scoring_func: sqrtsoftplus</code>；专家权重 <code>expert_dtype: fp4</code>。</td></tr>
+      <tr><td>Kimi K3</td><td class="m">2026-07</td><td>SiTU-GLU</td><td><code>hidden_act: situ</code>，<code>activation_situ_beta: 4.0</code>，<code>activation_situ_linear_beta: 25.0</code>，乘积上界 100；896 专家激活 16 个。</td></tr>
+      <tr><td>Gemma 4 31B</td><td class="m">2026</td><td>GeGLU<span class="tag">gelu_pytorch_tanh</span></td><td>仍是 tanh 近似 GELU gate，$d_{ff}=4d$（5376 → 21504）；最终 logits 再次使用 soft-capping，<code>final_logit_softcapping: 30.0</code>。</td></tr>
+      <tr><td>GLM-4.5、Mistral Small 3、OLMo 2/3、SmolLM3、MiniMax-M1 等</td><td class="m">2025</td><td>SwiGLU</td><td>Llama 式 dense 或 MoE 架构的常规选择，配置文件里写作 <code>hidden_act: silu</code>。</td></tr>
+      <tr><td>Grok-1</td><td class="m">2024-03 开源</td><td>GeGLU</td><td>xAI 开源的 JAX 代码里 MoE 专家用 GELU gate，与 Google 的模型一致。</td></tr>
+    </tbody>
+  </table></div>
+  <p>表里引用的配置字段都来自各模型在 Hugging Face 上的 <code>config.json</code>，实现细节来自 transformers 对应的 <code>modeling_*.py</code>，链接在文末。把表格读一遍，结论很清楚：SwiGLU 仍然是绝对主流；Google 的多个模型采用 GeGLU；真正的新东西集中在两个方向，一是限制 GLU 的输出范围（gpt-oss、DeepSeek-V4、Kimi K3），二是回到非门控的分段二次激活（Nemotron 的 Squared ReLU）。前者关注训练稳定性，后者使用两个投影矩阵实现具有二次增长特性的 FFN。</p>
+</section>
+
+<section id="s11">
+  <h2><span class="n">12</span>怎么选</h2>
+  <p class="sub">没有一个函数在所有目标上都最好。下面按最常见的几种处境给出判断。</p>
+  <p><strong>如果你在训练一个常规规模的 dense 或 MoE 模型</strong>，可以优先评估 SwiGLU。它有最多的训练配置、最成熟的 fused kernel、最多的量化和推理框架支持，任何替代方案带来的收益都要先付出「生态不兼容」的成本。选 GeGLU 也没问题，两者的效果需在相同设置下比较，唯一要确认的是 GELU 用精确版还是 tanh 近似版，并且训练推理保持一致。</p>
+  <p><strong>如果你的模型大到开始出现 loss spike，或者 MoE 的专家稀疏度很高</strong>，在设计阶段就限制 GLU 的输出范围。三种方案里，hard clamp 实现简单、内核改动最小；tanh soft-capping 的梯度更平滑，但需要多两次超越函数；gpt-oss 在线性分支加 1 的改动可以单独评估。阈值要从你自己的激活统计里定，不要照抄别人的 7 或者 25。</p>
+  <p><strong>如果主要目标是降低推理成本，并且部署环境是带宽受限的</strong>（端侧、CPU、单卡跑大模型），可以评估利用激活稀疏性减少计算和访存。从头训练可以直接用 Squared ReLU 或 dReLU；已有 SwiGLU 模型可以做 ReLUfication 微调，需要继续训练，并评估对模型质量的影响。这条路的收益完全取决于推理引擎能不能真正跳过零对应的权重，应先确认推理框架是否支持。</p>
+  <p><strong>如果你在做量化或者写推理内核</strong>，关注的不是 loss 而是数值范围和实现细节：有界的激活（clamp 过的 GLU、SiTU）对 W8A8 这类激活量化明显更友好；GELU 的两个版本不能混用；SiLU 的反向只需要存 sigmoid 值；Squared ReLU 的输出动态范围大，低比特激活量化要小心。</p>
+  <p>最后一条适用于所有情况：激活函数在这个领域里从来不是单独调的，它总是和归一化位置、初始化尺度、learning rate warmup、路由函数共同构成训练配置。换掉一个函数而不动其他部分，可能无法区分激活函数本身与其他配置不匹配造成的影响。</p>
+</section>
+
+<section id="s12">
+  <h2><span class="n">13</span>速查表与参考文献</h2>
+  <div class="tbl" id="activation-reference" data-toc-target><table>
+    <thead><tr><th>函数</th><th>$f(x)$</th><th>$f'(x)$</th><th>值域</th><th>典型位置</th></tr></thead>
+    <tbody>
+      <tr><td>Sigmoid</td><td>$\sigma(x)=\frac{1}{1+e^{-x}}$</td><td>$\sigma(x)(1-\sigma(x))$</td><td>$(0,1)$</td><td>各类 gate、MoE 路由</td></tr>
+      <tr><td>Tanh</td><td>$\tanh(x)$</td><td>$1-\tanh^2(x)$</td><td>$(-1,1)$</td><td>soft-capping $c\tanh(x/c)$</td></tr>
+      <tr><td>ReLU</td><td>$\max(0,x)$</td><td>$\mathbb{1}[x>0]$</td><td>$[0,\infty)$</td><td>稀疏推理</td></tr>
+      <tr><td>Squared ReLU</td><td>$\max(0,x)^2$</td><td>$2\max(0,x)$</td><td>$[0,\infty)$</td><td>Nemotron FFN</td></tr>
+      <tr><td>GELU</td><td>$x\,\Phi(x)$</td><td>$\Phi(x)+x\varphi(x)$</td><td>$[-0.17,\infty)$</td><td>GeGLU 的 gate</td></tr>
+      <tr><td>SiLU</td><td>$x\,\sigma(x)$</td><td>$\sigma(x)(1+x(1-\sigma(x)))$</td><td>$[-0.28,\infty)$</td><td>SwiGLU 的 gate</td></tr>
+      <tr><td>Softplus</td><td>$\log(1+e^x)$</td><td>$\sigma(x)$</td><td>$(0,\infty)$</td><td>Mamba 步长、参数约束</td></tr>
+      <tr><td>SiTU gate</td><td>$\beta_1\tanh(x/\beta_1)\,\sigma(x)$</td><td>$(1-\tanh^2)\sigma+\beta_1\tanh\cdot\sigma(1-\sigma)$</td><td>$(-\beta_1,\beta_1)$</td><td>Kimi K3 FFN</td></tr>
+    </tbody>
+  </table></div>
+  <div class="refs" id="references" data-toc-target><ol>
+    <li>Shazeer, N. <a href="https://arxiv.org/abs/2002.05202">GLU Variants Improve Transformer</a>, 2020.</li>
+    <li>Hendrycks, D. &amp; Gimpel, K. <a href="https://arxiv.org/abs/1606.08415">Gaussian Error Linear Units (GELUs)</a>, 2016.</li>
+    <li>Ramachandran, P. et al. <a href="https://arxiv.org/abs/1710.05941">Searching for Activation Functions</a>, 2017.</li>
+    <li>So, D. et al. <a href="https://arxiv.org/abs/2109.08668">Primer: Searching for Efficient Transformers for Language Modeling</a>, 2021.</li>
+    <li>Mirzadeh, I. et al. <a href="https://arxiv.org/abs/2310.04564">ReLU Strikes Back: Exploiting Activation Sparsity in Large Language Models</a>, ICLR 2024.</li>
+    <li>Song, Y. et al. <a href="https://arxiv.org/abs/2406.05955">Turbo Sparse: Achieving LLM SOTA Performance with Minimal Activated Parameters</a>, 2024.</li>
+    <li>NVIDIA. <a href="https://arxiv.org/abs/2512.20848">Nemotron 3 Nano: Open, Efficient Mixture-of-Experts Hybrid Mamba-Transformer Model</a>, 2025；<a href="https://arxiv.org/abs/2504.03624">Nemotron-H</a>, 2025.</li>
+    <li>DeepSeek. <a href="https://arxiv.org/abs/2606.19348">DeepSeek-V4: Towards Highly Efficient Million-Token Context Intelligence</a>, 2026.</li>
+    <li>Huang, J. <a href="https://jianyuh.github.io/llm/architecture/2026/07/18/Kimi-K3.html">Kimi K3 技术报告解读（SiTU-GLU 公式与常数）</a>, 2026.</li>
+    <li>Ceramic AI. <a href="https://www.ceramic.ai/blog/gpt-oss-swiglu">What's actually different about GPT-OSS?</a>；Adrian. <a href="https://www.adrian.idv.hk/2026-03-25-gptoss/">GPT-OSS Model</a>, 2026.</li>
+    <li>Qiu, Z. et al. <a href="https://arxiv.org/abs/2505.06708">Gated Attention for Large Language Models: Non-linearity, Sparsity, and Attention-Sink-Free</a>, NeurIPS 2025.</li>
+    <li>Raschka, S. <a href="https://magazine.sebastianraschka.com/p/the-big-llm-architecture-comparison">The Big LLM Architecture Comparison</a>, 2025；<a href="https://magazine.sebastianraschka.com/p/a-dream-of-spring-for-open-weight">A Dream of Spring for Open-Weight LLMs</a>, 2026.</li>
+    <li>Hugging Face. <a href="https://huggingface.co/docs/transformers/model_doc/gemma">Gemma 文档（gelu_pytorch_tanh 说明）</a>；<a href="https://huggingface.co/docs/transformers/model_doc/deepseek_v4">DeepSeek-V4 文档（swiglu_limit、scoring_func）</a>。</li>
+    <li>配置文件：<a href="https://huggingface.co/openai/gpt-oss-20b/blob/main/config.json">gpt-oss-20b</a>、<a href="https://huggingface.co/moonshotai/Kimi-K3/blob/main/config.json">Kimi-K3</a>、<a href="https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16/blob/main/config.json">Nemotron-3-Nano</a>、<a href="https://huggingface.co/Qwen/Qwen3-Next-80B-A3B-Instruct/blob/main/config.json">Qwen3-Next</a>、<a href="https://huggingface.co/google/gemma-3-4b-it/blob/main/config.json">Gemma-3-4b</a>、<a href="https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/main/config.json">DeepSeek-V4-Pro</a>、<a href="https://huggingface.co/google/gemma-4-31b-it/blob/main/config.json">Gemma-4-31b</a>。</li>
+    <li>实现代码（transformers）：<a href="https://github.com/huggingface/transformers/blob/main/src/transformers/models/gpt_oss/modeling_gpt_oss.py">modeling_gpt_oss.py</a>、<a href="https://github.com/huggingface/transformers/blob/main/src/transformers/models/deepseek_v4/modeling_deepseek_v4.py">modeling_deepseek_v4.py</a>、<a href="https://github.com/huggingface/transformers/blob/main/src/transformers/activations.py">activations.py</a>。</li>
+  </ol></div>
+</section>
+
+  </article>
+</div>
+<script>
+window.MathJax = { tex:{ inlineMath:[['$','$'],['\\(','\\)']], displayMath:[['$$','$$']] }, svg:{ fontCache:'global' }, options:{ skipHtmlTags:['script','noscript','style','textarea','pre','code'] } };
+</script>
+<script src="tex-svg.js"></script>
+<script>
+(function(){
+'use strict';
+/* ---------- math ---------- */
+const sig = x => x >= 0 ? 1/(1+Math.exp(-x)) : Math.exp(x)/(1+Math.exp(x));
+const tanh = Math.tanh;
+function erf(x){ const s = x<0?-1:1; x=Math.abs(x); const t=1/(1+0.3275911*x);
+  const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x); return s*y; }
+const Phi = x => 0.5*(1+erf(x/Math.SQRT2));
+const phi = x => Math.exp(-x*x/2)/Math.sqrt(2*Math.PI);
+const softplus = x => x>20 ? x : Math.log1p(Math.exp(x));
+const K = Math.sqrt(2/Math.PI);
+
+const FN = {
+  sigmoid:  { f: sig, d: x => sig(x)*(1-sig(x)) },
+  tanh:     { f: tanh, d: x => 1-tanh(x)**2 },
+  relu:     { f: x => Math.max(0,x), d: x => x===0?NaN:(x>0?1:0) },
+  relu2:    { f: x => Math.max(0,x)**2, d: x => x>0?2*x:0 },
+  gelu:     { f: x => x*Phi(x), d: x => Phi(x)+x*phi(x) },
+  geluTanh: { f: x => 0.5*x*(1+tanh(K*(x+0.044715*x**3))),
+              d: x => { const t=tanh(K*(x+0.044715*x**3)); return 0.5*(1+t)+0.5*x*(1-t*t)*K*(1+3*0.044715*x*x); } },
+  quickGelu:{ f: x => x*sig(1.702*x), d: x => { const s=sig(1.702*x); return s*(1+1.702*x*(1-s)); } },
+  silu:     { f: x => x*sig(x), d: x => { const s=sig(x); return s*(1+x*(1-s)); } },
+  softplus: { f: softplus, d: sig },
+  situ:     { f: (x,b1=4) => b1*tanh(x/b1)*sig(x),
+              d: (x,b1=4) => { const t=tanh(x/b1), s=sig(x); return (1-t*t)*s + b1*t*s*(1-s); } },
+  gptoss:   { f: x => { const g=Math.min(x,7); return g*sig(1.702*g); },
+              d: x => { if(x===7)return NaN; if (x>7) return 0; const s=sig(1.702*x); return s*(1+1.702*x*(1-s)); } },
+};
+const swish = b => ({ f: x => x*sig(b*x), d: x => { const s=sig(b*x); return s*(1+b*x*(1-s)); } });
+
+/* ---------- svg plot ---------- */
+const NS='http://www.w3.org/2000/svg';
+const el=(n,a={})=>{ const e=document.createElementNS(NS,n); for(const k in a) e.setAttribute(k,a[k]); return e; };
+let uid=0;
+function niceTicks(a,b){ const span=b-a; const raw=span/5; const p=Math.pow(10,Math.floor(Math.log10(raw)));
+  const m=raw/p; const step=(m<1.5?1:m<3.5?2:m<7.5?5:10)*p; const t=[]; for(let v=Math.ceil(a/step)*step; v<=b+1e-9; v+=step) t.push(+v.toFixed(6)); return t; }
+
+function plot(host, opt){
+  const W=440,H=250,ml=40,mr=12,mt=10,mb=28;
+  const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':opt.label||''});
+  const id='c'+(uid++);
+  const defs=el('defs'); const cp=el('clipPath',{id}); cp.appendChild(el('rect',{x:ml,y:mt,width:W-ml-mr,height:H-mt-mb})); defs.appendChild(cp); svg.appendChild(defs);
+  const [x0,x1]=opt.x, [y0,y1]=opt.y;
+  const sx=v=>ml+(v-x0)/(x1-x0)*(W-ml-mr), sy=v=>mt+(y1-v)/(y1-y0)*(H-mt-mb);
+  const g=el('g'); svg.appendChild(g);
+  for(const t of niceTicks(y0,y1)){ g.appendChild(el('line',{x1:ml,x2:W-mr,y1:sy(t),y2:sy(t),stroke:'var(--grid)','stroke-width':1}));
+    const l=el('text',{x:ml-6,y:sy(t)+3.5,'text-anchor':'end','font-size':10,fill:'var(--ink-3)','font-family':'JetBrains Mono, ui-monospace, monospace'}); l.textContent=t; g.appendChild(l); }
+  for(const t of niceTicks(x0,x1)){ g.appendChild(el('line',{y1:mt,y2:H-mb,x1:sx(t),x2:sx(t),stroke:'var(--grid)','stroke-width':1}));
+    const l=el('text',{x:sx(t),y:H-mb+14,'text-anchor':'middle','font-size':10,fill:'var(--ink-3)','font-family':'JetBrains Mono, ui-monospace, monospace'}); l.textContent=t; g.appendChild(l); }
+  if(y0<0&&y1>0) g.appendChild(el('line',{x1:ml,x2:W-mr,y1:sy(0),y2:sy(0),stroke:'var(--axis)','stroke-width':1}));
+  if(x0<0&&x1>0) g.appendChild(el('line',{y1:mt,y2:H-mb,x1:sx(0),x2:sx(0),stroke:'var(--axis)','stroke-width':1}));
+  const backdrop=el('g'); svg.appendChild(backdrop);
+  const layer=el('g',{'clip-path':`url(#${id})`}); svg.appendChild(layer);
+  const marks=el('g'); svg.appendChild(marks);
+  function annotate(node,label){
+    node.setAttribute('tabindex','0'); node.setAttribute('role','img'); node.setAttribute('aria-label',label);
+    const title=el('title'); title.textContent=label; node.appendChild(title);
+    node.addEventListener('pointerenter',()=>{tip.textContent=label;tip.hidden=false;tip.style.left='44px';tip.style.top='8px';});
+    node.addEventListener('pointerleave',()=>{tip.hidden=true;});
+    node.addEventListener('focus',()=>{tip.textContent=label;tip.hidden=false;tip.style.left='44px';tip.style.top='8px';});
+    node.addEventListener('blur',()=>{tip.hidden=true;});
+    marks.appendChild(node);
+  }
+  const cross=el('line',{y1:mt,y2:H-mb,stroke:'var(--ink-3)','stroke-width':1,'stroke-dasharray':'3 3',visibility:'hidden'}); svg.appendChild(cross);
+  const dots=el('g'); svg.appendChild(dots);
+  const wrap=document.createElement('div'); wrap.className='plotwrap'; wrap.appendChild(svg);
+  const tip=document.createElement('div'); tip.className='tip'; tip.hidden=true; wrap.appendChild(tip);
+  host.appendChild(wrap);
+  let series=[];
+  function draw(s,guides=null){ series=s; opt.guides=guides; layer.innerHTML=''; dots.innerHTML=''; marks.innerHTML=''; backdrop.innerHTML=''; tip.hidden=true;
+    if(guides){
+      for(const b of guides.bands||[]){
+        const a=Math.max(x0,b.a),z=Math.min(x1,b.b);if(a>=z)continue;
+        backdrop.appendChild(el('rect',{x:sx(a),y:mt,width:sx(z)-sx(a),height:H-mb-mt,fill:b.color||'var(--accent)',opacity:.09,'pointer-events':'none'}));
+      }
+      for(const r of guides.references||[]){
+        backdrop.appendChild(el('line',{x1:sx(r.a),x2:sx(r.b),y1:sy(r.y),y2:sy(r.endY??r.y),stroke:r.color||'var(--ink-3)','stroke-width':2.5,'stroke-dasharray':'9 5'}));
+        const t=el('text',{x:sx(r.labelX??((r.a+r.b)/2)),y:sy(r.labelY??r.y)+(r.dy??-9),'text-anchor':'middle',fill:r.color||'var(--ink-3)','font-size':10,stroke:'var(--surface)','stroke-width':3,'paint-order':'stroke'});t.textContent=r.label;backdrop.appendChild(t);
+      }
+      for(const v of guides.verticals||[]){
+        if(v.x<x0||v.x>x1)continue;
+        backdrop.appendChild(el('line',{x1:sx(v.x),x2:sx(v.x),y1:mt,y2:H-mb,stroke:'var(--ink-3)','stroke-dasharray':'4 4'}));
+        const t=el('text',{x:sx(v.x)+6,y:mt+13,fill:'var(--ink-2)','font-size':10});t.textContent=v.label;backdrop.appendChild(t);
+      }
+    }
+    const N=400;
+    for(const q of series){ if(q.hidden) continue; let d='', pen=false;
+      for(let i=0;i<=N;i++){ const x=x0+(x1-x0)*i/N; const y=q.fn(x);
+        if(!isFinite(y)){pen=false;continue;} if((q.breaks||[]).some(v=>x-(x1-x0)/N<=v&&x>=v))pen=false; const Y=Math.max(Math.min(y,y1+ (y1-y0)),y0-(y1-y0));
+        d+=(pen?'L':'M')+sx(x).toFixed(1)+' '+sy(Y).toFixed(1); pen=true; }
+      const p=el('path',{d,fill:'none',stroke:q.color,'stroke-width':q.width||2,'stroke-linejoin':'round','stroke-linecap':'round'});
+      if(q.dash) p.setAttribute('stroke-dasharray','6 4'); if(q.faint) p.setAttribute('opacity','.55'); layer.appendChild(p); }
+    if(opt.guides){
+      (opt.guides.bands||[]).forEach((b,i)=>{
+        if(b.shadeOnly)return;
+        const q=series[b.index??i]; if(!q||q.hidden)return;
+        let d=''; for(let j=0;j<=100;j++){const x=Math.max(x0,b.a)+(Math.min(x1,b.b)-Math.max(x0,b.a))*j/100;d+=(j?'L':'M')+sx(x)+' '+sy(q.fn(x));}
+        annotate(el('path',{'clip-path':`url(#${id})`,d,fill:'none',stroke:q.color,'stroke-width':4,'stroke-linecap':'round'}),b.label);
+        for(const x of [b.a,b.b].filter(x=>x>=x0&&x<=x1&&q.fn(x)>=y0&&q.fn(x)<=y1))annotate(el('circle',{cx:sx(x),cy:sy(q.fn(x)),r:4,fill:'var(--surface)',stroke:q.color,'stroke-width':2}),b.label+'；边界 x = '+x.toFixed(2));
+      });
+      for(const q of series.filter(q=>!q.hidden&&!q.dash&&!q.faint)){
+        for(const side of [-1,1]){
+          const x=side<0?x0+(x1-x0)*.06:x1-(x1-x0)*.06;
+          const xx=x-side*(x1-x0)*.035;
+          const px=sx(x),py=sy(q.fn(x)),angle=Math.atan2(py-sy(q.fn(xx)),px-sx(xx));
+          if(py<mt+6||py>H-mb-6)continue;
+          const dx=Math.cos(angle),dy=Math.sin(angle);
+          const d=`M ${px-7*dx+4*dy} ${py-7*dy-4*dx} L ${px} ${py} L ${px-7*dx-4*dy} ${py-7*dy+4*dx}`;
+          annotate(el('path',{d,fill:'none',stroke:q.color,'stroke-width':2.5,'stroke-linecap':'round','stroke-linejoin':'round'}),q.name+' · '+(side<0?opt.guides.left:opt.guides.right));
+        }
+      }
+      for(const m of opt.guides.points||[]){
+        if(m.x<x0||m.x>x1||m.y<y0||m.y>y1)continue;
+        annotate(el('circle',{cx:sx(m.x),cy:sy(m.y),r:4,fill:m.open?'var(--surface)':(m.color||'var(--ink)'),stroke:m.open?(m.color||'var(--ink)'):'var(--surface)','stroke-width':1.5}),m.label||('边界点 ('+m.x.toFixed(2)+', '+m.y.toFixed(2)+')'));
+        const label=el('text',{x:sx(m.x)+(m.dx??8),y:sy(m.y)+(m.dy??-10),fill:m.color||'var(--ink)','font-size':10,stroke:'var(--surface)','stroke-width':3,'paint-order':'stroke','pointer-events':'none'});
+        label.textContent=m.label;marks.appendChild(label);
+
+      }
+    }
+  }
+  function hover(ev){ if(ev.target.closest('[tabindex]'))return; const r=svg.getBoundingClientRect(); const px=(ev.clientX-r.left)/r.width*W; if(px<ml||px>W-mr){leave();return;}
+    const x=x0+(px-ml)/(W-ml-mr)*(x1-x0); cross.setAttribute('x1',sx(x)); cross.setAttribute('x2',sx(x)); cross.setAttribute('visibility','visible');
+    dots.innerHTML=''; let html=`<b>x</b> ${x.toFixed(2)}`;
+    for(const q of series){ if(q.hidden) continue; const y=q.fn(x); if(y>=y0&&y<=y1){ dots.appendChild(el('circle',{cx:sx(x),cy:sy(y),r:3.5,fill:q.color,stroke:'var(--surface)','stroke-width':1.5})); }
+      html+=`<br><span style="color:${q.color}">■</span> ${q.name} ${isFinite(y)?y.toFixed(3):'不可导'}`; }
+    tip.innerHTML=html; tip.hidden=false; const left=(ev.clientX-r.left); tip.style.top='8px'; tip.style.left=(left>r.width*0.6? left-tip.offsetWidth-12 : left+12)+'px'; }
+  function leave(){ cross.setAttribute('visibility','hidden'); dots.innerHTML=''; tip.hidden=true; }
+  svg.addEventListener('pointermove',hover); svg.addEventListener('pointerleave',leave);
+  return { draw };
+}
+
+/* ---------- figure builder ---------- */
+function figure(id, spec){
+  const fig=document.getElementById(id); if(!fig) return;
+  const cap=fig.querySelector('figcaption');
+    const legend=document.createElement('div'); legend.className='legend';
+  const controls=document.createElement('div'); controls.className='controls';
+  const panels=document.createElement('div'); panels.className='panels';
+  const mk=(t)=>{ const p=document.createElement('div'); p.className='panel'; const h=document.createElement('h4'); h.textContent=t; p.appendChild(h); panels.appendChild(p); return p; };
+  const pf=mk('f(x)'), pd=mk("f'(x)");
+  fig.insertBefore(legend,cap); fig.insertBefore(controls,cap); fig.insertBefore(panels,cap);
+  const state={};
+  let focusKey=null;
+  const P1=plot(pf,{x:spec.x,y:spec.yf,label:spec.label+' 函数',guides:undefined}), P2=plot(pd,{x:spec.x,y:spec.yd,label:spec.label+' 导数',guides:undefined});
+  const items=spec.series.map((s,i)=>({...s, hidden: s.on===false}));
+  if(spec.toggle){
+    for(const s of items){ const l=document.createElement('label'); l.style.setProperty('--c',s.color);
+      const c=document.createElement('input'); c.type='checkbox'; c.checked=!s.hidden; c.id=id+'-'+s.key;
+      c.addEventListener('change',()=>{ s.hidden=!c.checked; render(); });
+      const sw=document.createElement('i'); sw.className='sw'; l.append(c,sw,document.createTextNode(s.name)); controls.appendChild(l); }
+  } else {
+    for(const s of items){ const sp=document.createElement('span'); const i=document.createElement('i'); i.style.setProperty('--c',s.color); if(s.dash) i.className='dash'; sp.append(i,document.createTextNode(s.name)); legend.appendChild(sp); }
+  }
+  if(spec.sliders){ for(const sl of spec.sliders){ state[sl.key]=sl.value; const l=document.createElement('label');
+      const nm=document.createElement('span'); nm.innerHTML=sl.name; const inp=document.createElement('input'); inp.type='range'; inp.min=sl.min; inp.max=sl.max; inp.step=sl.step; inp.value=sl.value; inp.id=id+'-'+sl.key;
+      const v=document.createElement('span'); v.className='v'; v.textContent=(+sl.value).toFixed(2);
+      inp.addEventListener('input',()=>{ state[sl.key]=+inp.value; v.textContent=(+inp.value).toFixed(2); render(); });
+      l.append(nm,inp,v); controls.appendChild(l); } }
+  if(id==='fig-all'){
+    const label=document.createElement('label');label.appendChild(document.createTextNode('重点查看'));
+    const select=document.createElement('select');select.setAttribute('aria-label','总览重点函数');
+    for(const [value,name] of [['','全部比较'],...items.map(s=>[s.key,s.name])]){const o=document.createElement('option');o.value=value;o.textContent=name;select.appendChild(o);}
+    select.addEventListener('change',()=>{focusKey=select.value||null;render();});label.appendChild(select);controls.appendChild(label);
+  }
+  const status=document.createElement('div');status.className='chart-status';status.setAttribute('aria-live','polite');fig.insertBefore(status,cap);
+  if(!spec.toggle && !spec.sliders) controls.remove();
+  function render(){
+    const keys={'fig-logistic':'sigmoid','fig-normal-cdf':'normal','fig-relu':'relu','fig-relu2':'relu2','fig-silu':'sw','fig-softplus':'softplus'};
+    const active=focusKey?items.find(s=>s.key===focusKey):null;
+    const guides=(d)=>{
+      if(id==='fig-all')return active?curveGuides(active.key,d,state,active.color,spec.x):undefined;
+      if(keys[id])return curveGuides(keys[id],d,state,items[0].color,spec.x);
+      return d?spec.guidesD:spec.guidesF;
+    };
+    const data=d=>items.map(s=>({name:s.name,color:s.color,dash:s.dash,faint:s.faint||(active&&s!==active),hidden:active?false:s.hidden,breaks:d?(s.key==='relu'?[0]:s.key==='oss'?[7]:[]):[],fn:x=>(d?s.d:s.f)(x,state)}));
+    for(const d of [false,true]){
+      const g=guides(d);if(g&&active)g.bands.forEach(b=>b.index=items.indexOf(active));
+      (d?P2:P1).draw(data(d),g);
+    }
+    if(id==='fig-silu'){
+      const w=Math.log(9)/state.b,xmin=-1.278465/state.b;
+      status.textContent='gate 过渡区：['+(-w).toFixed(2)+', '+w.toFixed(2)+']；宽 '+(2*w).toFixed(2)+(w>4?'（色带超出当前视野）':'')+(xmin< -4?'；最低点位于视野左侧，x ≈ '+xmin.toFixed(2):'');
+    }else status.textContent='';
+  }
+  render();
+}
+const C=n=>`var(--s${n})`;
+const S=(key,name,color,fn,extra={})=>({key,name,color,f:x=>fn.f(x),d:x=>fn.d(x),...extra});
+
+
+const band=(a,b,color,label,index=0)=>({a,b,color,label,index});
+const point=(x,y,label,extra={})=>({x,y,label,...extra});
+const ref=(a,b,y,label,extra={})=>({a,b,y,label,...extra});
+function curveGuides(key,derivative,state={},color=C(1),range=[-4,4]){
+  const [lo,hi]=range,beta=state.b??1;
+  const result={bands:[],points:[],references:[],verticals:[],left:'当输入趋向负无穷',right:'当输入趋向正无穷'};
+  const zero=()=>result.references.push(ref(lo,0,0,derivative?'导数 → 0':'输出 → 0',{labelX:lo*.72}));
+  const linear=()=>result.references.push(derivative?ref(0,hi,1,'导数 → 1',{labelX:hi*.72,dy:18}):ref(0,hi,0,'y = x',{endY:hi,labelX:hi*.72,labelY:hi*.72,dy:18}));
+  if(key==='relu'||key==='relu2'){
+    result.bands=[{...band(lo,0,color,'负半轴：输出与导数严格为零'),shadeOnly:true}];
+    result.verticals=[{x:0,label:key==='relu'?'x = 0：折点':'x = 0：导数连续'}];
+    result.references=[ref(lo,0,0,'严格为零',{labelX:lo*.65})];
+    if(key==='relu'){
+      if(derivative){result.references.push(ref(0,hi,1,'斜率 = 1',{dy:18}));result.points=[point(0,0,'',{open:true}),point(0,1,'原点不可导',{open:true,dy:18})];}
+      else result.points=[point(0,0,'原点 (0, 0)')];
+    }else{
+      result.points=[point(0,0,derivative?'原点斜率 = 0':'原点 (0, 0)'),point(2,4,derivative?'x=2：斜率 4':'x=2：输出 4',{dx:-100}),point(2,derivative?1:2,derivative?'ReLU：斜率 1':'ReLU：输出 2',{dx:-100,color:C(2)})];
+    }
+  }else if(['sigmoid','tanh','normal'].includes(key)){
+    const w=key==='normal'?1.281552:Math.log(9)/(key==='tanh'?2:1);
+    result.bands=[band(-w,w,color,'输出变化的 10%–90%：宽 '+(2*w).toFixed(2))];
+    const f0=key==='tanh'?0:.5,d0=key==='normal'?phi(0):key==='tanh'?1:.25;
+    result.points=[point(0,derivative?d0:f0,derivative?'原点斜率 '+d0.toFixed(3):'x=0，输出 '+f0,{dy:18})];
+    result.references=[ref(lo,0,derivative?0:key==='tanh'?-1:0,derivative?'导数 → 0':'饱和参考',{labelX:lo*.7,dy:16}),ref(0,hi,derivative?0:1,derivative?'导数 → 0':'输出 → 1',{labelX:hi*.7,dy:16})];
+  }else if(['silu','sw','gelu','softplus'].includes(key)){
+    const w=key==='gelu'?2:Math.log(9)/(key==='sw'?beta:1);
+    result.bands=[band(-w,w,color,key==='gelu'?'主要变化范围 ≈ [−2, 2]':(key==='softplus'?'斜率':'gate')+' 10%–90%，宽 '+(2*w).toFixed(2))];zero();linear();
+    result.points=[point(0,derivative?.5:key==='softplus'?Math.log(2):0,derivative?'原点斜率 = 0.5':key==='softplus'?'f(0) = ln 2 ≈ 0.693':'原点 (0, 0)')];
+    if(!derivative&&key!=='softplus'){
+      const x=key==='gelu'?-.7518:-1.278465/(key==='sw'?beta:1),y=key==='gelu'?FN.gelu.f(x):swish(key==='sw'?beta:1).f(x);
+      result.points.push(point(x,y,'最低点 ('+x.toFixed(2)+', '+y.toFixed(2)+')',{dx:-70,dy:22}));
+    }
+  }
+  result.points=result.points.map(p=>({color,...p}));return result;
+}
+/* 引言：四个要素的对照图 */
+figure('fig-intro-neg',{ guidesF:{bands:[{...band(-6,-2,null,'负半轴远端'),shadeOnly:true}],references:[ref(-6,-2,0,'ReLU 严格为零；SiLU → 0⁻',{labelX:-4}),ref(-6,-2,-1,'tanh → −1',{labelX:-4,dy:16,color:C(3)})],left:'当 x → −∞',right:'向原点方向'},guidesD:{bands:[{...band(-6,-2,null,'负半轴远端'),shadeOnly:true}],references:[ref(-6,-2,0,'ReLU 导数 = 0；SiLU、tanh 导数 → 0',{labelX:-3.8})],left:'当 x → −∞：导数 → 0',right:'向原点方向'}, label:'负半轴远端', x:[-6,2], yf:[-1.5,2], yd:[-0.3,1.2], series:[ S('relu','ReLU',C(1),FN.relu), S('silu','SiLU',C(2),FN.silu), S('tanh','tanh',C(3),FN.tanh) ]});
+figure('fig-intro-zero',{ guidesF:{verticals:[{x:0,label:'x = 0'}],points:[point(0,0,'ReLU、SiLU：f(0) = 0',{dy:18}),point(0,.5,'Sigmoid：f(0) = 0.5',{color:C(3)})],left:'向负半轴延伸',right:'向正半轴延伸'},guidesD:{verticals:[{x:0,label:''}],points:[point(0,0,'ReLU：左极限 0',{open:true,color:C(1),dy:18}),point(0,1,'ReLU：右极限 1，原点不可导',{open:true,color:C(1)}),point(0,.5,'SiLU：f′(0) = 0.5',{color:C(2)}),point(0,.25,'Sigmoid：f′(0) = 0.25',{color:C(3),dy:14})],left:'向负半轴延伸',right:'向正半轴延伸'}, label:'零点', x:[-2,2], yf:[-0.5,1.5], yd:[-0.2,1.2], series:[ S('relu','ReLU',C(1),FN.relu), S('silu','SiLU',C(2),FN.silu), S('sig','Sigmoid',C(3),FN.sigmoid) ]});
+figure('fig-intro-trans',{ guidesF:{bands:[band(-2,2,C(2),'GELU 主要变化范围 ≈ [−2, 2]',1)],verticals:[{x:0,label:'ReLU：过渡集中在 x = 0'}],points:[point(-.7518,FN.gelu.f(-.7518),'GELU 最低点 ≈ (−0.75, −0.17)',{color:C(2),dx:-118,dy:22})],left:'当 x → −∞',right:'当 x → +∞'},guidesD:{bands:[band(-2,2,C(2),'GELU 主要变化范围 ≈ [−2, 2]',1)],verticals:[{x:0,label:'ReLU：导数在 x = 0 跳变'}],points:[point(-Math.SQRT2,FN.gelu.d(-Math.SQRT2),'GELU 导数最小 ≈ −0.129',{color:C(2),dx:-64,dy:18}),point(Math.SQRT2,FN.gelu.d(Math.SQRT2),'GELU 导数最大 ≈ 1.129',{color:C(2),dx:-30,dy:-10})],left:'当 x → −∞',right:'当 x → +∞'}, label:'过渡区', x:[-4,4], yf:[-1,3], yd:[-0.4,1.6], series:[ S('relu','ReLU',C(1),FN.relu), S('gelu','GELU',C(2),FN.gelu), S('sig','Sigmoid',C(3),FN.sigmoid) ]});
+figure('fig-intro-pos',{ guidesF:{bands:[{...band(2,6,null,'正半轴远端'),shadeOnly:true}],references:[ref(2,6,1,'tanh → 1：有上界',{color:C(3),labelX:4}),ref(0,6,0,'SiLU ≈ x：线性增长',{endY:6,labelX:4.4,labelY:3.0,dy:24,color:C(1)})],points:[point(2,4,'ReLU²：x = 2 时输出 4',{color:C(2),dx:-126,dy:-8})],left:'向原点方向',right:'当 x → +∞'},guidesD:{bands:[{...band(2,6,null,'正半轴远端'),shadeOnly:true}],references:[ref(2,6,1,'SiLU 导数 → 1',{color:C(1),labelX:4}),ref(2,6,0,'tanh 导数 → 0',{color:C(3),labelX:4,dy:16})],points:[point(1,2,'ReLU²：导数 = 2x，无上界',{color:C(2),dx:8,dy:-8})],left:'向原点方向',right:'当 x → +∞'}, label:'正半轴远端', x:[-2,6], yf:[-1,7], yd:[-0.3,3], series:[ S('silu','SiLU',C(1),FN.silu), S('tanh','tanh',C(3),FN.tanh), S('relu2','ReLU²',C(2),FN.relu2) ]});
+figure('fig-logistic',{ label:'Logistic sigmoid', x:[-6,6], yf:[-0.05,1.05], yd:[-0.02,0.45], series:[ S('logistic','Logistic σ(x)',C(1),FN.sigmoid) ]});
+figure('fig-normal-cdf',{ label:'标准正态累积分布 Φ(x)', x:[-6,6], yf:[-0.05,1.05], yd:[-0.02,0.45], series:[ S('normal-cdf','Φ(x)',C(3),{f:Phi,d:phi}) ]});
+
+figure('fig-all',{ label:'总览', x:[-4,4], yf:[-1,4], yd:[-0.5,2.5], toggle:true, series:[
+  S('relu','ReLU',C(1),FN.relu), S('relu2','ReLU²',C(2),FN.relu2), S('gelu','GELU',C(3),FN.gelu), S('silu','SiLU',C(4),FN.silu),
+  S('softplus','Softplus',C(6),FN.softplus,{on:false}), S('sigmoid','Sigmoid',C(7),FN.sigmoid,{on:false}), S('tanh','Tanh',C(8),FN.tanh,{on:false}) ]});
+const sigBands=[{a:-Math.log(9),b:Math.log(9),label:'Sigmoid 10–90% · 宽 4.39',color:C(1)},{a:-Math.log(9)/2,b:Math.log(9)/2,label:'Tanh 10–90% · 宽 2.20',color:C(2)}];
+const geluBands=[{a:-2,b:2,label:'主要过渡区 ≈ [−2, 2]',color:C(1)}];
+figure('fig-sig',{ guidesF:{references:[{a:-6,b:0,labelX:-4.4,y:0,label:'σ → 0',color:C(1)},{a:-6,b:0,labelX:-4.4,y:-1,label:'tanh → −1',color:C(2)},{a:0,b:6,labelX:4.4,y:1,label:'饱和区 · → 1',dy:16}],left:'当 x → −∞：σ → 0 / tanh → −1',right:'当 x → +∞：两者 → 1',bands:sigBands,points:[{x:0,y:.5,label:'σ(0) = 0.5',color:C(1)},{x:0,y:0,label:'tanh(0) = 0',dy:18,color:C(2)}]},guidesD:{references:[{a:-6,b:0,labelX:-4.4,y:0,label:'饱和区 · 导数 → 0'},{a:0,b:6,labelX:4.4,y:0,label:'饱和区 · 导数 → 0'}],left:'当 x → −∞：导数 → 0⁺',right:'当 x → +∞：导数 → 0⁺',bands:sigBands,points:[{x:0,y:.25,label:'σ′(0) = 0.25',color:C(1)},{x:0,y:1,label:'tanh′(0) = 1',dy:16,color:C(2)}]}, label:'Sigmoid 与 Tanh', x:[-6,6], yf:[-1.2,1.2], yd:[-0.1,1.1], series:[ S('sig','Sigmoid',C(1),FN.sigmoid), S('tanh','Tanh',C(2),FN.tanh) ]});
+figure('fig-relu',{ label:'ReLU', x:[-4,4], yf:[-1,4], yd:[-0.2,1.2], series:[ S('relu','ReLU',C(1),FN.relu) ]});
+figure('fig-gelu',{ guidesF:{references:[{a:-4,b:0,labelX:-3,y:0,label:'饱和区 · → 0'},{a:0,b:4,y:0,endY:4,labelX:2.9,labelY:2.9,label:'近似线性增长 · y = x',dy:24}],left:'当 x → −∞：输出 → 0⁻',right:'当 x → +∞：输出 ≈ x',bands:geluBands,points:[{x:-.7518,y:FN.gelu.f(-.7518),label:'最低点 ≈ (−0.75, −0.17)',dx:-104,dy:23},{x:0,y:0,label:'原点 (0, 0)',dy:-14}]},guidesD:{references:[{a:-4,b:0,labelX:-3,y:0,label:'导数 → 0'},{a:0,b:4,labelX:3,y:1,label:'导数 → 1',dy:20}],left:'当 x → −∞：导数 → 0⁻',right:'当 x → +∞：导数 → 1',bands:geluBands,points:[{x:-Math.SQRT2,y:FN.gelu.d(-Math.SQRT2),label:'导数最小 ≈ −0.129',dx:-65,dy:18},{x:0,y:.5,label:'x = 0，斜率 0.5'},{x:Math.SQRT2,y:FN.gelu.d(Math.SQRT2),label:'导数最大 ≈ 1.129',dx:-20,dy:-10}]}, label:'GELU', x:[-4,4], yf:[-1,4], yd:[-0.3,1.3], series:[ S('gelu','GELU (erf)',C(1),FN.gelu), S('gt','GELU (tanh 近似)',C(2),FN.geluTanh,{dash:true}), S('qg','GELU (quick 近似)',C(3),FN.quickGelu,{dash:true,faint:true}) ]});
+figure('fig-silu',{ label:'Swish', x:[-4,4], yf:[-1,4], yd:[-0.3,1.3], sliders:[{key:'b',name:'β',min:0.1,max:5,step:0.05,value:1}], series:[
+  { key:'sw', name:'Swish_β', color:C(1), f:(x,s)=>swish(s.b).f(x), d:(x,s)=>swish(s.b).d(x) },
+  S('relu','ReLU（参考）',C(2),FN.relu,{dash:true,faint:true}) ]});
+figure('fig-cap',{ guidesF:{bands:[band(-Math.log(9),Math.log(9),C(1),'零附近的 gate 过渡')],verticals:[{x:7,label:'g = 7：截断'}],references:[ref(-4,0,0,'输出 → 0'),ref(0,12,4,'SiTU → 4',{color:C(3),labelX:10}),ref(7,12,FN.gptoss.f(7),'截断后恒定 ≈ 7',{color:C(2),labelX:9.5}),ref(0,12,0,'SiLU ≈ g',{endY:12,labelX:9,labelY:9})],points:[point(0,0,'原点 (0, 0)')]},guidesD:{bands:[band(-Math.log(9),Math.log(9),C(1),'零附近的 gate 过渡')],verticals:[{x:7,label:'g = 7：不可导'}],references:[ref(-4,0,0,'导数 → 0'),ref(0,12,1,'SiLU → 1',{labelX:10,dy:-12}),ref(0,12,0,'SiTU → 0',{color:C(3),labelX:4,dy:18})],points:[point(7,0,'截断后斜率 = 0',{open:true,dy:18,color:C(2)}),point(7,FN.quickGelu.d(7),'',{open:true,color:C(2)}),point(0,.5,'原点斜率 = 0.5')]}, label:' gate 分支的三种处理', x:[-4,12], yf:[-1,12], yd:[-0.3,1.5], series:[ S('silu','SiLU',C(1),FN.silu), S('oss','gpt-oss gate ',C(2),FN.gptoss), S('situ','SiTU gate (β₁=4)',C(3),FN.situ) ]});
+figure('fig-relu2',{ label:'Squared ReLU', x:[-3,3], yf:[-0.5,6], yd:[-0.5,6], series:[ S('relu2','ReLU²',C(1),FN.relu2), S('relu','ReLU',C(2),FN.relu,{dash:true,faint:true}) ]});
+figure('fig-softplus',{ label:'Softplus', x:[-5,5], yf:[-0.5,5], yd:[-0.1,1.1], series:[ S('sp','Softplus',C(1),FN.softplus), S('relu','ReLU',C(2),FN.relu,{dash:true,faint:true}) ]});
+
+/* ---------- SwiGLU heatmap ---------- */
+(function(){
+  const fig=document.getElementById('fig-glu'); if(!fig) return; const cap=fig.querySelector('figcaption');
+  const box=document.createElement('div'); box.className='heat';
+  const left=document.createElement('div'); left.className='plotwrap';
+  const cv=document.createElement('canvas'); const N=160; cv.width=N; cv.height=N; cv.setAttribute('aria-label','SwiGLU 通道输出热图，横轴 g 从 −4 到 4，纵轴 u 从下到上为 −4 到 4');
+  const yTitle=document.createElement('div');yTitle.className='heat-axis-title';yTitle.textContent='线性分支 u';left.appendChild(yTitle);
+  const imageBox=document.createElement('div');imageBox.className='heat-image';imageBox.appendChild(cv);
+  const yTicks=document.createElement('div');yTicks.className='heat-y-ticks';yTicks.innerHTML='<span>4</span><span>0</span><span>−4</span>';imageBox.appendChild(yTicks);left.appendChild(imageBox);
+  const axes=document.createElement('div');axes.className='heat-x-ticks';axes.innerHTML='<span>−4</span><span>0</span><span>4</span>';left.appendChild(axes);
+  const xTitle=document.createElement('div');xTitle.className='heat-x-label';xTitle.textContent='门控分支 g';left.appendChild(xTitle);
+  const tip=document.createElement('div'); tip.className='tip'; tip.hidden=true; imageBox.appendChild(tip);
+  const cb=document.createElement('div'); cb.className='cbar'; cb.innerHTML='<span>+8</span><div class="bar"></div><span>−8</span><span style="margin-top:6px;text-align:center">SiLU(g)·u</span>';
+  const heatTitle=document.createElement('h4');heatTitle.className='glu-view-title';heatTitle.textContent='两个分支一起变化时，输出是什么？';fig.insertBefore(heatTitle,cap);
+  box.append(left,cb); fig.insertBefore(box,cap);
+  const hex=v=>{ v=v.trim(); const n=parseInt(v.slice(1),16); return [(n>>16)&255,(n>>8)&255,n&255]; };
+  const mix=(a,b,t)=>a.map((c,i)=>Math.round(c+(b[i]-c)*t));
+  function draw(){ const cs=getComputedStyle(document.documentElement); const neg=hex(cs.getPropertyValue('--div-neg')), mid=hex(cs.getPropertyValue('--div-mid')), pos=hex(cs.getPropertyValue('--div-pos'));
+    const ctx=cv.getContext('2d'); const img=ctx.createImageData(N,N); const L=8;
+    for(let j=0;j<N;j++){ const u=4-8*j/(N-1); for(let i=0;i<N;i++){ const g=-4+8*i/(N-1); let v=FN.silu.f(g)*u; v=Math.max(-L,Math.min(L,v))/L;
+      const c= v<0 ? mix(mid,neg,-v) : mix(mid,pos,v); const k=(j*N+i)*4; img.data[k]=c[0]; img.data[k+1]=c[1]; img.data[k+2]=c[2]; img.data[k+3]=255; } }
+    ctx.putImageData(img,0,0);
+  }
+  draw();
+  cv.addEventListener('pointermove',ev=>{ const r=cv.getBoundingClientRect(); const g=-4+8*(ev.clientX-r.left)/r.width, u=4-8*(ev.clientY-r.top)/r.height;
+    tip.innerHTML=`<b>g</b> ${g.toFixed(2)} <b>u</b> ${u.toFixed(2)}<br><b>SiLU(g)·u</b> ${(FN.silu.f(g)*u).toFixed(3)}`; tip.hidden=false; const x=ev.clientX-r.left; tip.style.top=(ev.clientY-r.top+14)+'px'; tip.style.left=(x>r.width*0.6? x-tip.offsetWidth-12 : x+12)+'px'; });
+  cv.addEventListener('pointerleave',()=>{ tip.hidden=true; });
+  const mq=matchMedia('(prefers-color-scheme: dark)'); mq.addEventListener?.('change',draw);
+  new MutationObserver(draw).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+})();
+
+/* ---------- toc ---------- */
+(function(){
+  const nav=document.querySelector('.toc');
+  const links=[...nav.querySelectorAll('a')];
+  const targets=links.map(a=>document.getElementById(a.hash.slice(1)));
+  const toggle=nav.querySelector('.toc-toggle');
+  const narrow=matchMedia('(max-width:1000px)');
+  function resetToggle(){toggle.setAttribute('aria-expanded',String(!narrow.matches));}
+  resetToggle(); narrow.addEventListener('change',resetToggle);
+  toggle.addEventListener('click',()=>toggle.setAttribute('aria-expanded',String(toggle.getAttribute('aria-expanded')!=='true')));
+  nav.addEventListener('click',e=>{if(e.target.closest('a')&&narrow.matches)toggle.setAttribute('aria-expanded','false');});
+  let pending=false;
+  function update(){
+    pending=false;
+    const line=Math.min(160,innerHeight*.2);
+    let current=0;
+    targets.forEach((target,i)=>{if(target.getBoundingClientRect().top<=line)current=i;});
+    if(scrollY+innerHeight>=document.documentElement.scrollHeight-2)current=targets.length-1;
+    const section=targets[current].closest('section');
+    links.forEach((a,i)=>{
+      a.classList.toggle('on',i===current);
+      a.classList.toggle('in-section',a.hash==='#'+section.id&&i!==current);
+      if(i===current)a.setAttribute('aria-current','location');else a.removeAttribute('aria-current');
+    });
+  }
+  function schedule(){if(!pending){pending=true;requestAnimationFrame(update);}}
+  addEventListener('scroll',schedule,{passive:true});
+  addEventListener('resize',schedule); addEventListener('hashchange',schedule); addEventListener('load',schedule);
+  if('ResizeObserver' in window)new ResizeObserver(schedule).observe(document.querySelector('article'));
+  update();
+})();
+})();
+</script>
+
+
+</body></html>

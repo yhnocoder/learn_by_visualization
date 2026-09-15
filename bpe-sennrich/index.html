@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BPE 演示：训练与推理</title>
+<style>
+  :root{
+    --bg:#f4f5f2;
+    --paper:#fbfbf9;
+    --ink:#2c3136;
+    --ink-2:#6b7278;
+    --rule:#dcdfd9;
+    --slate:#5f7280;
+    --slate-soft:#dfe6ea;
+    --sage:#c8d3c2;
+    --sage-deep:#7c8f74;
+    --focus:#8fa3b1;
+    --mono:"SF Mono","JetBrains Mono","Fira Code",Menlo,Consolas,monospace;
+    --sans:-apple-system,"PingFang SC","Hiragino Sans GB","Noto Sans CJK SC","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.6}
+  body{padding:28px 32px 60px;max-width:1180px;margin:0 auto}
+  h1{font-size:22px;font-weight:600;margin:0 0 4px;letter-spacing:.01em}
+  .sub{color:var(--ink-2);margin:0 0 22px;font-size:14px}
+  .sub code{font-family:var(--mono);font-size:13px}
+
+  .tabs{display:flex;gap:2px;border-bottom:1px solid var(--rule);margin-bottom:22px}
+  .tab{background:none;border:0;padding:8px 14px 10px;font:inherit;font-size:15px;color:var(--ink-2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--slate);font-weight:600}
+  .tab:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:3px}
+  .panel{display:none}.panel.on{display:block}
+
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:26px;align-items:start}
+  @media (max-width:860px){.grid{grid-template-columns:1fr}}
+
+  section{margin-bottom:22px}
+  h2{font-size:14px;font-weight:600;margin:0 0 8px;color:var(--ink)}
+  h2 small{font-weight:400;color:var(--ink-2);margin-left:8px}
+  .box{background:var(--paper);border:1px solid var(--rule);border-radius:6px;padding:14px 16px}
+
+  textarea,input[type=text]{font:inherit;font-family:var(--mono);font-size:13.5px;width:100%;border:1px solid var(--rule);border-radius:4px;padding:8px 10px;background:#fff;color:var(--ink);resize:vertical}
+  textarea:focus,input:focus{outline:2px solid var(--focus);outline-offset:1px;border-color:transparent}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+  button.btn{font:inherit;font-size:14px;padding:6px 14px;border-radius:4px;border:1px solid var(--slate);background:var(--slate);color:#fff;cursor:pointer}
+  button.btn.quiet{background:transparent;color:var(--slate)}
+  button.btn:disabled{opacity:.4;cursor:default}
+  button.btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+  label.inline{display:inline-flex;align-items:center;gap:6px;color:var(--ink-2);font-size:14px}
+  input[type=number]{font:inherit;width:64px;padding:4px 6px;border:1px solid var(--rule);border-radius:4px}
+  .hint{color:var(--ink-2);font-size:13px;margin-top:8px}
+
+  table{border-collapse:collapse;width:100%;font-size:14px}
+  th{text-align:left;font-weight:500;color:var(--ink-2);padding:4px 8px 6px;border-bottom:1px solid var(--rule)}
+  td{padding:5px 8px;vertical-align:middle;border-bottom:1px solid #eceee9}
+  tr:last-child td{border-bottom:0}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  td.w{font-family:var(--mono);font-size:13px;color:var(--ink-2)}
+
+  .sym{display:inline-block;font-family:var(--mono);font-size:13px;padding:1px 6px;border-radius:3px;margin:1px 2px 1px 0;border:1px solid rgba(0,0,0,.06);line-height:1.5}
+  .sym.hit{box-shadow:0 0 0 2px var(--slate);position:relative}
+  .sym.new{animation:pop .6s ease-out}
+  @keyframes pop{0%{background:var(--sage-deep);color:#fff}100%{}}
+  @media (prefers-reduced-motion:reduce){.sym.new{animation:none}}
+
+  .pairs{display:flex;flex-wrap:wrap;gap:6px}
+  .pair{font-family:var(--mono);font-size:13px;padding:3px 8px;border:1px solid var(--rule);border-radius:4px;background:#fff;color:var(--ink-2)}
+  .pair b{font-weight:500;color:var(--ink)}
+  .pair.top{border-color:var(--slate);background:var(--slate-soft);color:var(--ink)}
+  .pair .n{margin-left:6px;font-size:12px}
+  .pair.unk{color:#a3a8ac;border-style:dashed}
+
+  ol.merges{margin:0;padding-left:26px;font-family:var(--mono);font-size:13px}
+  ol.merges li{padding:2px 0;color:var(--ink-2)}
+  ol.merges li.cur{color:var(--ink);font-weight:600}
+  ol.merges li.done{color:var(--ink)}
+  ol.merges li .arrow{margin:0 6px;color:var(--ink-2);font-weight:400}
+  .vocab{display:flex;flex-wrap:wrap;gap:3px}
+  .empty{color:var(--ink-2);font-size:13px}
+
+  .steps{list-style:none;margin:0;padding:0}
+  .steps li{display:grid;grid-template-columns:44px 1fr;gap:10px;padding:8px 0;border-bottom:1px solid #eceee9;align-items:start}
+  .steps li:last-child{border-bottom:0}
+  .steps .k{font-family:var(--mono);font-size:12px;color:var(--ink-2);padding-top:3px}
+  .steps .rule{font-family:var(--mono);font-size:13px;margin-bottom:3px}
+  .steps .skip .rule{color:var(--ink-2)}
+  .steps .skip .rule::after{content:"  未命中，跳过";font-family:var(--sans);font-size:12px}
+  .steps .apply .rule::after{content:"  命中";font-family:var(--sans);font-size:12px;color:var(--sage-deep)}
+  .result{margin-top:12px;padding-top:12px;border-top:1px solid var(--rule)}
+  .result .lbl{color:var(--ink-2);font-size:13px;margin-right:8px}
+  .note{background:var(--slate-soft);border-radius:6px;padding:10px 14px;font-size:14px;color:var(--ink);margin-top:14px}
+</style>
+</head>
+<body>
+
+<h1>BPE 演示</h1>
+<p class="sub">按 Sennrich et al. (2016) 的算法：训练阶段反复合并语料中最高频的相邻符号对，推理阶段按训练得到的合并顺序切分新词。词尾用 <code>&lt;/w&gt;</code> 标记。</p>
+
+<div class="tabs" role="tablist">
+  <button class="tab" role="tab" aria-selected="true" data-tab="train">训练</button>
+  <button class="tab" role="tab" aria-selected="false" data-tab="infer">推理</button>
+</div>
+
+<!-- ================= 训练 ================= -->
+<div class="panel on" id="train">
+<div class="grid">
+  <div>
+    <section>
+      <h2>语料<small>每行一个词，后面可跟频次；不写频次就按出现次数统计</small></h2>
+      <div class="box">
+        <textarea id="corpus" rows="5" spellcheck="false">low 5
+lower 2
+newest 6
+widest 3</textarea>
+        <div class="row">
+          <button class="btn quiet" id="btnReset">重新开始</button>
+          <label class="inline">目标合并次数 <input type="number" id="maxMerges" min="1" max="200" value="10"></label>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>词典状态<small>每个词已拆成符号序列</small></h2>
+      <div class="box">
+        <table>
+          <thead><tr><th>词</th><th>符号序列</th><th class="num">频次</th></tr></thead>
+          <tbody id="wordTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>相邻符号对频次<small>按频次排序，最高的那一对将被合并</small></h2>
+      <div class="box">
+        <div class="pairs" id="pairs"></div>
+        <div class="row">
+          <button class="btn quiet" id="btnBack" disabled>上一步</button>
+          <button class="btn" id="btnStep">合并一次</button>
+          <button class="btn quiet" id="btnAuto">自动播放</button>
+          <button class="btn quiet" id="btnAll">合并到目标次数</button>
+          <span class="hint" id="trainStatus"></span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div>
+    <section>
+      <h2>合并规则<small>按学到的顺序</small></h2>
+      <div class="box"><ol class="merges" id="mergeList"></ol><div class="empty" id="mergeEmpty">还没有合并。</div></div>
+    </section>
+    <section>
+      <h2>当前词表<small id="vocabCount"></small></h2>
+      <div class="box"><div class="vocab" id="vocab"></div></div>
+    </section>
+  </div>
+</div>
+</div>
+
+<!-- ================= 推理 ================= -->
+<div class="panel" id="infer">
+<div class="grid">
+  <div>
+    <section>
+      <h2>输入新词</h2>
+      <div class="box">
+        <input type="text" id="word" value="lowest" spellcheck="false">
+        <div class="row">
+          <label class="inline"><input type="radio" name="mode" value="scan" checked> 按规则顺序扫描</label>
+          <label class="inline"><input type="radio" name="mode" value="prio"> 每次取优先级最高的对</label>
+        </div>
+        <div class="row">
+          <button class="btn" id="btnTok">开始切分</button>
+          <button class="btn quiet" id="btnNext" disabled>下一条规则</button>
+          <button class="btn quiet" id="btnAll" disabled>全部执行</button>
+          <span class="hint" id="inferStatus"></span>
+        </div>
+        <div class="hint">推理不再统计频次，只看训练学到的规则顺序。两种模式结果相同：「扫描」是从第 1 条规则起逐条试；「取优先级最高」是 Sennrich 参考实现的做法，每次在当前序列里找排名最靠前的相邻对合并，直到没有规则可用。</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>当前序列的相邻符号对<small>标注命中的规则序号；没在规则表里的对标为未见过</small></h2>
+      <div class="box"><div class="pairs" id="inferPairs"><span class="empty">还没开始。</span></div></div>
+    </section>
+
+    <section>
+      <h2>逐规则过程</h2>
+      <div class="box">
+        <ol class="steps" id="steps"></ol>
+        <div class="empty" id="stepsEmpty">先训练几步，再回来切分。</div>
+        <div class="result" id="result" hidden><span class="lbl">结果</span><span id="resultSyms"></span></div>
+      </div>
+    </section>
+  </div>
+
+  <div>
+    <section>
+      <h2>合并规则<small>来自训练</small></h2>
+      <div class="box"><ol class="merges" id="mergeList2"></ol><div class="empty" id="mergeEmpty2">还没有合并规则。</div></div>
+    </section>
+    <section>
+      <h2>当前词表<small id="vocabCount2"></small></h2>
+      <div class="box"><div class="vocab" id="vocab2"></div></div>
+    </section>
+  </div>
+</div>
+</div>
+
+<script>
+(function(){
+  const EOW = '</w>';
+  const $ = id => document.getElementById(id);
+
+  // ---------- 低饱和色块，按符号哈希分配 ----------
+  const palette = [
+    ['#e5e9ee','#3d4a55'],['#e3e9df','#41513a'],['#ece6dd','#5a4e3c'],
+    ['#e9e3ea','#54455a'],['#dfe8e8','#3b5556'],['#eee7df','#5c4b3c'],
+    ['#e6e6ea','#45455a'],['#e2eae4','#3c5445']
+  ];
+  function colorOf(sym){
+    let h=0; for(const c of sym) h=(h*31+c.charCodeAt(0))>>>0;
+    return palette[h%palette.length];
+  }
+  function chip(sym, cls){
+    const [bg,fg]=colorOf(sym);
+    return `<span class="sym${cls?' '+cls:''}" style="background:${bg};color:${fg}">${esc(sym)}</span>`;
+  }
+  function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+  // ---------- 训练状态 ----------
+  let words = [];   // [{orig, syms:[...], freq}]
+  let merges = [];  // [[a,b], ...]
+  let lastMerged = null;
+  let autoTimer = null;
+  let history = []; // 每次合并前的 syms 快照
+
+  function parseCorpus(text){
+    const counts = new Map();
+    for(const raw of text.split('\n')){
+      const line = raw.trim(); if(!line) continue;
+      const parts = line.split(/\s+/);
+      const last = parts[parts.length-1];
+      if(parts.length>=2 && /^\d+$/.test(last)){
+        const w = parts.slice(0,-1).join('');
+        counts.set(w,(counts.get(w)||0)+parseInt(last,10));
+      }else{
+        for(const w of parts) counts.set(w,(counts.get(w)||0)+1);
+      }
+    }
+    return [...counts].map(([w,f])=>({orig:w, syms:[...Array.from(w), EOW], freq:f}));
+  }
+
+  function pairStats(){
+    const stats = new Map(); // key "a\u0000b" -> {a,b,n}
+    for(const w of words){
+      for(let i=0;i<w.syms.length-1;i++){
+        const k = w.syms[i]+'\u0000'+w.syms[i+1];
+        const e = stats.get(k);
+        if(e) e.n += w.freq; else stats.set(k,{a:w.syms[i],b:w.syms[i+1],n:w.freq});
+      }
+    }
+    // 稳定排序：频次相同保持首次出现顺序（和论文实现里 max(...) 的行为一致）
+    return [...stats.values()].sort((x,y)=>y.n-x.n);
+  }
+
+  function applyMerge(syms, a, b){
+    const out=[]; const hits=[];
+    for(let i=0;i<syms.length;i++){
+      if(i<syms.length-1 && syms[i]===a && syms[i+1]===b){ hits.push(out.length); out.push(a+b); i++; }
+      else out.push(syms[i]);
+    }
+    return {out, hits};
+  }
+
+  function currentVocab(){
+    const s=new Set(); for(const w of words) for(const x of w.syms) s.add(x); return [...s];
+  }
+
+  // ---------- 训练渲染 ----------
+  function renderTrain(){
+    const stats = pairStats();
+    const top = stats[0];
+    const max = parseInt($('maxMerges').value,10)||10;
+
+    $('wordTable').innerHTML = words.map(w=>{
+      const html = w.syms.map((s,i)=>{
+        let cls='';
+        if(lastMerged && (lastMerged.get(w.orig)||[]).includes(i)) cls='new';
+        else if(top && i<w.syms.length-1 && s===top.a && w.syms[i+1]===top.b) cls='hit';
+        else if(top && i>0 && s===top.b && w.syms[i-1]===top.a) cls='hit';
+        return chip(s,cls);
+      }).join('');
+      return `<tr><td class="w">${esc(w.orig)}</td><td>${html}</td><td class="num">${w.freq}</td></tr>`;
+    }).join('');
+
+    $('pairs').innerHTML = stats.length
+      ? stats.map((p,i)=>`<span class="pair${i===0?' top':''}"><b>${esc(p.a)}</b> <b>${esc(p.b)}</b><span class="n">×${p.n}</span></span>`).join('')
+      : '<span class="empty">没有可合并的相邻对了。</span>';
+
+    renderMergeList('mergeList','mergeEmpty',-1);
+    const v = currentVocab();
+    $('vocab').innerHTML = $('vocab2').innerHTML = v.map(s=>chip(s)).join('');
+    $('vocabCount').textContent = $('vocabCount2').textContent = `${v.length} 个符号`;
+
+    const done = !top || merges.length>=max;
+    $('btnStep').disabled = done;
+    $('btnAll').disabled = done;
+    $('btnBack').disabled = !history.length;
+    $('btnAuto').disabled = done && !autoTimer;
+    $('trainStatus').textContent = top
+      ? (merges.length>=max ? `已完成 ${merges.length} 次合并，可以调大目标次数继续。` : `第 ${merges.length+1} 次：将合并 ${top.a} + ${top.b}（频次 ${top.n}）`)
+      : '每个词都只剩一个符号了。';
+    renderMergeList('mergeList2','mergeEmpty2', -1);
+  }
+
+  function renderMergeList(listId, emptyId, curIdx){
+    $(listId).innerHTML = merges.map(([a,b],i)=>{
+      let cls = i<curIdx?'done': i===curIdx?'cur':'';
+      return `<li class="${cls}">${esc(a)} ${esc(b)}<span class="arrow">→</span>${esc(a+b)}</li>`;
+    }).join('');
+    $(emptyId).style.display = merges.length?'none':'';
+  }
+
+  function stepTrain(){
+    const stats = pairStats(); const top = stats[0];
+    const max = parseInt($('maxMerges').value,10)||10;
+    if(!top || merges.length>=max) return false;
+    history.push(words.map(w=>w.syms.slice()));
+    merges.push([top.a,top.b]);
+    lastMerged = new Map(); // word -> 合并后的新符号位置
+    for(const w of words){
+      const {out,hits}=applyMerge(w.syms, top.a, top.b);
+      w.syms=out;
+      if(hits.length) lastMerged.set(w.orig,hits);
+    }
+    resetInfer();
+    renderTrain();
+    return true;
+  }
+
+  function resetTrain(){
+    stopAuto();
+    words = parseCorpus($('corpus').value);
+    merges = []; lastMerged=null; history=[];
+    resetInfer();
+    renderTrain();
+  }
+
+  function stopAuto(){ if(autoTimer){clearInterval(autoTimer);autoTimer=null;$('btnAuto').textContent='自动播放';} }
+  $('btnAuto').addEventListener('click',()=>{
+    if(autoTimer){ stopAuto(); renderTrain(); return; }
+    $('btnAuto').textContent='暂停';
+    autoTimer=setInterval(()=>{ if(!stepTrain()) stopAuto(); },900);
+  });
+  $('btnStep').addEventListener('click',()=>{ stopAuto(); stepTrain(); });
+  $('btnBack').addEventListener('click',()=>{
+    stopAuto();
+    if(!history.length) return;
+    const snap=history.pop();
+    words.forEach((w,i)=>{ w.syms=snap[i]; });
+    merges.pop(); lastMerged=null;
+    resetInfer(); renderTrain();
+  });
+  $('btnAll').addEventListener('click',()=>{ stopAuto(); while(stepTrain()){} lastMerged=null; renderTrain(); });
+  $('btnReset').addEventListener('click',resetTrain);
+  $('corpus').addEventListener('input',resetTrain);
+  $('maxMerges').addEventListener('input',renderTrain);
+
+  // ---------- 推理 ----------
+  let inferState = null; // {syms, idx, log:[{i,a,b,hits,syms}], mode, done}
+  const mode = ()=>document.querySelector('input[name=mode]:checked').value;
+  function rankOf(a,b){ for(let i=0;i<merges.length;i++) if(merges[i][0]===a&&merges[i][1]===b) return i; return -1; }
+
+  function resetInfer(){
+    inferState=null;
+    $('steps').innerHTML=''; $('stepsEmpty').style.display='';
+    $('stepsEmpty').textContent = merges.length ? '点「开始切分」。' : '先训练几步，再回来切分。';
+    $('result').hidden=true;
+    $('inferPairs').innerHTML='<span class="empty">还没开始。</span>';
+    $('btnNext').disabled=true; $('btnAll').disabled=true;
+    $('inferStatus').textContent='';
+  }
+
+  function startInfer(){
+    const w = $('word').value.trim();
+    if(!w){ $('inferStatus').textContent='请输入一个词。'; return; }
+    inferState = {syms:[...Array.from(w), EOW], idx:0, log:[], mode:mode(), done:false};
+    renderInfer();
+  }
+
+  function stepInfer(){
+    const st=inferState; if(!st||st.done) return false;
+    if(st.mode==='scan'){
+      if(st.idx>=merges.length){ st.done=true; renderInfer(); return false; }
+      const [a,b]=merges[st.idx];
+      const {out,hits}=applyMerge(st.syms,a,b);
+      st.log.push({i:st.idx,a,b,hits,syms:out});
+      st.syms=out; st.idx++;
+      if(st.idx>=merges.length) st.done=true;
+    }else{
+      let best=-1;
+      for(let i=0;i<st.syms.length-1;i++){
+        const r=rankOf(st.syms[i],st.syms[i+1]);
+        if(r>=0 && (best<0||r<best)) best=r;
+      }
+      if(best<0){ st.done=true; renderInfer(); return false; }
+      const [a,b]=merges[best];
+      const {out,hits}=applyMerge(st.syms,a,b);
+      st.log.push({i:best,a,b,hits,syms:out});
+      st.syms=out; st.idx=best;
+      // 预判：还有没有可用的对
+      let any=false;
+      for(let i=0;i<st.syms.length-1;i++) if(rankOf(st.syms[i],st.syms[i+1])>=0){any=true;break;}
+      if(!any) st.done=true;
+    }
+    renderInfer();
+    return true;
+  }
+
+  function renderInfer(){
+    const st=inferState;
+    $('stepsEmpty').style.display='none';
+    let html = `<li><span class="k">起点</span><div><div class="rule">拆成字符 + ${esc(EOW)}</div>${
+      [...Array.from($('word').value.trim()), EOW].map(s=>chip(s)).join('')}</div></li>`;
+    html += st.log.map(e=>{
+      const cls = e.hits.length?'apply':'skip';
+      const syms = e.syms.map((s,i)=>chip(s, e.hits.includes(i)?'new':'')).join('');
+      return `<li class="${cls}"><span class="k">规则 ${e.i+1}</span><div><div class="rule">${esc(e.a)} ${esc(e.b)} → ${esc(e.a+e.b)}</div>${syms}</div></li>`;
+    }).join('');
+    $('steps').innerHTML=html;
+    const finished = st.done;
+    $('btnNext').disabled=finished; $('btnAll').disabled=finished;
+    $('result').hidden=!finished;
+    if(finished) $('resultSyms').innerHTML = st.syms.map(s=>chip(s)).join('');
+    if(finished){
+      $('inferStatus').textContent = `没有规则可用了，得到 ${st.syms.length} 个 token，共应用 ${st.log.filter(e=>e.hits.length).length} 条。`;
+    }else if(st.mode==='scan'){
+      $('inferStatus').textContent = `已扫描 ${st.idx} / ${merges.length} 条规则，下一条：${merges[st.idx][0]} + ${merges[st.idx][1]}`;
+    }else{
+      let best=-1;
+      for(let i=0;i<st.syms.length-1;i++){ const r=rankOf(st.syms[i],st.syms[i+1]); if(r>=0&&(best<0||r<best)) best=r; }
+      $('inferStatus').textContent = `当前序列里排名最靠前的对是规则 ${best+1}：${merges[best][0]} + ${merges[best][1]}`;
+    }
+    // 相邻对面板
+    {
+      const seen=new Map();
+      for(let i=0;i<st.syms.length-1;i++){
+        const a=st.syms[i],b=st.syms[i+1],k=a+'\u0000'+b;
+        if(!seen.has(k)) seen.set(k,{a,b,r:rankOf(a,b)});
+      }
+      const list=[...seen.values()];
+      let next=-1;
+      if(!finished){
+        if(st.mode==='scan'){ const [a,b]=merges[st.idx]; next=list.findIndex(p=>p.a===a&&p.b===b); }
+        else { let best=-1; list.forEach((p,i)=>{ if(p.r>=0&&(best<0||p.r<list[best].r)) best=i; }); next=best; }
+      }
+      $('inferPairs').innerHTML = list.length
+        ? list.map((p,i)=>`<span class="pair${i===next?' top':''}${p.r<0?' unk':''}"><b>${esc(p.a)}</b> <b>${esc(p.b)}</b><span class="n">${p.r<0?'未见过':'规则 '+(p.r+1)}</span></span>`).join('')
+        : '<span class="empty">只剩一个符号。</span>';
+    }
+    const cur = finished ? merges.length : (st.mode==='scan' ? st.idx : (()=>{let b=-1;for(let i=0;i<st.syms.length-1;i++){const r=rankOf(st.syms[i],st.syms[i+1]);if(r>=0&&(b<0||r<b))b=r;}return b;})());
+    renderMergeList('mergeList2','mergeEmpty2', cur);
+    const last=$('steps').lastElementChild; if(last) last.scrollIntoView({block:'nearest'});
+  }
+
+  $('btnTok').addEventListener('click',startInfer);
+  $('btnNext').addEventListener('click',stepInfer);
+  $('btnAll').addEventListener('click',()=>{ while(stepInfer()){} });
+  $('word').addEventListener('keydown',e=>{ if(e.key==='Enter') startInfer(); });
+  $('word').addEventListener('input',()=>{ if(inferState) resetInfer(); });
+  document.querySelectorAll('input[name=mode]').forEach(r=>r.addEventListener('change',()=>{ if(inferState) resetInfer(); }));
+
+  // ---------- tabs ----------
+  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',x===t));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id===t.dataset.tab));
+    if(t.dataset.tab==='infer'){ stopAuto(); if(!inferState) resetInfer(); else renderInfer(); }
+  }));
+
+  resetTrain();
+})();
+</script>
+</body>
+</html>
