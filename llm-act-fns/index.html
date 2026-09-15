@@ -233,7 +233,7 @@ td .tag{display:inline-block; font-size:11.5px; font-family:"JetBrains Mono",ui-
   <article>
 <section id="s0">
   <h2><span class="n">01</span>引言</h2>
-  <p class="sub">先确定激活函数在模型中的位置、它的输入是什么，以及读每一张曲线图时要看的四个要素。</p>
+
   <h3 id="where">激活函数在 LLM 里的位置</h3>
   <p>一个 decoder block 由注意力和前馈网络（FFN）两部分组成。激活函数出现在 FFN 中间：输入先被升维，过一个逐元素的非线性，再被降回来（注意力里的 softmax 严格来说也是非线性，但它的角色是归一化权重，不是我们平时说的「激活函数」）。写成最朴素的形式就是</p>
   <div class="math-block">$$\mathrm{FFN}(x) = \phi(xW_1 + b_1)\,W_2 + b_2,\qquad W_1\in\mathbb{R}^{d\times d_{ff}},\; W_2\in\mathbb{R}^{d_{ff}\times d}.$$</div>
@@ -241,7 +241,6 @@ td .tag{display:inline-block; font-size:11.5px; font-family:"JetBrains Mono",ui-
   <p>2017 年的原始 Transformer 用 ReLU，2018 年 BERT 和 GPT 换成 GELU，2020 年 Shazeer 证明门控形式的 GLU 能在同参数量下压低 loss ，之后 PaLM 和 Llama 把 SwiGLU 变成了事实标准。2025 到 2026 年的变化则来自另一个方向：模型大到一定程度之后，GLU 的乘积无界成了训练稳定性的隐患，于是 gpt-oss、DeepSeek-V4、Kimi K3 各自给它加了上界（clamp 或 soft-capping）；与此同时 NVIDIA 的 Nemotron 用回了 Squared ReLU。综合这些变化，激活函数的选择其实是在「表达力、稳定性、稀疏性、内核效率」四个目标之间取平衡，下面每一节都会回到这四个词。</p>
 
   <h3 id="unit-input">一个神经元收到的是什么</h3>
-  <p class="sub">激活函数的输入是一个标量。本节说明这个标量从哪里来，$f(x)$ 和 $f'(x)$ 各自在前向传播与反向传播中承担什么。</p>
   <p>上面的 FFN 公式对一个 token 的表示 $x\in\mathbb{R}^{d}$ 进行计算。中间层有 $d_{ff}$ 个神经元，第 $i$ 个神经元收到的数是</p>
   <div class="math-block">$$z_i = x\,w_i + b_i ,$$</div>
   <p>其中 $w_i$ 是 $W_1$ 的第 $i$ 列，$b_i$ 是 $b_1$ 的第 $i$ 个分量。$z_i$ 称为预激活值（pre-activation），它是 $x$ 在方向 $w_i$ 上的投影加上一个偏置，是一个实数。激活函数 $\phi$ 逐元素作用，所以它对第 $i$ 个神经元的计算只用到 $z_i$ 这一个数，不用到 $x$ 的其他分量，也不用到同一层其他神经元的 $z_j$。一个长度为 $T$ 的序列经过这一层时，会产生 $T\times d_{ff}$ 个这样的实数，$\phi$ 对每一个都独立地计算一次。</p>
@@ -254,7 +253,6 @@ td .tag{display:inline-block; font-size:11.5px; font-family:"JetBrains Mono",ui-
   <p>$f'(z_i)$ 同时控制两条路径：一条是流向本神经元参数 $w_i$ 和 $b_i$ 的梯度，决定这个神经元是否会因这个 token 而更新；另一条是经过 $w_i$ 流回 $x$ 的梯度，决定这个神经元是否把误差信号传给更靠前的层。$f'(z_i)=0$ 时两条路径都被切断；$f'(z_i)$ 大于 1 时梯度被放大；$f'(z_i)$ 为负时梯度的符号被翻转。所以 $f'(x)$ 面板要和 $f(x)$ 面板一起看：前者说明这个神经元现在贡献多少，后者说明它还能不能被修正。</p>
 
   <h3 id="four-regions">读图时要看的四个要素</h3>
-  <p class="sub">本文每张曲线图的图注都按同一顺序写：负半轴远端、零点、过渡区、正半轴远端。本节说明为什么是这四个位置，以及在每个位置要问什么问题。每个要素配一张对照图，图中的函数只是用来展示不同的可能形状，各函数的详细讨论在后面各节。</p>
   <p>常见情况下，预激活值 $z_i$ 在训练中的分布大致以零为中心：多数落在原点附近的一个有限范围内，两侧各有一部分落在较远处。把横轴按此分成四段，每一段上都有一批神经元。在某一段上要问什么问题，取决于落在这一段的神经元会经历什么。</p>
 
   <p><strong>要素一：负半轴远端（$x\to-\infty$）。</strong>落在这里的神经元收到的是与 $w_i$ 方向相反的强输入，按设计意图它们不应当响应。要问的第一个问题是 $f(x)$ 是否严格为零，还是只是趋近零。严格为零时，这个神经元对应的 $W_2$ 行完全不参与求和，推理时可以跳过这一行的计算，这是激活稀疏性的前提；只是趋近零时，仍有一个很小的输出通过，不能跳过。如果 $f(x)$ 趋近的不是零而是某个非零常数，还要考虑这个常数会以固定比例把 $W_2$ 的这一行加进输出。第二个问题是 $f'(x)$ 是否为零。为零时，落在这里的神经元不会因这个 token 得到任何更新；如果一个神经元对多数 token 都落在这里，它就不再更新，也没有机会回到别的区域。$f'(x)$ 很小但非零时，更新仍在进行，只是缓慢。所以在这一段要看 $f(x)$ 的极限值、它趋近极限的快慢，以及 $f'(x)$ 是否严格为零。</p>
@@ -269,14 +267,13 @@ td .tag{display:inline-block; font-size:11.5px; font-family:"JetBrains Mono",ui-
   <p><strong>要素四：正半轴远端（$x\to+\infty$）。</strong>落在这里的神经元收到与 $w_i$ 方向一致的强输入，是完全响应的神经元，也是数值幅度最大的地方；模型规模增大之后，训练不稳定往往首先出现在这里。要问的第一个问题是 $f(x)$ 有没有上界。没有上界时，$W_2$ 的求和中可能出现很大的项，需要考虑数值范围和后续归一化能否承受；有上界时，不同的强输入给出近似相同的输出，它们之间的差异被压缩。第二个问题是 $f(x)$ 以什么速度增长：与 $x$ 同速、比 $x$ 快，还是趋于停止。第三个问题是 $f'(x)$ 的极限：趋近一个常数，意味着强输入的梯度按固定比例通过；趋近零，意味着强输入几乎收不到梯度；没有上界，意味着梯度随输入增大而增大。图中的虚线表示极限行为，不表示饱和从某个固定位置开始。</p>
   <figure id="fig-intro-pos"><figcaption><p>淡色区域是正半轴远端。三条曲线展示三种增长方式：SiLU 的输出趋近 x，导数趋近 1，没有上界但增长速度不再增加；tanh 的输出趋近 1，导数趋近 0，有上界；ReLU² 的输出按 x² 增长，导数为 2x，输出和导数都没有上界，曲线在图内就已经超出纵轴范围。</p></figcaption></figure>
 
-  <p>后面每一节的图注都按这四段写，第 02 节的总览图把所有函数画在同一坐标系里，可以按这个顺序逐段比较。</p>
   <div class="aside"><span class="k">阅读约定</span><p>本文的 $\sigma(x)=\dfrac{1}{1+e^{-x}}$ 表示 logistic sigmoid，$\Phi(x)$ 表示标准正态分布的累积分布函数，$\odot$ 表示逐元素乘。</p></div>
 </section>
 
 <section id="s1">
   <h2><span class="n">02</span>总览</h2>
   <p class="sub">比较各函数的输出、导数和极限行为。</p>
-  <figure id="fig-all"><figcaption><p><strong>勾选曲线进行比较，或用“重点查看”选择一个函数：</strong>该函数显示色带、参考线和关键点，其余曲线淡化。色带的含义随函数改变：ReLU 家族表示负半轴的输出为零的区域，其他函数表示各自定义的过渡范围。</p><p>读图时先看负半轴的输出与斜率，再看原点和过渡宽度，最后看大正输入是近似线性增长、饱和还是加速增长。详细定义见各函数专图。</p></figcaption></figure>
+  <figure id="fig-all"><figcaption><p><strong>勾选曲线进行比较。</strong>色带、参考线和关键点见各函数专图。</p><p>读图时先看负半轴的输出与斜率，再看原点和过渡宽度，最后看大正输入是近似线性增长、饱和还是加速增长。详细定义见各函数专图。</p></figcaption></figure>
   <h3 id="logistic">Logistic：把输入映射到 0 与 1 之间</h3>
   <div class="math-block">$$\sigma(x)=\frac{1}{1+e^{-x}},\qquad \sigma'(x)=\sigma(x)\bigl(1-\sigma(x)\bigr).$$</div>
   <figure id="fig-logistic"><figcaption><p><strong>当输入趋向负无穷：</strong>输出趋近 0，导数趋近 0，进入输出趋近 0 的饱和区。</p><p><strong>原点：</strong>输出 0.5，导数 0.25；零输入对应门控系数 0.5。</p><p><strong>过渡区：</strong>色带覆盖输出从 0.1 到 0.9 的范围，约 [−2.20, 2.20]，宽 4.39。曲线和导数都连续光滑。</p><p><strong>当输入趋向正无穷：</strong>输出趋近 1，导数趋近 0，进入输出趋近 1 的饱和区。水平虚线表示极限值，不表示饱和从某个固定位置开始。</p></figcaption></figure>
@@ -348,9 +345,11 @@ td .tag{display:inline-block; font-size:11.5px; font-family:"JetBrains Mono",ui-
     <p><strong>开销主要来自更多计算。</strong>ReLU 只需比较并选择，而 erf 的求值通常需要一组乘加及可能的区间判断等操作。FFN 的每个中间元素都要计算一次，大量重复后就可能影响速度；这并不意味着 erf 天然需要大量显存。tanh 近似能否更快，还要看硬件支持、精度和内核融合方式，不能只看公式长短。</p>
   </details>
   <p>一个是 tanh 近似：</p>
-  <div class="math-block">$$\mathrm{GELU}_{\tanh}(x)=\tfrac12 x\Bigl[1+\tanh\Bigl(\sqrt{\tfrac{2}{\pi}}\,(x+0.044715\,x^3)\Bigr)\Bigr],$$</div>
+  <div class="math-block">$$\mathrm{GELU}_{\tanh}(x)=\tfrac12 x\bigl[1+\tanh u\bigr],\qquad u=\sqrt{\tfrac{2}{\pi}}\,(x+0.044715\,x^3),$$</div>
+  <p>它的导数由乘积法则给出，其中 $\tanh' u=1-\tanh^2 u$：</p>
+  <div class="math-block">$$\mathrm{GELU}_{\tanh}'(x)=\tfrac12\bigl[1+\tanh u\bigr]+\tfrac12 x\,\bigl(1-\tanh^2 u\bigr)\,\sqrt{\tfrac{2}{\pi}}\,\bigl(1+0.134145\,x^2\bigr).$$</div>
   <p>BERT、GPT-2 以及现在的 Gemma 系列用的都是它。另一个常被叫作 Quick GELU：</p>
-  <div class="math-block">$$\mathrm{GELU}_{\text{quick}}(x)=x\,\sigma(1.702x).$$</div>
+  <div class="math-block">$$\begin{aligned}\mathrm{GELU}_{\text{quick}}(x)&=x\,\sigma(1.702x),\\ \mathrm{GELU}_{\text{quick}}'(x)&=\sigma(1.702x)\bigl[1+1.702\,x\,\bigl(1-\sigma(1.702x)\bigr)\bigr].\end{aligned}$$</div>
   <p>系数 1.702 用来让 $\sigma(1.702x)$ 逼近 $\Phi(x)$。OpenAI 的 CLIP 用过，而 gpt-oss 的激活函数里那个 $\alpha=1.702$ 也是从这儿来的。</p>
   <p>近似的存在带来一个工程的规则：<em>训练用哪个版本，推理就必须用哪个版本</em>。Gemma 刚开源时 Hugging Face 的实现用了精确 GELU，而官方权重是用 tanh 近似训的，两者在大多数位置只差万分之几，但一层层累积之后足以影响生成质量，最后是 transformers 专门加了 <code>gelu_pytorch_tanh</code> 才解决。做权重转换、写推理内核、做量化校准的时候，这是最常见的silent bug 之一。</p>
 </section>
@@ -640,7 +639,6 @@ function figure(id, spec){
   const pf=mk('f(x)'), pd=mk("f'(x)");
   fig.insertBefore(legend,cap); fig.insertBefore(controls,cap); fig.insertBefore(panels,cap);
   const state={};
-  let focusKey=null;
   const P1=plot(pf,{x:spec.x,y:spec.yf,label:spec.label+' 函数',guides:undefined}), P2=plot(pd,{x:spec.x,y:spec.yd,label:spec.label+' 导数',guides:undefined});
   const items=spec.series.map((s,i)=>({...s, hidden: s.on===false}));
   if(spec.toggle){
@@ -656,26 +654,18 @@ function figure(id, spec){
       const v=document.createElement('span'); v.className='v'; v.textContent=(+sl.value).toFixed(2);
       inp.addEventListener('input',()=>{ state[sl.key]=+inp.value; v.textContent=(+inp.value).toFixed(2); render(); });
       l.append(nm,inp,v); controls.appendChild(l); } }
-  if(id==='fig-all'){
-    const label=document.createElement('label');label.appendChild(document.createTextNode('重点查看'));
-    const select=document.createElement('select');select.setAttribute('aria-label','总览重点函数');
-    for(const [value,name] of [['','全部比较'],...items.map(s=>[s.key,s.name])]){const o=document.createElement('option');o.value=value;o.textContent=name;select.appendChild(o);}
-    select.addEventListener('change',()=>{focusKey=select.value||null;render();});label.appendChild(select);controls.appendChild(label);
-  }
   const status=document.createElement('div');status.className='chart-status';status.setAttribute('aria-live','polite');fig.insertBefore(status,cap);
   if(!spec.toggle && !spec.sliders) controls.remove();
   function render(){
     const keys={'fig-logistic':'sigmoid','fig-normal-cdf':'normal','fig-relu':'relu','fig-relu2':'relu2','fig-silu':'sw','fig-softplus':'softplus'};
-    const active=focusKey?items.find(s=>s.key===focusKey):null;
     const guides=(d)=>{
-      if(id==='fig-all')return active?curveGuides(active.key,d,state,active.color,spec.x):undefined;
+      if(id==='fig-all')return undefined;
       if(keys[id])return curveGuides(keys[id],d,state,items[0].color,spec.x);
       return d?spec.guidesD:spec.guidesF;
     };
-    const data=d=>items.map(s=>({name:s.name,color:s.color,dash:s.dash,faint:s.faint||(active&&s!==active),hidden:active?false:s.hidden,breaks:d?(s.key==='relu'?[0]:s.key==='oss'?[7]:[]):[],fn:x=>(d?s.d:s.f)(x,state)}));
+    const data=d=>items.map(s=>({name:s.name,color:s.color,dash:s.dash,faint:s.faint,hidden:s.hidden,breaks:d?(s.key==='relu'?[0]:s.key==='oss'?[7]:[]):[],fn:x=>(d?s.d:s.f)(x,state)}));
     for(const d of [false,true]){
-      const g=guides(d);if(g&&active)g.bands.forEach(b=>b.index=items.indexOf(active));
-      (d?P2:P1).draw(data(d),g);
+      (d?P2:P1).draw(data(d),guides(d));
     }
     if(id==='fig-silu'){
       const w=Math.log(9)/state.b,xmin=-1.278465/state.b;
