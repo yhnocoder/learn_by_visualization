@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<link rel="stylesheet" href="index.css">
+	<title>Float Exposed – fp4 / fp6 / fp8 / fp16 / bf16 / fp32</title>
+	<link rel="icon" type="image/svg+xml" href="favicon.svg">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<script src="fmt.js"></script>
+	<script defer src="app.js"></script>
+</head>
+<body>
+<div id="container">
+	<div id="body">
+
+		<div id="mode_section"></div>
+		<div id="sub_mode_section"></div>
+		<div id="fmt_note" class="fmt_note"></div>
+
+		<div id="value_section">
+			<div class="field_title centered">Value</div>
+			<input id="float_value_field" class="monospace" maxlength="64" spellcheck="false">
+		</div>
+
+		<div class="separator"></div>
+
+		<div id="bits_section">
+			<div class="field_title centered">Bit Pattern</div>
+			<div id="bits_container" class="non_selectable"></div>
+			<div id="cls_badge" class="cls_badge"></div>
+		</div>
+
+		<div class="separator"></div>
+
+		<div id="values">
+			<div id="column_container">
+				<div id="column0" class="column"></div>
+				<div id="column1" class="column"></div>
+			</div>
+		</div>
+
+		<div class="separator"></div>
+
+		<div class="field_title centered">All Non‑negative Values (log<sub>2</sub> axis &rarr; relative precision; each column is one binade)<span id="line_note"></span></div>
+		<div id="line_wrap"><svg id="overlay"></svg><svg id="number_line" class="non_selectable"></svg><svg id="zoom" class="non_selectable"></svg></div>
+
+		<div id="narrow_only">
+		<div class="separator"></div>
+
+		<div class="field_title centered">All Bit Patterns</div>
+		<div id="legend" class="legend">
+			<span><i class="sw cls_zero"></i>zero</span><span><i class="sw cls_sub"></i>subnormal</span><span><i class="sw cls_normal"></i>normal</span><span><i class="sw cls_inf"></i>inf</span><span><i class="sw cls_nan"></i>NaN</span>
+		</div>
+		<div id="grid_wrap"><div id="grid" class="non_selectable monospace"></div></div>
+		</div>
+
+		<div class="separator"></div>
+
+		<div class="field_title centered">Evaluation in Base‑2</div>
+		<div id="eval2" class="components_container monospace evaluation"></div>
+
+		<div class="field_title centered">Evaluation in Base‑10</div>
+		<div id="eval10" class="components_container monospace evaluation"></div>
+
+		<div class="field_title centered">Exact Base‑10 Value</div>
+		<div class="components_container exact_value monospace"><span id="exact_10"></span></div>
+
+		<div id="interval">
+			<div class="field_title centered">Round‑trip Interval (inputs that round to this value)</div>
+			<div class="components_container exact_value monospace"><span id="interval_v"></span></div>
+		</div>
+
+		<div class="separator"></div>
+
+		<div id="delta_pm">
+			<div class="field_title centered">Delta to Next/Previous Representable Value</div>
+			<div class="components_container exact_value monospace"><span id="delta_pm_v"></span></div>
+		</div>
+		<div id="delta_n">
+			<div class="field_title centered">Delta to Next Representable Value</div>
+			<div class="components_container exact_value monospace"><span id="delta_n_v"></span></div>
+		</div>
+		<div id="delta_p">
+			<div class="field_title centered">Delta to Previous Representable Value</div>
+			<div class="components_container exact_value monospace"><span id="delta_p_v"></span></div>
+		</div>
+
+		<div class="separator"></div>
+
+		<div class="field_title centered">References</div>
+		<ul id="references">
+			<li><a href="https://ciechanow.ski/exposing-floating-point/">Exposing Floating Point</a> &mdash; Bartosz Ciechanowski. Interactive article on how the sign, exponent and mantissa bits form a value, subnormals, rounding and precision.</li>
+			<li><a href="https://float.exposed/">float.exposed</a> &mdash; Bartosz Ciechanowski. Interactive bit-level explorer for fp16 / bf16 / fp32 / fp64; the layout and interaction design of this page are borrowed from it.</li>
+			<li><a href="https://github.com/jax-ml/ml_dtypes">jax-ml/ml_dtypes</a> &mdash; Reference implementation of fp4 / fp6 / fp8 formats used to verify every encoding and rounding rule on this page.</li>
+			<li><a href="https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf">OCP Microscaling Formats (MX) Specification v1.0</a> &mdash; Defines the E2M1 / E2M3 / E3M2 / E4M3 / E5M2 element formats.</li>
+			<li><a href="https://arxiv.org/abs/2209.05433">FP8 Formats for Deep Learning</a> &mdash; Micikevicius et al., 2022. Proposal of the E4M3 and E5M2 formats.</li>
+			<li><a href="https://ieeexplore.ieee.org/document/8766229">IEEE 754-2019</a> &mdash; Standard for binary16 / binary32 / binary64 encoding and rounding.</li>
+		</ul>
+
+		<div class="spacer"></div>
+	</div>
+	<div id="footer">
+		<p>With thanks to <a href="https://float.exposed/">float.exposed</a> by Bartosz Ciechanowski &mdash; this page borrows its layout, stylesheet and interaction design, and exists because that site made floating point click.</p>
+		<p>Format definitions and conversion semantics follow <a href="https://github.com/jax-ml/ml_dtypes">jax-ml/ml_dtypes</a>; every encoding and rounding rule here is checked against it by <code>test_ml_dtypes.py</code>.</p>
+	</div>
+</div>
+</body>
+</html>

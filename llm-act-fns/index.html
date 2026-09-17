@@ -367,18 +367,21 @@ td .tag{display:inline-block; font-size:11.5px; font-family:"JetBrains Mono",ui-
 <section id="s6">
   <h2><span class="n">07</span>GLU 家族：门控前馈网络</h2>
   <p class="sub">SwiGLU、GeGLU、ReGLU 的区别只是 gate 用什么函数；重要的是「gate 乘以线性分支」这个结构本身。</p>
-  <div class="math-block">$$\mathrm{GLU}_\phi(x)=\bigl(\phi(xW_g)\odot xW_u\bigr)W_d,\qquad W_g,W_u\in\mathbb{R}^{d\times d_{ff}},\; W_d\in\mathbb{R}^{d_{ff}\times d}.$$</div>
-  <p>输入 $x$ 先经过两个不同的线性投影，得到门控分支 $g=xW_g$ 和线性分支 $u=xW_u$。对 $g$ 应用激活函数，再与 $u$ 逐元素相乘，得到中间表示 $h=\phi(g)\odot u$；最后通过 $W_d$ 将中间表示投影为输出。SwiGLU、GeGLU、ReGLU 的区别，就在门控分支分别采用 SiLU、GELU、ReLU。</p>
+  <div class="math-block">$$\begin{aligned}
+  g=xW_g,\qquad u=xW_u,&\qquad g,u\in\mathbb{R}^{d_{ff}},\\
+  \mathrm{GLU}_\phi(x)=\bigl(\phi(g)\odot u\bigr)W_d,&\qquad W_g,W_u\in\mathbb{R}^{d\times d_{ff}},\; W_d\in\mathbb{R}^{d_{ff}\times d}.
+  \end{aligned}$$</div>
+  <p>输入 $x$ 先经过两个不同的线性投影，得到门控分支 $g$ 和线性分支 $u$，两者都是 $d_{ff}$ 维向量。对 $g$ 应用激活函数，再与 $u$ 逐元素相乘，得到中间表示 $h=\phi(g)\odot u$；最后通过 $W_d$ 将中间表示投影为输出。SwiGLU、GeGLU、ReGLU 的区别，就在门控分支分别采用 SiLU、GELU、ReLU。</p>
   <h3 id="swiglu-channel">先看 SwiGLU 的一个中间通道</h3>
-  <p>暂时不看最后的输出投影 $W_d$，只观察逐元素相乘这一步。取出一个通道后，$g$ 和 $u$ 都是一个数，这个通道的输出就是：</p>
-  <div class="math-block">$$h=\mathrm{SiLU}(g)\,u=g\,\sigma(g)\,u.$$</div>
-  <p>这里的门控系数不局限于 0 到 1。$\mathrm{SiLU}(g)$ 可以为负，也可以大于 1，因此它既能减小信号幅度，也能翻转符号或放大信号。下面的热力图展示 $g$、$u$ 不同组合产生的 $h$：横轴改变门控输入 $g$，纵轴改变待传递的数值 $u$。</p>
+  <p>暂时不看最后的输出投影 $W_d$，只观察逐元素相乘这一步。取出第 $i$ 个通道（维度）后，$g_i$ 和 $u_i$ 都是一个数，这个通道的输出（默认使用 SiLU）就是：</p>
+  <div class="math-block">$$h_i=\mathrm{SiLU}(g_i)\,u_i=g_i\,\sigma(g_i)\,u_i.$$</div>
+  <p>这里的门控系数不局限于 0 到 1。$\mathrm{SiLU}(g_i)$ 可以为负，也可以大于 1，因此它既能减小信号幅度，也能翻转符号或放大信号。下面的热力图展示 $g_i$、$u_i$ 不同组合产生的 $h_i$：横轴改变门控输入 $g_i$，纵轴改变待传递的数值 $u_i$（图中省略下标，记作 g、u）。</p>
   <figure id="fig-glu"><figcaption><p>横轴是门控输入 g，纵轴是线性分支 u；每个位置的颜色表示两者相乘后的输出 SiLU(g)·u。红色表示正输出，蓝色表示负输出，接近中性色表示输出接近零。</p><p>图中左侧颜色较浅，因为较大的负门控输入会减小输出幅度；右侧颜色更鲜明，因为正门控输入能放大线性分支。上、下两部分的颜色相反，反映 u 的符号变化。g=0 或 u=0 时输出为零。</p><p>移动指针可查看 g、u 和输出的具体数值。色标范围限制为 [−8, 8]，实际输出不受这个显示范围限制。</p></figcaption></figure>
   <h3 id="glu-gradients">梯度：两个分支的梯度如何计算</h3>
-  <p>训练时两个分支都会更新。记 $g=xW_g$，$u=xW_u$，$h=\phi(g)\odot u$，上游梯度为 $\delta=\partial L/\partial h$。那么</p>
+  <p>训练时两个分支都会更新。沿用上面的 $g$、$u$，记 $h=\phi(g)\odot u$，上游梯度为 $\delta=\partial L/\partial h$。那么</p>
   <div class="math-block">$$\frac{\partial L}{\partial u}=\delta\odot\phi(g),\qquad \frac{\partial L}{\partial g}=\delta\odot u\odot\phi'(g).$$</div>
   <p>两条路径的梯度互为对方的函数：$u$ 的梯度被 gate 的输出 $\phi(g)$ 缩放， gate 的梯度被 $u$ 的大小缩放。这解释了 GLU 的一个训练特点，即 $g$ 和 $u$ 两个分支的数值尺度会互相放大，如果某个通道上两者同时变大，输出和梯度的幅度可能同时过大。在 SwiGLU 里 $\phi'(g)$ 在 $g$ 很大时趋近 1，$\phi(g)\approx g$，所以在较大的正输入区域，固定任一非零分支时，输出幅度可随另一分支近似线性地无界增长，这是 2025 年之后多个模型采用输出范围限制的动机之一。</p>
-  <p>从图中还能看出两个分支的multiplicative interaction：输出由门控分支和线性分支共同决定；当 $g$、$u$ 同时取很大的正值时，SwiGLU 的输出近似 $gu$。如果去掉非线性调制，两个线性投影的乘积 $(xW_g)_i(xW_u)_i$ 是输入的二次型；一般的 GLU 则包含非线性函数 $\phi$，更准确地说，它给 FFN 引入了multiplicative interaction。</p>
+  <p>从图中还能看出两个分支的multiplicative interaction：输出由门控分支和线性分支共同决定；当同一通道上 $g_i$、$u_i$ 同时取很大的正值时，SwiGLU 的输出近似 $g_iu_i$。如果去掉非线性调制，两个线性投影的乘积 $(xW_g)_i(xW_u)_i$ 是输入的二次型；一般的 GLU 则包含非线性函数 $\phi$，更准确地说，它给 FFN 引入了multiplicative interaction。</p>
   <h3 id="glu-history">从 GLU 到 SwiGLU：历史与实验</h3>
   <p>门控线性单元最早由 Dauphin 等人在 2016 年提出，$\phi=\sigma$。Shazeer 在 2020 年的短文里系统地试了 $\phi$ 取 sigmoid、ReLU、GELU、Swish 以及Bilinear（省略激活函数）的版本，发现在 T5 的设定下 GeGLU 和 SwiGLU 的预训练困惑度和下游任务都明显好于普通的 ReLU 或 GELU FFN。论文没有给出这些变体效果更好的理论解释。</p>
   <h3 id="glu-parameters">参数量的对齐：为什么 $d_{ff}$ 是 $\tfrac{8}{3}d$</h3>
