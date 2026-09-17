@@ -1,0 +1,12 @@
+{
+  "name": "interactive-htmls",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "http-server": "14.1.1"
+  }
+}

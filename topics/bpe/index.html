@@ -138,7 +138,7 @@ widest 3</textarea>
           <button class="btn quiet" id="btnBack" disabled>上一步</button>
           <button class="btn" id="btnStep">合并一次</button>
           <button class="btn quiet" id="btnAuto">自动播放</button>
-          <button class="btn quiet" id="btnAll">合并到目标次数</button>
+          <button class="btn quiet" id="btnTrainAll">合并到目标次数</button>
           <span class="hint" id="trainStatus"></span>
         </div>
       </div>
@@ -173,7 +173,7 @@ widest 3</textarea>
         <div class="row">
           <button class="btn" id="btnTok">开始切分</button>
           <button class="btn quiet" id="btnNext" disabled>下一条规则</button>
-          <button class="btn quiet" id="btnAll" disabled>全部执行</button>
+          <button class="btn quiet" id="btnInferAll" disabled>全部执行</button>
           <span class="hint" id="inferStatus"></span>
         </div>
         <div class="hint">推理不再统计频次，只看训练学到的规则顺序。两种模式结果相同：「扫描」是从第 1 条规则起逐条试；「取优先级最高」是 Sennrich 参考实现的做法，每次在当前序列里找排名最靠前的相邻对合并，直到没有规则可用。</div>
@@ -306,7 +306,7 @@ widest 3</textarea>
 
     const done = !top || merges.length>=max;
     $('btnStep').disabled = done;
-    $('btnAll').disabled = done;
+    $('btnTrainAll').disabled = done;
     $('btnBack').disabled = !history.length;
     $('btnAuto').disabled = done && !autoTimer;
     $('trainStatus').textContent = top
@@ -363,7 +363,7 @@ widest 3</textarea>
     merges.pop(); lastMerged=null;
     resetInfer(); renderTrain();
   });
-  $('btnAll').addEventListener('click',()=>{ stopAuto(); while(stepTrain()){} lastMerged=null; renderTrain(); });
+  $('btnTrainAll').addEventListener('click',()=>{ stopAuto(); while(stepTrain()){} lastMerged=null; renderTrain(); });
   $('btnReset').addEventListener('click',resetTrain);
   $('corpus').addEventListener('input',resetTrain);
   $('maxMerges').addEventListener('input',renderTrain);
@@ -379,7 +379,7 @@ widest 3</textarea>
     $('stepsEmpty').textContent = merges.length ? '点「开始切分」。' : '先训练几步，再回来切分。';
     $('result').hidden=true;
     $('inferPairs').innerHTML='<span class="empty">还没开始。</span>';
-    $('btnNext').disabled=true; $('btnAll').disabled=true;
+    $('btnNext').disabled=true; $('btnInferAll').disabled=true;
     $('inferStatus').textContent='';
   }
 
@@ -431,7 +431,7 @@ widest 3</textarea>
     }).join('');
     $('steps').innerHTML=html;
     const finished = st.done;
-    $('btnNext').disabled=finished; $('btnAll').disabled=finished;
+    $('btnNext').disabled=finished; $('btnInferAll').disabled=finished;
     $('result').hidden=!finished;
     if(finished) $('resultSyms').innerHTML = st.syms.map(s=>chip(s)).join('');
     if(finished){
@@ -467,7 +467,7 @@ widest 3</textarea>
 
   $('btnTok').addEventListener('click',startInfer);
   $('btnNext').addEventListener('click',stepInfer);
-  $('btnAll').addEventListener('click',()=>{ while(stepInfer()){} });
+  $('btnInferAll').addEventListener('click',()=>{ while(stepInfer()){} });
   $('word').addEventListener('keydown',e=>{ if(e.key==='Enter') startInfer(); });
   $('word').addEventListener('input',()=>{ if(inferState) resetInfer(); });
   document.querySelectorAll('input[name=mode]').forEach(r=>r.addEventListener('change',()=>{ if(inferState) resetInfer(); }));
