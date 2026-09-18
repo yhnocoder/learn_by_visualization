@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Learn by Visualization</title>
+<meta name="description" content="用可交互的页面解释大模型训练、推理与深度学习中的具体机制。">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{--k:1;--ground:#f5f6f4;--surface:#fff;--surface-2:#eef0ec;--ink:#161a1d;--ink-2:#4f575e;--ink-3:#7d858c;--rule:#dde1dc;--accent:#2f5d8a;--accent-soft:#e3ecf5;
+  --serif:"Noto Serif SC","Songti SC",serif;--sans:"Noto Sans SC","PingFang SC",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;
+  --shadow:0 1px 2px rgba(22,26,29,.06),0 6px 20px rgba(22,26,29,.05)}
+@media(prefers-color-scheme:dark){:root{--ground:#121416;--surface:#1b1e21;--surface-2:#24282c;--ink:#e8eaec;--ink-2:#b3b9be;--ink-3:#7d858c;--rule:#30353a;--accent:#7fb0e0;--accent-soft:#1f2e3d;--shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25)}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);line-height:1.6}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1240px;margin:0 auto;padding:0 20px}
+header{padding:56px 0 24px}
+h1{font-family:var(--serif);font-size:40px;margin:0 0 6px;letter-spacing:.01em}
+.sub{margin:0;color:var(--ink-2);max-width:60ch;font-size:15px}
+/* 分类导航：固定在顶部，随滚动高亮当前段落 */
+.chips{position:sticky;top:0;z-index:2;background:color-mix(in srgb,var(--ground) 88%,transparent);backdrop-filter:blur(8px);padding:12px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--rule)}
+.chips a.ch{font-size:13px;padding:5px 12px 5px 10px;border-radius:999px;border:1px solid var(--rule);background:var(--surface);color:var(--ink-2);display:flex;gap:7px;align-items:center}
+.chips a.ch i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.chips a.ch b{font-family:var(--mono);font-weight:400;font-size:11px;color:var(--ink-3)}
+.chips a.ch.on{border-color:var(--c);color:var(--ink);background:var(--surface-2)}
+.chips .sp{flex:1}
+.cols{display:flex;align-items:center;gap:2px;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.cols button{font:inherit;width:26px;height:26px;border-radius:6px;border:1px solid transparent;background:none;color:var(--ink-3);cursor:pointer}
+.cols button.on{border-color:var(--rule);background:var(--surface);color:var(--ink)}
+@media(max-width:999px){.cols{display:none}}
+/* 分类段落 */
+section{padding:36px 0 8px;scroll-margin-top:56px}
+section+section{border-top:1px solid var(--rule)}
+.sh{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:18px;padding-left:14px;border-left:4px solid var(--c)}
+.sh h2{font-size:24px}
+.sh p{margin:0;color:var(--ink-2);font-size:14px}
+.sh b{font-family:var(--mono);font-weight:400;font-size:12px;color:var(--ink-3);margin-left:auto}
+main{padding-bottom:80px}
+/* 卡片网格：宽屏按设置的列数，窄屏按最小宽度自动填充；4、5 列时按 --k 缩小卡片内文字 */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px}
+@media(min-width:1000px){.grid{grid-template-columns:repeat(var(--cols,3),1fr)}:root[data-cols="4"]{--k:.88}:root[data-cols="5"]{--k:.8}}
+.card{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--rule);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);transition:transform .15s,border-color .15s;position:relative}
+.card:hover,.card:focus-visible{transform:translateY(-2px);border-color:var(--c);outline:none}
+.pv{aspect-ratio:16/9;background:var(--surface-2);position:relative;overflow:hidden;font-family:var(--mono)}
+.pv svg{width:100%;height:100%;display:block}
+.pv .lbl{position:absolute;right:10px;bottom:8px;font-size:calc(11px*var(--k));color:var(--ink-3)}
+.body{padding:calc(14px*var(--k)) calc(16px*var(--k)) calc(16px*var(--k));display:flex;flex-direction:column;gap:calc(6px*var(--k));flex:1}
+h2{font-family:var(--serif);font-size:calc(18px*var(--k));margin:0;line-height:1.35}
+.s{font-size:calc(13.5px*var(--k));color:var(--ink-2);margin:0;flex:1}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.tag{font-family:var(--mono);font-size:calc(11px*var(--k));color:var(--ink-3);background:var(--surface-2);padding:1px 7px;border-radius:4px}
+/* 预览：浮点位串 */
+.bits{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:4px}
+.bit{width:calc(26px*var(--k));height:calc(38px*var(--k));border-radius:5px;display:grid;place-items:center;font-size:calc(16px*var(--k));font-weight:500;color:#fff;transition:opacity .2s}
+.bit.b-s{background:#e83e5d}.bit.b-e{background:#41ba63}.bit.b-m{background:#577ec7}
+.bit[data-v="0"]{opacity:.35}
+/* 预览：BPE 符号 */
+.syms{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:5px;flex-wrap:wrap;padding:0 14px}
+.sym{padding:calc(5px*var(--k)) calc(9px*var(--k));border-radius:6px;background:var(--surface);border:1px solid var(--rule);font-size:calc(14px*var(--k));transition:background .25s,border-color .25s}
+.sym.new{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.sym.eow{color:var(--ink-3)}
+@media(prefers-reduced-motion:reduce){.card{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Learn by Visualization</h1>
+    <p class="sub">用可交互的页面解释大模型训练、推理与深度学习中的具体机制。卡片上的图形是页面内容的缩小版本，鼠标移上去会运行。</p>
+  </header>
+  <nav class="chips" id="chips" aria-label="分类"></nav>
+  <main id="grid"></main>
+</div>
+<script>
+(() => {
+  const categories = [
+    { id: 'numerics', name: '数值与精度', color: '#2a78d6', desc: '数在硬件里如何表示，误差从哪里来。' },
+    { id: 'tokenize', name: '分词与数据', color: '#eb6834', desc: '文本如何切成 token，语料如何清洗。' },
+    { id: 'arch',     name: '模型结构',   color: '#1baf7a', desc: 'Transformer 各个组件的计算过程。' },
+    { id: 'train',    name: '训练',       color: '#eda100', desc: '优化器、并行策略与训练稳定性。' },
+  ];
+  // 新增主题：加一条记录，并在 previews 里补一个同 id 的预览函数。
+  const topics = [
+    { id: 'floating_points', cat: 'numerics', title: '浮点数格式', href: 'topics/floating_points/',
+      summary: 'fp4 到 fp32 的位布局、可表示范围与舍入。输入一个数，逐位查看它的编码。', tags: ['fp8', 'bf16', 'IEEE 754'] },
+    { id: 'bpe', cat: 'tokenize', title: 'BPE 分词', href: 'topics/bpe/',
+      summary: '按 Sennrich et al. (2016) 的算法逐步合并最高频符号对，再用学到的合并顺序切分新词。', tags: ['Sennrich 2016', 'merge'] },
+    { id: 'llm-act-fns', cat: 'arch', title: '大模型里的激活函数', href: 'topics/llm-act-fns/',
+      summary: '从 ReLU 到 SwiGLU：比较各函数的输出、导数和极限行为，参数可调。', tags: ['GELU', 'SiLU', 'GLU'] },
+    { id: 'mixed-precision-training', cat: 'train', title: '混合精度训练', href: 'topics/mixed-precision-training/',
+      summary: 'fp32 主权重、fp16/bf16 计算与 loss scaling 三个机制，以及一次迭代的完整流程。', tags: ['loss scaling', 'bf16', 'fp32 master'] },
+  ];
+  const catOf = Object.fromEntries(categories.map(c => [c.id, c]));
+  const grid = document.getElementById('grid'), chips = document.getElementById('chips');
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // 每个主题一个实时预览：返回 { html, init(el), start(el), stop(el) }。
+  const previews = {
+    // fp8 E4M3：1 位符号、4 位指数、3 位尾数。悬停时随机翻转一位并重新算值。
+    floating_points() {
+      let bits = [0, 1,0,0,0, 0,1,0], timer;
+      const kinds = 'b-s b-e b-e b-e b-e b-m b-m b-m'.split(' ');
+      const html = `<div class="bits">${bits.map((b, i) => `<span class="bit ${kinds[i]}" data-v="${b}">${b}</span>`).join('')}</div><span class="lbl"></span>`;
+      const value = () => { const e = parseInt(bits.slice(1, 5).join(''), 2), m = parseInt(bits.slice(5).join(''), 2);
+        const v = e === 0 ? Math.pow(2, -6) * m / 8 : Math.pow(2, e - 7) * (1 + m / 8); return bits[0] ? -v : v; };
+      const render = el => { el.querySelectorAll('.bit').forEach((s, i) => { s.dataset.v = bits[i]; s.textContent = bits[i]; });
+        el.querySelector('.lbl').textContent = 'E4M3 = ' + value(); };
+      return { html, init: render, start(el) { timer = setInterval(() => { bits[Math.floor(Math.random() * 8)] ^= 1; render(el); }, 450); }, stop() { clearInterval(timer); } };
+    },
+    // 逐步应用一组固定的合并规则，循环播放。
+    bpe() {
+      const steps = [['l','o','w','e','r','</w>'], ['l','o','w','er','</w>'], ['lo','w','er','</w>'], ['low','er','</w>'], ['lower','</w>']];
+      let i = 0, timer;
+      const render = el => { const prev = steps[Math.max(i - 1, 0)];
+        el.querySelector('.syms').innerHTML = steps[i].map(s => `<span class="sym ${s === '</w>' ? 'eow' : ''} ${i > 0 && !prev.includes(s) ? 'new' : ''}">${esc(s)}</span>`).join('');
+        el.querySelector('.lbl').textContent = `merge ${i} / ${steps.length - 1}`; };
+      return { html: '<div class="syms"></div><span class="lbl"></span>', init: render, start(el) { timer = setInterval(() => { i = (i + 1) % steps.length; render(el); }, 700); }, stop() { clearInterval(timer); } };
+    },
+    // SiLU_β(x) = x·σ(βx)，β 在 0.5 到 8 之间往复；β 越大越接近 ReLU（虚线）。
+    'llm-act-fns'() {
+      let t = 0, raf;
+      const W = 320, H = 180, X = x => W / 2 + x * 34, Y = y => H * .74 - y * 24;
+      const html = `<svg viewBox="0 0 ${W} ${H}"><line x1="0" y1="${Y(0)}" x2="${W}" y2="${Y(0)}" stroke="var(--rule)"/><line x1="${X(0)}" y1="0" x2="${X(0)}" y2="${H}" stroke="var(--rule)"/>
+        <path d="M0 ${Y(0)} H${X(0)} L${W} ${Y((W / 2) / 34)}" fill="none" stroke="var(--ink-3)" stroke-dasharray="3 3"/><path class="f" fill="none" stroke="#1baf7a" stroke-width="2.5" stroke-linejoin="round"/></svg><span class="lbl"></span>`;
+      const render = (el, beta) => { let d = '';
+        for (let x = -4.7; x <= 4.7; x += .1) d += (d ? 'L' : 'M') + X(x).toFixed(1) + ' ' + Y(x / (1 + Math.exp(-beta * x))).toFixed(1) + ' ';
+        el.querySelector('.f').setAttribute('d', d); el.querySelector('.lbl').textContent = 'SiLU  β = ' + beta.toFixed(2); };
+      return { html, init: el => render(el, 1), start(el) { const step = () => { t += .02; render(el, 0.5 + 7.5 * (1 - Math.cos(t)) / 2); raf = requestAnimationFrame(step); }; step(); }, stop() { cancelAnimationFrame(raf); } };
+    },
+    // 指数轴上 fp16 的可表示下界是 2^-24；一个 2^-30 的梯度乘以 2^k 后才进入范围。
+    'mixed-precision-training'() {
+      let k = 0, timer;
+      const W = 320, H = 180, X = e => 20 + (e + 40) / 40 * (W - 40);
+      const html = `<svg viewBox="0 0 ${W} ${H}"><rect x="${X(-24)}" y="70" width="${W - 20 - X(-24)}" height="40" fill="#1baf7a" fill-opacity=".18"/>
+        <rect x="20" y="70" width="${X(-24) - 20}" height="40" fill="#e34948" fill-opacity=".14"/>
+        <line x1="20" y1="90" x2="${W - 20}" y2="90" stroke="var(--rule)"/>
+        <text x="${X(-24)}" y="128" font-size="10" fill="var(--ink-3)" text-anchor="middle">2^-24 fp16 最小次正规数</text>
+        <text x="22" y="60" font-size="10" fill="#e34948">被吸收为 0</text><text x="${W - 22}" y="60" font-size="10" fill="#1baf7a" text-anchor="end">可表示</text>
+        <circle class="g" cy="90" r="7" fill="#eda100"/><text class="gl" y="45" font-size="11" fill="var(--ink)" text-anchor="middle"></text></svg><span class="lbl"></span>`;
+      const render = el => { const e = -30 + k; el.querySelector('.g').setAttribute('cx', X(e)); const l = el.querySelector('.gl'); l.setAttribute('x', X(e)); l.textContent = `g·2^${k} = 2^${e}`;
+        el.querySelector('.lbl').textContent = e >= -24 ? 'loss scale 生效' : 'loss scale = 2^' + k; };
+      return { html, init: render, start(el) { timer = setInterval(() => { k = (k + 1) % 17; render(el); }, 350); }, stop() { clearInterval(timer); } };
+    },
+  };
+
+  // 渲染：按分类分段
+  const live = new Map();
+  const card = x => {
+    const p = previews[x.id](); live.set(x.id, p);
+    return `<a class="card" href="${x.href}" data-id="${x.id}" style="--c:${catOf[x.cat].color}">
+      <div class="pv">${p.html}</div>
+      <div class="body"><h2>${esc(x.title)}</h2><p class="s">${esc(x.summary)}</p>
+      <div class="tags">${x.tags.map(g => `<span class="tag">${esc(g)}</span>`).join('')}</div></div></a>`;
+  };
+  const groups = categories.map(c => ({ c, items: topics.filter(x => x.cat === c.id) })).filter(g => g.items.length);
+  grid.innerHTML = groups.map(({ c, items }) => `<section id="cat-${c.id}" style="--c:${c.color}">
+    <div class="sh"><h2>${c.name}</h2><p>${c.desc}</p><b>${items.length}</b></div>
+    <div class="grid">${items.map(card).join('')}</div></section>`).join('');
+
+  // 预览：初始化静态画面；悬停或聚焦时运行，离开时停止。
+  for (const [id, p] of live) {
+    const el = grid.querySelector(`[data-id="${id}"] .pv`); p.init(el);
+    if (reduced) continue;
+    const a = el.closest('.card');
+    const on = () => p.start(el), off = () => p.stop(el);
+    a.addEventListener('pointerenter', on); a.addEventListener('pointerleave', off);
+    a.addEventListener('focus', on); a.addEventListener('blur', off);
+  }
+
+  // 分类导航：跳转到对应段落，滚动时高亮当前段落
+  chips.innerHTML = groups.map(({ c, items }) => `<a class="ch" href="#cat-${c.id}" style="--c:${c.color}"><i></i>${c.name}<b>${items.length}</b></a>`).join('') +
+    `<span class="sp"></span><span class="cols" id="cols">列数 ${[3, 4, 5].map(n => `<button data-n="${n}">${n}</button>`).join('')}</span>`;
+  const links = [...chips.querySelectorAll('a.ch')];
+  const io = new IntersectionObserver(es => {
+    es.forEach(e => { if (e.isIntersecting) links.forEach(l => l.classList.toggle('on', l.getAttribute('href') === '#' + e.target.id)); });
+  }, { rootMargin: '-15% 0px -70% 0px' });
+  grid.querySelectorAll('section').forEach(sec => io.observe(sec));
+
+  // 列数设置：3 到 5 列，记在 localStorage
+  const colsEl = document.getElementById('cols');
+  function setCols(n, save) {
+    document.documentElement.style.setProperty('--cols', n); document.documentElement.dataset.cols = n;
+    colsEl.querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.n === n));
+    if (save) try { localStorage.setItem('nav-cols', n); } catch {}
+  }
+  let saved = 3; try { saved = +localStorage.getItem('nav-cols') || 3; } catch {}
+  setCols(Math.min(5, Math.max(3, saved)), false);
+  colsEl.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setCols(+b.dataset.n, true); });
+})();
+</script>
+</body>
+</html>
