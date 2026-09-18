@@ -17,6 +17,7 @@ module.exports = defineConfig({
   ],
   webServer: {
     command: 'npx --no-install http-server . -a 127.0.0.1 -p 4173 -c-1 --silent',
-    url: 'http://127.0.0.1:4173/topics/bpe/',
+    url: 'http://127.0.0.1:4173/',
+    reuseExistingServer: true,
   },
 });

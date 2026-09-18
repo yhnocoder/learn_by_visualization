@@ -109,3 +109,22 @@ test('Mixed precision: compare fp16 absorption with fp32 accumulation', async ({
     await screenshot(page, testInfo, 'after-fp16-preset');
   });
 });
+
+test('Index: every card links to a topic that loads', async ({ page }, testInfo) => {
+  await openTopic(page, testInfo, '/');
+  const cards = page.locator('a.card');
+  await expect(cards).toHaveCount(4);
+  const hrefs = await cards.evaluateAll(links => links.map(link => link.getAttribute('href')));
+  for (const href of hrefs) {
+    const response = await page.request.get(href);
+    expect(response.status(), href).toBe(200);
+  }
+  // The column setting is hidden on narrow screens.
+  if (await page.locator('#cols').isVisible()) {
+    await test.step('Column setting persists across reload', async () => {
+      await page.locator('#cols button[data-n="5"]').click();
+      await page.reload();
+      await expect(page.locator('#cols button.on')).toHaveAttribute('data-n', '5');
+    });
+  }
+});
