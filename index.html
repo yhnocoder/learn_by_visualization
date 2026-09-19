@@ -77,6 +77,7 @@ h2{font-family:var(--serif);font-size:calc(18px*var(--k));margin:0;line-height:1
   const categories = [
     { id: 'numerics', name: '数值与精度', color: '#2a78d6', desc: '如何做一个 1' },
     { id: 'tokenize', name: '分词', color: '#eb6834', desc: 'f(文本) = list[token]' },
+    { id: 'repr',     name: '表示学习',   color: '#7c5cd6', desc: 'f(token) = vector' },
     { id: 'arch',     name: '模型结构',   color: '#1baf7a', desc: 'Building Blocks' },
     { id: 'train',    name: '训练',       color: '#eda100', desc: '优化器、并行策略与训练稳定性。' },
   ];
@@ -86,6 +87,8 @@ h2{font-family:var(--serif);font-size:calc(18px*var(--k));margin:0;line-height:1
       summary: 'fp4 到 fp32 的位布局、可表示范围与舍入。输入一个数，逐位查看它的编码。', tags: ['fp4', 'fp8', 'bf16', 'fp32'] },
     { id: 'bpe', cat: 'tokenize', title: 'BPE 分词', href: 'topics/bpe/',
       summary: '按 Sennrich et al. (2016) 的算法逐步合并最高频符号对，再用学到的合并顺序切分新词。', tags: ['sennrich', 'bpe'] },
+    { id: 'word2vec', cat: 'repr', title: 'word2vec：Skip-gram 是怎么来的', href: 'topics/word2vec/',
+      summary: '从分布假设出发，解释 Skip-gram 为什么是一个预测任务、每个词为什么有两个向量，并在浏览器里训练二维词向量。', tags: ['Skip-gram', '负采样', 'Mikolov 2013'] },
     { id: 'llm-act-fns', cat: 'arch', title: '大模型里的激活函数', href: 'topics/llm-act-fns/',
       summary: '从 ReLU 到 SwiGLU：比较各函数的输出、导数和极限行为，参数可调。', tags: ['GELU', 'SiLU', 'GLU'] },
     { id: 'mixed-precision-training', cat: 'train', title: '混合精度训练', href: 'topics/mixed-precision-training/',
@@ -142,6 +145,19 @@ h2{font-family:var(--serif);font-size:calc(18px*var(--k));margin:0;line-height:1
       const render = el => { const e = -30 + k; el.querySelector('.g').setAttribute('cx', X(e)); const l = el.querySelector('.gl'); l.setAttribute('x', X(e)); l.textContent = `g·2^${k} = 2^${e}`;
         el.querySelector('.lbl').textContent = e >= -24 ? 'loss scale 生效' : 'loss scale = 2^' + k; };
       return { html, init: render, start(el) { timer = setInterval(() => { k = (k + 1) % 17; render(el); }, 350); }, stop() { clearInterval(timer); } };
+    },
+    // 五组词的二维向量从随机初始位置移动到各自的簇，循环播放。
+    word2vec() {
+      let t = 0, raf;
+      const W = 320, H = 180, colors = ['#4a3aa7', '#e34948', '#2a78d6', '#eda100', '#1baf7a'];
+      const centers = [[70, 60], [250, 50], [90, 135], [235, 130], [160, 95]];
+      let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+      const pts = centers.flatMap((c, g) => Array.from({ length: 4 }, () => ({ g, x0: 40 + rnd() * (W - 80), y0: 25 + rnd() * (H - 50), x1: c[0] + (rnd() - .5) * 26, y1: c[1] + (rnd() - .5) * 22 })));
+      const html = `<svg viewBox="0 0 ${W} ${H}">${pts.map(p => `<circle r="5" fill="${colors[p.g]}" stroke="var(--surface)" stroke-width="1.2"/>`).join('')}</svg><span class="lbl"></span>`;
+      const render = (el, u) => { const e = u < .5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+        el.querySelectorAll('circle').forEach((c, i) => { const p = pts[i]; c.setAttribute('cx', p.x0 + (p.x1 - p.x0) * e); c.setAttribute('cy', p.y0 + (p.y1 - p.y0) * e); });
+        el.querySelector('.lbl').textContent = 'epoch ' + Math.round(u * 60); };
+      return { html, init: el => render(el, 0), start(el) { const step = () => { t = (t + .006) % 1.3; render(el, Math.min(1, t)); raf = requestAnimationFrame(step); }; step(); }, stop() { cancelAnimationFrame(raf); } };
     },
   };
 
