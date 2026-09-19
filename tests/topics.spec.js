@@ -110,10 +110,26 @@ test('Mixed precision: compare fp16 absorption with fp32 accumulation', async ({
   });
 });
 
+test('word2vec: one gradient step raises the probability of the context word', async ({ page }, testInfo) => {
+  await openTopic(page, testInfo, '/topics/word2vec/', true);
+  await test.step('Apply one update to the default (banking, crises) sample', async () => {
+    await expect(page.locator('#sg-status')).toContainText('1.744');
+    await page.locator('#sg-step').click();
+    await expect(page.locator('#sg-status')).toContainText('目标词概率从 0.175 变为 0.238');
+    await screenshot(page, testInfo, 'after-one-step');
+  });
+  await test.step('Run one epoch of the 2D training', async () => {
+    await page.locator('#tr-one').click();
+    await expect(page.locator('#tr-progress-label')).toHaveText('epoch 1 / 60');
+    await checkMath(page);
+    await screenshot(page, testInfo, 'after-one-epoch');
+  });
+});
+
 test('Index: every card links to a topic that loads', async ({ page }, testInfo) => {
   await openTopic(page, testInfo, '/');
   const cards = page.locator('a.card');
-  await expect(cards).toHaveCount(4);
+  await expect(cards).toHaveCount(5);
   const hrefs = await cards.evaluateAll(links => links.map(link => link.getAttribute('href')));
   for (const href of hrefs) {
     const response = await page.request.get(href);
