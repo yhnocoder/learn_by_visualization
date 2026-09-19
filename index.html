@@ -67,7 +67,7 @@ h2{font-family:var(--serif);font-size:calc(18px*var(--k));margin:0;line-height:1
 <div class="wrap">
   <header>
     <h1>Learn by Visualization</h1>
-    <p class="sub">用可交互的页面解释大模型训练、推理与深度学习中的具体机制。卡片上的图形是页面内容的缩小版本，鼠标移上去会运行。</p>
+    <p class="sub">用可交互的页面解释大模型训练、推理与深度学习中的具体机制。</p>
   </header>
   <nav class="chips" id="chips" aria-label="分类"></nav>
   <main id="grid"></main>
@@ -75,17 +75,17 @@ h2{font-family:var(--serif);font-size:calc(18px*var(--k));margin:0;line-height:1
 <script>
 (() => {
   const categories = [
-    { id: 'numerics', name: '数值与精度', color: '#2a78d6', desc: '数在硬件里如何表示，误差从哪里来。' },
-    { id: 'tokenize', name: '分词与数据', color: '#eb6834', desc: '文本如何切成 token，语料如何清洗。' },
-    { id: 'arch',     name: '模型结构',   color: '#1baf7a', desc: 'Transformer 各个组件的计算过程。' },
+    { id: 'numerics', name: '数值与精度', color: '#2a78d6', desc: '如何做一个 1' },
+    { id: 'tokenize', name: '分词', color: '#eb6834', desc: 'f(文本) = list[token]' },
+    { id: 'arch',     name: '模型结构',   color: '#1baf7a', desc: 'Building Blocks' },
     { id: 'train',    name: '训练',       color: '#eda100', desc: '优化器、并行策略与训练稳定性。' },
   ];
   // 新增主题：加一条记录，并在 previews 里补一个同 id 的预览函数。
   const topics = [
     { id: 'floating_points', cat: 'numerics', title: '浮点数格式', href: 'topics/floating_points/',
-      summary: 'fp4 到 fp32 的位布局、可表示范围与舍入。输入一个数，逐位查看它的编码。', tags: ['fp8', 'bf16', 'IEEE 754'] },
+      summary: 'fp4 到 fp32 的位布局、可表示范围与舍入。输入一个数，逐位查看它的编码。', tags: ['fp4', 'fp8', 'bf16', 'fp32'] },
     { id: 'bpe', cat: 'tokenize', title: 'BPE 分词', href: 'topics/bpe/',
-      summary: '按 Sennrich et al. (2016) 的算法逐步合并最高频符号对，再用学到的合并顺序切分新词。', tags: ['Sennrich 2016', 'merge'] },
+      summary: '按 Sennrich et al. (2016) 的算法逐步合并最高频符号对，再用学到的合并顺序切分新词。', tags: ['sennrich', 'bpe'] },
     { id: 'llm-act-fns', cat: 'arch', title: '大模型里的激活函数', href: 'topics/llm-act-fns/',
       summary: '从 ReLU 到 SwiGLU：比较各函数的输出、导数和极限行为，参数可调。', tags: ['GELU', 'SiLU', 'GLU'] },
     { id: 'mixed-precision-training', cat: 'train', title: '混合精度训练', href: 'topics/mixed-precision-training/',

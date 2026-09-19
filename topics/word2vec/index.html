@@ -1,0 +1,868 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>word2vec的</title>
+<meta name="description" content="从分布假设出发，解释 Skip-gram 为什么被设计成一个预测任务，模型的输入、参数与输出分别是什么，以及为什么每个词有两个向量。">
+<link rel="icon" type="image/svg+xml" href="favicon.svg" sizes="any">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/lxgwwenkai-regular.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --ground:#f5f6f4; --surface:#ffffff; --surface-2:#eef0ec;
+  --ink:#161a1d; --ink-2:#4f575e; --ink-3:#7d858c;
+  --rule:#dde1dc; --rule-2:#c7ccc6;
+  --accent:#2f5d8a; --accent-soft:#e3ecf5;
+  --lede-highlight:#99501f; --lede-highlight-soft:#f3e3d3;
+  --center:#e34948; --center-soft:#fbe3e2; --ctx:#2a78d6; --ctx-soft:#dbe8f8;
+  --code-bg:#eef0ec;
+  --shadow:0 1px 2px rgba(22,26,29,.06), 0 6px 20px rgba(22,26,29,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#111413; --surface:#1a1e1c; --surface-2:#222724;
+    --ink:#e9ece7; --ink-2:#b4bab5; --ink-3:#848b86;
+    --rule:#2c312e; --rule-2:#3a403c;
+    --accent:#8ab6e3; --accent-soft:#1f2c3a;
+  --lede-highlight:#e5ac79; --lede-highlight-soft:#3b2d22;
+    --center:#e66767; --center-soft:#3d2626; --ctx:#3987e5; --ctx-soft:#1f2e42;
+    --code-bg:#222724;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#111413; --surface:#1a1e1c; --surface-2:#222724;
+  --ink:#e9ece7; --ink-2:#b4bab5; --ink-3:#848b86;
+  --rule:#2c312e; --rule-2:#3a403c;
+  --accent:#8ab6e3; --accent-soft:#1f2c3a;
+  --lede-highlight:#e5ac79; --lede-highlight-soft:#3b2d22;
+  --center:#e66767; --center-soft:#3d2626; --ctx:#3987e5; --ctx-soft:#1f2e42;
+  --code-bg:#222724;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0; background:var(--ground); color:var(--ink);
+  font-family:"Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  font-weight:400; font-size:16.5px; line-height:1.85; padding:0 20px 80px}
+a{color:var(--accent); text-decoration:none; border-bottom:1px solid transparent}
+a:hover{border-bottom-color:var(--accent)}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.frame{max-width:1180px; margin:0 auto; display:grid; grid-template-columns:220px minmax(0,720px); gap:64px; justify-content:center}
+@media (max-width:1000px){ .frame{grid-template-columns:minmax(0,720px)} }
+
+.mast{grid-column:1/-1; padding-block:56px 40px; border-bottom:1px solid var(--rule-2); margin-bottom:40px}
+.mast .eyebrow{font-family:"JetBrains Mono",ui-monospace,monospace; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); margin:0 0 14px}
+.mast h1{font-family:"LXGW WenKai","KaiTi","STKaiti",serif; font-weight:700; font-size:clamp(34px,5vw,52px); line-height:1.2; margin:0 0 18px; text-wrap:balance; letter-spacing:-.01em}
+.mast p.lede{font-size:18px; color:var(--ink-2); max-width:44em; margin:0; line-height:1.8}
+.mast .lede mark, article mark{color:var(--lede-highlight); font-weight:500; background:linear-gradient(transparent 72%,var(--lede-highlight-soft) 72%); padding:0 .06em; -webkit-box-decoration-break:clone; box-decoration-break:clone}
+
+.toc{position:sticky; top:28px; align-self:start; font-size:13.5px; line-height:1.6; max-height:calc(100dvh - 56px); overflow-y:auto; scrollbar-width:thin; overscroll-behavior:contain}
+.toc-toggle{display:none}
+.toc .t{font-family:"JetBrains Mono",ui-monospace,monospace; font-size:11.5px; letter-spacing:.14em; color:var(--ink-3); margin:0 0 12px}
+.toc ol{list-style:none; margin:0; padding:0; border-left:1px solid var(--rule-2)}
+.toc li a{display:block; padding:5px 8px 5px 14px; color:var(--ink-2); border:0; margin-left:-1px; border-left:2px solid transparent}
+.toc ol ol{border:0; margin:2px 0 7px}
+.toc ol ol a{padding-left:26px; font-size:12.5px; color:var(--ink-3)}
+.toc li a:hover{color:var(--ink)}
+.toc li a.in-section{color:var(--accent); font-weight:500}
+.toc li a.on{color:var(--accent); border-left-color:var(--accent)}
+article section,article h3{scroll-margin-top:24px}
+@media (max-width:1000px){
+  .toc{position:static; max-height:none; margin-bottom:24px}
+  .toc .t{display:none}
+  .toc-toggle{display:flex; align-items:center; justify-content:space-between; width:100%; padding:12px 14px; font:inherit; color:var(--ink); background:var(--surface); border:1px solid var(--rule-2); border-radius:6px; cursor:pointer}
+  .toc-toggle::after{content:'−'}
+  .toc-toggle[aria-expanded="false"]::after{content:'+'}
+  .toc > ol{margin-top:12px; max-height:60dvh; overflow-y:auto}
+  .toc-toggle[aria-expanded="false"] + ol{display:none}
+}
+
+article{min-width:0}
+section{margin-bottom:72px}
+h2{font-family:"LXGW WenKai","KaiTi","STKaiti",serif; font-weight:700; font-size:30px; line-height:1.3; margin:0 0 6px; text-wrap:balance; letter-spacing:-.005em}
+h2 .n{font-family:"JetBrains Mono",ui-monospace,monospace; font-weight:500; font-size:13px; color:var(--ink-3); letter-spacing:.1em; display:block; margin-bottom:10px}
+h3{font-family:"LXGW WenKai","KaiTi","STKaiti",serif; font-weight:600; font-size:21px; line-height:1.4; margin:40px 0 8px; text-wrap:balance}
+p{margin:0 0 1.15em}
+p.sub{color:var(--ink-2); font-size:17px; margin-bottom:1.6em}
+strong{font-weight:600}
+em{font-style:normal; color:var(--accent); font-weight:500}
+code{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.86em; background:var(--code-bg); padding:.1em .4em; border-radius:4px}
+ul,ol{padding-left:1.5em; margin:0 0 1.15em}
+li{margin-bottom:.35em}
+.math-block{margin:8px 0 1.3em; overflow-x:auto; padding:6px 0}
+mjx-container[display="true"]{margin:.4em 0 !important}
+mjx-container svg{display:inline-block; width:auto; height:auto}
+blockquote{margin:22px 0 28px; padding:20px 26px; border-radius:12px; background:var(--surface-2); font-family:"LXGW WenKai","KaiTi","STKaiti",serif; font-size:20px; line-height:1.7; color:var(--ink); text-wrap:pretty}
+blockquote p{margin:0}
+blockquote cite{display:block; margin-top:8px; font-style:normal; font-size:13px; color:var(--ink-3)}
+.tbl{overflow-x:auto; margin:22px 0 28px; border:1px solid var(--rule); border-radius:10px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; line-height:1.6}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+th{font-weight:500; color:var(--ink-3); font-size:12.5px; letter-spacing:.06em; font-family:"JetBrains Mono",ui-monospace,monospace; background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+
+figure{margin:26px 0 30px; background:var(--surface); border:1px solid var(--rule); border-radius:10px; padding:18px 18px 12px; box-shadow:var(--shadow)}
+figcaption{font-size:14px; color:var(--ink-2); line-height:1.7; margin-top:12px; padding-top:10px; border-top:1px solid var(--rule)}
+.controls{display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center; font-size:13.5px; margin:4px 0 12px; color:var(--ink-2)}
+.controls label{display:inline-flex; align-items:center; gap:8px; cursor:pointer}
+.controls input[type=range]{width:150px; accent-color:var(--accent)}
+.controls .v{font-family:"JetBrains Mono",ui-monospace,monospace; min-width:2em; color:var(--ink); font-variant-numeric:tabular-nums}
+.plotwrap > svg{width:100%; height:auto; display:block}
+/* 形状图（HTML 网格） */
+.shapes-wrap{padding:10px 0 4px}
+.shapes{display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:16px 4px; margin:0 auto; padding:0 12px}
+.shapes-group{display:flex; align-items:center; justify-content:center; min-width:0}
+.shape-key{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px 16px; margin:14px 0 8px; font-size:13px; color:var(--ink-2)}
+@media(max-width:420px){.shape-key{grid-template-columns:1fr}}
+.shapes .m{display:flex; flex-direction:column; align-items:center; gap:8px; position:relative}
+.shapes .m .lab{font-size:17px; line-height:1; min-height:22px; display:flex; align-items:flex-end}
+.shapes .m .dim{font-size:12px; color:var(--ink-3); white-space:nowrap}
+.shapes .m .meaning{font-size:12px; color:var(--ink-2); white-space:nowrap; line-height:1.5}
+.shapes .m.context-matrix{margin-right:16px}
+.shapes .g{display:grid; gap:1px; background:var(--rule-2); border:1px solid var(--rule-2); border-radius:3px; overflow:hidden}
+.shapes .g i{display:block; width:16px; height:16px; background:var(--surface)}
+.shapes .g i.c{background:var(--center-soft); box-shadow:inset 0 0 0 1.5px var(--center)}
+.shapes .g i.o{background:var(--ctx-soft); box-shadow:inset 0 0 0 1.5px var(--ctx)}
+.shapes .g i.u{background:var(--ctx-soft)}
+.shapes .gw{position:relative}
+.shapes .side{position:absolute; font-family:"JetBrains Mono",ui-monospace,monospace; font-size:12px; font-weight:500; line-height:17px}
+.shapes .side.l{right:calc(100% + 6px); top:calc(3 * 17px + 1px); color:var(--center)}
+.shapes .side.r{left:calc(100% + 6px); top:calc(6 * 17px + 1px); color:var(--ctx)}
+.shapes .a{display:flex; flex-direction:column; align-items:center; gap:2px; padding:0 3px; align-self:center; color:var(--ink-2); font-size:12px; white-space:nowrap; margin-top:26px; font-family:"JetBrains Mono",ui-monospace,monospace}
+.shapes .a.wide{padding:0 4px}
+.shapes .a svg{width:24px; height:10px; overflow:visible}
+.shapes .a svg line{stroke:var(--ink-3); stroke-width:1.3}
+.shapes .a svg path{fill:var(--ink-3)}
+.shapes .a .t{min-height:18px}
+
+/* 按钮与第 5 节 */
+.btn{font:inherit; font-size:13.5px; padding:5px 14px; border-radius:6px; border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer}
+.btn.quiet{background:transparent; color:var(--accent)}
+.btn:disabled{opacity:.45; cursor:default}
+.controls select{font:inherit; font-size:13.5px; color:var(--ink); background:var(--surface); border:1px solid var(--rule-2); border-radius:6px; padding:4px 8px}
+.controls input[type=checkbox]{accent-color:var(--accent); width:15px; height:15px}
+.sg-grid{display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:start}
+@media (max-width:640px){ .sg-grid{grid-template-columns:1fr} }
+.sg-panel h4{margin:0 0 6px; font-size:13px; font-weight:500; color:var(--ink-2)}
+.sg-panel > svg{width:100%; height:auto; display:block}
+#sg-bars .bar{fill:var(--rule-2)} #sg-bars .bar.o{fill:var(--ctx)} #sg-bars .bar.c{fill:var(--center-soft); stroke:var(--center); stroke-width:1}
+#sg-bars .lbl{fill:var(--ink-2); font-family:"JetBrains Mono",ui-monospace,monospace; font-size:10px}
+#sg-bars .val{fill:var(--ink-3); font-family:"JetBrains Mono",ui-monospace,monospace; font-size:9.5px}
+#sg-bars .axis{stroke:var(--rule-2); stroke-width:1}
+.sg-table{font-size:13px; font-family:"JetBrains Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums}
+.sg-table td{padding:3px 8px; border-bottom:1px solid var(--rule); vertical-align:middle}
+.sg-table tr:last-child td{border-bottom:0}
+.sg-table td.w{color:var(--ink-2)} .sg-table tr.o td.w{color:var(--ctx); font-weight:500} .sg-table tr.c td.w{color:var(--center); font-weight:500}
+.sg-table .gb{display:inline-block; height:8px; border-radius:2px; vertical-align:middle}
+.sg-table .gb.neg{background:var(--ctx)} .sg-table .gb.pos{background:var(--center)}
+.sg-table td.n{text-align:right; min-width:5.5em}
+/* 第 6 节 */
+.legend{display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12.5px; color:var(--ink-2); margin:2px 0 8px; font-family:"JetBrains Mono",ui-monospace,monospace}
+.legend span{display:inline-flex; align-items:center; gap:6px}
+.legend i{display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--c)}
+#tr-svg{background:var(--surface-2); border-radius:6px}
+#tr-svg .grid{stroke:var(--rule); stroke-width:1}
+#tr-svg .axis{stroke:var(--rule-2); stroke-width:1}
+#tr-svg .pt{stroke:var(--surface); stroke-width:1.2}
+#tr-svg .pu{fill:none; stroke-width:1.6}
+#tr-svg .lab{font-family:"JetBrains Mono",ui-monospace,monospace; font-size:10.5px; fill:var(--ink-2); pointer-events:none}
+#tr-svg .lab.u{fill:var(--ink-3); font-style:italic}
+/* 窗口图 */
+.win .tok rect{fill:var(--surface-2); stroke:var(--rule-2); stroke-width:1}
+.win .tok text{fill:var(--ink); font-family:"JetBrains Mono",ui-monospace,monospace; font-size:14px}
+.win .tok.ctx rect{fill:var(--ctx-soft); stroke:var(--ctx)}
+.win .tok.center rect{fill:var(--center-soft); stroke:var(--center); stroke-width:1.5}
+.win .tok.center text{font-weight:500}
+.win .tok{cursor:pointer}
+.win .tok:hover rect{stroke:var(--ink-2)}
+.win .idx{fill:var(--ink-3); font-family:"JetBrains Mono",ui-monospace,monospace; font-size:11px}
+.win .arc{fill:none; stroke:var(--ctx); stroke-width:1.4; marker-end:url(#arrow)}
+.win .lbl{fill:var(--ink-2); font-family:"JetBrains Mono",ui-monospace,monospace; font-size:11.5px}
+.win .brace{fill:none; stroke:var(--ink-3); stroke-width:1}
+.win .cap{fill:var(--ink-2); font-size:12px}
+.win .cap.c{fill:var(--center)}
+.pairs{display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 4px; font-family:"JetBrains Mono",ui-monospace,monospace; font-size:13px}
+.pairs span{padding:2px 10px; border:1px solid var(--rule-2); border-radius:99px; background:var(--surface-2); font-variant-numeric:tabular-nums}
+.pairs span b{font-weight:400; color:var(--center)}
+.pairs span i{font-style:normal; color:var(--ctx)}
+.chart-status{font-size:12.5px; color:var(--ink-2); margin:8px 0 0; font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="mast">
+    <h1>word2vec</h1>
+    <p class="lede">word2vec 能把词转换成向量，让含义相近的词在向量空间中彼此接近。但<mark>训练数据只有文本</mark>，没有人告诉模型哪些词含义相近，<mark>它是怎么学会的？</mark></p>
+    <p class="lede">本文从这个问题出发，介绍 word2vec 的一种模型 Skip-gram：它如何利用词语周围的上下文构造<mark>预测任务</mark>，又如何通过一次次预测和参数更新，学到<mark>词的向量表示</mark>。我们会从一个具体例子开始，逐步理解模型的设计，以及<mark>负采样</mark>为什么能让训练更高效。</p>
+  </header>
+
+  <nav class="toc" aria-label="目录">
+    <p class="t">目录</p>
+    <button class="toc-toggle" type="button" aria-expanded="true" aria-controls="toc-list">目录</button>
+    <ol id="toc-list">
+      <li><a href="#s1">为什么能从上下文学到词向量</a>
+        <ol>
+          <li><a href="#meaning">词义没有公式</a></li>
+          <li><a href="#routes">计数与预测两条路线</a></li>
+        </ol>
+      </li>
+      <li><a href="#s2">Skip-gram：给一个中心词，预测窗口内的其他词</a>
+        <ol>
+          <li><a href="#window">窗口与训练数据</a></li>
+          <li><a href="#fig-window">演示：滑动窗口</a></li>
+          <li><a href="#objective">目标函数</a></li>
+          <li><a href="#pretext">预测本身不是目的</a></li>
+        </ol>
+      </li>
+      <li><a href="#s3">模型：前向过程</a>
+        <ol>
+          <li><a href="#forward">前向过程</a></li>
+          <li><a href="#head">U 就是输出头</a></li>
+          <li><a href="#dot">为什么用点积而不是 cosine 相似度</a></li>
+        </ol>
+      </li>
+      <li><a href="#s4">为什么每个词有两个向量</a>
+        <ol>
+          <li><a href="#two-matrices">两个矩阵从哪里来</a></li>
+          <li><a href="#share">为什么不共享</a></li>
+          <li><a href="#self-term">自身项</a></li>
+          <li><a href="#tied">同一个问题在 Transformer 里</a></li>
+        </ol>
+      </li>
+      <li><a href="#s5">训练：loss、梯度、一步更新</a>
+        <ol>
+          <li><a href="#ce">cross entropy 与 label</a></li>
+          <li><a href="#grad">梯度</a></li>
+          <li><a href="#fig-step">演示：一步更新</a></li>
+          <li><a href="#loop">完整流程</a></li>
+          <li><a href="#order">样本顺序</a></li>
+        </ol>
+      </li>
+      <li><a href="#s6">完整训练：向量在平面上的移动</a>
+        <ol>
+          <li><a href="#fig-train">演示：二维训练</a></li>
+          <li><a href="#observe">看什么</a></li>
+        </ol>
+      </li>
+    </ol>
+  </nav>
+
+  <article>
+<section id="s1">
+  <h2><span class="n">01</span>为什么能从上下文学到词向量</h2>
+  <blockquote><p>word2vec 没有直接定义"词义"，也没有直接优化"相似的词向量要相近"。它设定了一个预测任务让模型完成，词向量是模型完成这个任务时学到的参数。</p></blockquote>
+  <p>为什么预测周围的词能够帮助我们学习词向量？我们先从词义与上下文的关系说起。</p>
+
+  <h3 id="meaning">词义没有公式</h3>
+  <p>我们想要的性质是：<mark>意思相近的词，向量也相近</mark>。这个目标无法直接优化，因为"意思相近"没有定义。需要一个可以从语料里计算出来的替代量。</p>
+  <p>语言学里有一个现成的替代量，<mark>叫分布假设（distributional hypothesis）</mark>：一个词的含义由它周围经常出现的词决定。Firth 在 1957 年的表述是：</p>
+  <blockquote><p>You shall know a word by the company it keeps.</p><cite>J. R. Firth, 1957</cite></blockquote>
+  <p>以 <code>banking</code> 为例，它在语料里的邻居通常是 <code>money</code>、<code>loan</code>、<code>crisis</code>、<code>regulation</code> 这类词；<code>finance</code> 的邻居和它高度重合；<code>apple</code> 的邻居则几乎不重合。分布假设把"意思相近"替换成了"邻居的分布相近"。</p>
+  <p>于是学习目标变成一个可操作的版本：</p>
+  <blockquote><p>上下文分布相似的词，向量应该相似。</p></blockquote>
+  <p>这个目标里有一个隐含的要求：向量必须由上下文决定。只要向量是从上下文里算出来的，上下文相似的词就自然得到相似的向量。word2vec 的全部设计都在回答"怎么从上下文算出向量"这一个问题。</p>
+
+  <h3 id="routes">计数与预测两条路线</h3>
+  <p>从上下文得到向量有两条路线。</p>
+  <ul>
+    <li><strong>计数。</strong>统计一张共现矩阵，第 $i$ 行第 $j$ 列是词 $i$ 和词 $j$ 在窗口内一起出现的次数，再用 SVD 降维，取前 $d$ 个奇异向量作为词向量。本文不展开。</li>
+    <li><strong>预测。</strong>训练一个模型，给它一个词，让它预测周围会出现哪些词。如果它预测得准，说明它内部对这个词的表示已经包含了"这个词通常和谁一起出现"的信息。word2vec 走的是这条路线。</li>
+  </ul>
+  <p>计数方法可以得到有用的词向量，但当词表和语料规模增大时，构建共现矩阵并进行分解会带来计算与存储压力。word2vec 提供了另一种训练方式：直接从文本中提取训练样本，逐步更新低维词向量。这使它更便于在<mark>大规模语料上训练</mark>，但不意味着计数方法的效果比它差。</p>
+  <p>两条路线用的是同一份信息，都来自窗口内的共现。区别在于计数路线一次性算出整张矩阵再分解，预测路线用随机梯度下降逐个样本学习。Levy 和 Goldberg 在 2014 年证明 <mark>Skip-gram 加负采样在最优解处</mark>等价于对一张经过平移的 PMI（pointwise mutual information）矩阵做隐式分解。</p>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>Skip-gram：给一个中心词，预测窗口内的其他词</h2>
+  <p class="sub">取语料中位置 $t$ 的词作为中心词，预测它前后各 $m$ 个位置上出现的词。</p>
+
+  <h3 id="window">窗口与训练数据</h3>
+  <p>记语料为一个长度为 $T$ 的词序列 $w_1, w_2, \dots, w_T$，窗口大小为 $m$。对每一个位置 $t$，中心词是 $w_t$，上下文词是 $w_{t+j}$，其中 $j$ 取 $-m$ 到 $m$ 之间除 0 以外的整数。模型要给出的是条件概率</p>
+  <div class="math-block">$$P(w_{t+j} \mid w_t), \qquad -m \le j \le m,\; j \ne 0.$$</div>
+  <p>名字来自 n-gram。bigram 指两个连续词组成的组合，而 skip-gram 允许组合中的词不连续。在 word2vec 的 Skip-gram 模型中，每个中心词会分别与窗口内的上下文词组成训练样本（如 $w_t$ 和 $w_{t+2}$），因此模型既学习相邻词之间的关系，也学习中间隔着其他词的关系。CBOW（continuous bag-of-words）是同一个思路的反方向：给窗口内的词，预测中心词。本文只讲 Skip-gram。</p>
+  <p>训练数据：每一个位置 $t$ 和每一个偏移 $j$ 产生一个样本 $(c, o)$，$c = w_t$ 是中心词，$o = w_{t+j}$ 是上下文词。整个语料被拆成一个样本列表，样本之间相互独立，模型看不到两个样本来自同一个窗口。窗口在语料两端被截断，位置 1 只有右侧上下文。一个长度为 $T$ 的语料产生的样本数略少于 $2mT$。</p>
+
+  <h3 id="fig-window">演示：滑动窗口</h3>
+  <figure id="fig-win">
+    <div class="controls">
+      <label>中心词位置 $t$ <input type="range" id="win-t" min="1" max="8" value="4" step="1"><span class="v" id="win-t-v">4</span></label>
+      <label>窗口大小 $m$ <input type="range" id="win-m" min="1" max="3" value="2" step="1"><span class="v" id="win-m-v">2</span></label>
+    </div>
+    <div class="plotwrap"><svg class="win" id="win-svg" viewBox="0 0 720 250" role="img" aria-label="滑动窗口示意图"></svg></div>
+    <div class="pairs" id="win-pairs" aria-live="polite"></div>
+    <div class="chart-status" id="win-status"></div>
+    <figcaption>位置 $t$ 的中心词用红色标出，窗口内的上下文词用蓝色标出，每条弧线对应一个要预测的条件概率，也对应一个训练样本 $(c, o)$。拖动 $t$ 让窗口沿语料移动，拖动 $m$ 改变窗口大小。点击任意一个词可以直接把它设为中心词。</figcaption>
+  </figure>
+  <p>"滑动窗口"指的就是 $t$ 从 1 递增到 $T$。窗口本身不是模型的一部分，它只是把语料转换成样本列表的规则。</p>
+
+  <h3 id="objective">目标函数</h3>
+  <p>把所有样本的对数概率加起来，取负号和平均，就是 Skip-gram 的损失函数：</p>
+  <div class="math-block">$$J(\theta) = -\frac{1}{T}\sum_{t=1}^{T}\;\sum_{\substack{-m \le j \le m \\ j \ne 0}} \log P(w_{t+j} \mid w_t;\, \theta).$$</div>
+  <p>$\theta$ 是模型的全部参数，<a href="#forward">模型的前向过程</a>会说明它具体是哪两个矩阵。这个式子里有两点值得先注意：</p>
+  <ul>
+    <li>损失是所有样本的总和，样本的顺序不出现在式子里。训练时按什么顺序处理样本，影响的是优化路径，不是被优化的目标。</li>
+    <li>每一项是一个条件概率的对数。要计算它，需要模型对词表中每一个词都给出一个概率。</li>
+  </ul>
+
+  <h3 id="pretext">预测本身不是目的</h3>
+  <p>这个预测任务在实际中没有用处。没有人需要一个"给定 <code>banking</code>，猜它旁边是什么词"的模型，而且它的预测准确率一定很低，因为一个词的上下文本来就有很多种可能。自监督学习的文献把这类任务称为 pretext task：任务的标签直接来自数据本身，不需要人工标注；设定它的目的是让模型在完成任务的过程中学到有用的表示。</p>
+  <p>因此评价 Skip-gram 的标准从来不是它的预测准确率，而是训练结束后取出来的参数矩阵是否满足这个目标：<a href="#meaning"><mark>上下文分布相似的词，向量应该相似</mark></a>。这一点在读论文时会反复用到：论文里报告的实验全部是对词向量的评估（类比任务、相似度任务），没有一个是对预测任务本身的评估。</p>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>模型：前向过程</h2>
+  <p class="sub">对每一个样本 $(c, o)$，模型计算 $P(o \mid c)$。</p>
+
+  <h3 id="forward">前向过程</h3>
+  <p>记词表大小为 $|V|$，向量维度为 $d$。模型只有两个参数矩阵：</p>
+  <ul>
+    <li>$\mathbf{V} \in \mathbb{R}^{|V| \times d}$，第 $w$ 行记作 $v_w$，是词 $w$ 作为中心词时的向量。</li>
+    <li>$\mathbf{U} \in \mathbb{R}^{|V| \times d}$，第 $w$ 行记作 $u_w$，是词 $w$ 作为上下文词时的向量。</li>
+  </ul>
+  <p>给定中心词 $c$，计算分四步：</p>
+  <ol>
+    <li>把 $c$ 写成 one-hot 向量 $x \in \mathbb{R}^{|V|}$，只有第 $c$ 位是 1。</li>
+    <li>$v_c = \mathbf{V}^{\top} x$。因为 $x$ 是 one-hot，这一步等于取出 $\mathbf{V}$ 的第 $c$ 行，实现上是一次查表。</li>
+    <li>$s = \mathbf{U} v_c \in \mathbb{R}^{|V|}$。第 $w$ 个分量 $s_w = u_w \cdot v_c$ 是"词 $w$ 出现在 $c$ 旁边"的分数，词表里每一个词都有一个分数。</li>
+    <li>对 $s$ 做 softmax，得到词表上的概率分布。取出第 $o$ 位，就是我们要的条件概率：</li>
+  </ol>
+  <div class="math-block">$$P(o \mid c) = \frac{\exp(u_o \cdot v_c)}{\sum_{w=1}^{|V|} \exp(u_w \cdot v_c)}.$$</div>
+  <figure id="fig-shapes">
+    <div class="shapes-wrap"><div class="shapes" role="img" aria-label="Skip-gram 前向过程的形状图">
+      <div class="shapes-group">
+      <div class="m"><div class="lab">$x$</div><div class="gw"><div class="g" data-rows="9" data-cols="1" data-hl="c"></div><span class="side l">$c$</span></div><div class="dim">$|V| \times 1$</div></div>
+      <div class="a"><span class="t"></span><svg viewBox="0 0 44 10"><line x1="0" y1="5" x2="38" y2="5"/><path d="M36,1 L44,5 L36,9 z"/></svg></div>
+      <div class="m"><div class="lab">$\mathbf{V}$</div><div class="g" data-rows="9" data-cols="3" data-hl="c"></div><div class="dim">$|V| \times d$</div></div>
+      <div class="a wide"><span class="t">取第$c$行</span><svg viewBox="0 0 44 10"><line x1="0" y1="5" x2="38" y2="5"/><path d="M36,1 L44,5 L36,9 z"/></svg></div>
+      <div class="m"><div class="lab">$v_c$</div><div class="g" data-rows="1" data-cols="3" data-hl="all-c"></div><div class="dim">$1 \times d$</div></div>
+      </div><div class="shapes-group">
+      <div class="a"><span class="t"></span><svg viewBox="0 0 44 10"><line x1="0" y1="5" x2="38" y2="5"/><path d="M36,1 L44,5 L36,9 z"/></svg></div>
+      <div class="m context-matrix"><div class="lab">$\mathbf{U}$</div><div class="gw"><div class="g" data-rows="9" data-cols="3" data-hl="all-u"></div><span class="side r">$u_o$</span></div><div class="dim">$|V| \times d$</div></div>
+      <div class="a wide"><span class="t">$|V|$ 个点积</span><svg viewBox="0 0 44 10"><line x1="0" y1="5" x2="38" y2="5"/><path d="M36,1 L44,5 L36,9 z"/></svg></div>
+      <div class="m"><div class="lab">$s$</div><div class="g" data-rows="9" data-cols="1" data-hl="o"></div><div class="dim">$|V| \times 1$</div></div>
+      <div class="a wide"><span class="t">softmax</span><svg viewBox="0 0 44 10"><line x1="0" y1="5" x2="38" y2="5"/><path d="M36,1 L44,5 L36,9 z"/></svg></div>
+      <div class="m"><div class="lab">$P(\cdot \mid c)$</div><div class="gw"><div class="g" data-rows="9" data-cols="1" data-hl="o"></div><span class="side r">$o$</span></div><div class="dim">$|V| \times 1$</div></div>
+    </div></div></div>
+    <div class="shape-key">
+      <span>$\mathbf{V}$：中心词向量矩阵</span><span>$\mathbf{U}$：上下文词向量矩阵</span>
+      <span>$v_c$：中心词 $c$ 的向量</span><span>$u_o$：上下文词 $o$ 的向量</span>
+    </div>
+    <figcaption>前向过程中每一步的形状，图中 $|V| = 9$，$d = 3$，实际 $|V|$ 在几万到几百万，$d$ 在 100 到 300。红色标出中心词 $c$ 对应的位置；$\mathbf{U}$ 中蓝框标出第 $o$ 行，即上下文词 $o$ 的向量 $u_o$，它与 $v_c$ 的点积得到分数 $s_o$。右侧蓝框对应 $s_o$ 与 $P(o \mid c)$。图中的 $v_c$ 按行向量展示，维度为 $1 \times d$；代入上方矩阵乘法时使用其列向量形式。</figcaption>
+  </figure>
+  <p>两个矩阵之间没有非线性激活，没有 bias。从 one-hot 到分数是两次线性变换，整个模型是一个线性打分器加 softmax。这也是它在大语料上能跑得快的原因之一。</p>
+
+
+  <h3 id="head">U 就是输出头</h3>
+  <p>一个标准分类器的尾部是：隐藏层向量 $h \in \mathbb{R}^{d}$，过一个线性层 $\mathrm{Linear}(d, K)$ 得到 $K$ 个分数，再过 softmax。这个线性层就是输出头，它的权重是一个 $K \times d$ 的矩阵。对到 Skip-gram 上，$h$ 是 $v_c$，$K$ 是 $|V|$，线性层的权重矩阵就是 $\mathbf{U}$。所以 $u_w \cdot v_c$ 这个"点积打分"不是一个特殊设计，它是一个不带 bias 的全连接层在逐类别地计算。把 $\mathbf{U}$ 读成"每个词一个上下文向量"，只是换了一个角度读同一个矩阵的行。</p>
+  <p>现代语言模型的最后一层叫 LM head，也是一个 $\mathrm{Linear}(d, |V|)$ 加 softmax，结构和 $\mathbf{U}$ 完全相同，区别只在于前面的 $h$ 不再是一次查表的结果，而是经过了很多层 Transformer。</p>
+  <p>Skip-gram 比常见模型简单的地方不在于缺输出头，而在于 embedding 层和输出头之间什么都没有。</p>
+
+  <h3 id="dot">为什么用点积而不是 cosine 相似度</h3>
+  <p>cosine 相似度等于点积除以两个向量的模长，所以"用点积还是用 cosine"的区别只在于模长要不要参与打分。训练时用点积，有三个原因。</p>
+  <ul>
+    <li><strong>cosine 的取值范围是 $[-1, 1]$。</strong>放进 softmax 之后，$\exp(1)$ 和 $\exp(-1)$ 只差 $e^2 \approx 7.4$ 倍，模型无法表达"某个上下文词的概率远高于其他词"这种分布。点积的取值没有上界，分布可以任意尖锐。</li>
+    <li><strong>模长是一个可以利用的自由度。</strong>训练会自行决定每个词向量的模长，高频词、上下文分布集中的词可以有更大的模长。cosine 把这个信息去掉了。</li>
+    <li><strong>梯度简单。</strong>点积对 $v_c$ 的导数就是 $u_o$，cosine 的导数要多出归一化项。</li>
+  </ul>
+  <p>推荐系统里的双塔模型用 cosine，但不是裸的 cosine，而是 cosine 除以一个温度 $\tau$（常取 0.05 到 0.1），取值范围变成 $[-20, 20]$ 量级，尖锐分布的问题就不存在了。它选择归一化是因为在推荐场景里模长会学到热门度，热门 item 和谁的点积都大，这是要避免的。word2vec 没有这个顾虑，所以取最简单的形式。两种做法本质都是点积，区别是要不要让模长参与，以及由谁控制分数的尺度。</p>
+  <p>训练结束之后评估两个词向量的相似度时，通常用 cosine。这时要比较的是方向，不希望频率带来的模长差异干扰结果。训练时的打分函数和评估时的度量是两个不同的需求。</p>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>为什么每个词有两个向量</h2>
+  <p class="sub">Skip-gram 给每个词两个向量 $v_w$ 和 $u_w$，一个当中心词用，一个当上下文词用。</p>
+
+  <h3 id="two-matrices">两个矩阵从哪里来</h3>
+  <p>回到<a href="#forward">前向过程</a>：one-hot 乘 $\mathbf{V}$ 得到隐藏层 $v_c$，$v_c$ 乘 $\mathbf{U}$ 得到分数 $s$。$\mathbf{V}$ 的每一行按输入词索引，$\mathbf{U}$ 的每一行按输出词索引，两个矩阵的行恰好是同一个维度 $d$，所以每个词就同时在两个矩阵里各有一行。"每个词两个向量"是对这两个矩阵的一种读法。</p>
+
+  <h3 id="share">为什么不共享</h3>
+  <p>真正需要回答的问题是：既然两个矩阵形状相同，为什么不强制 $\mathbf{U} = \mathbf{V}$，让每个词只有一个向量。看一个例子：</p>
+  <ul>
+    <li><code>eat</code> 的旁边经常出现 <code>food</code>、<code>apple</code>、<code>dinner</code>。</li>
+    <li><code>eat</code> 和 <code>drink</code> 的上下文高度重合，但它们几乎不出现在彼此旁边。</li>
+  </ul>
+  <p>这是两种不同的关系。语言学上前者叫组合关系（syntagmatic），两个词在同一段文本里一起出现；后者叫聚合关系（paradigmatic），两个词可以在同一个位置上互相替换。<a href="#s1">上下文分布相似的词，向量相似</a>说的是后者。</p>
+  <p>Skip-gram 直接打分的是前者。$u_o \cdot v_c$ 大，表示"$o$ 出现在 $c$ 旁边"的概率大。如果只有一套向量，两个要求同时落在 $\mathbf{V}$ 上：</p>
+  <ul>
+    <li>组合关系要求 $v_{\text{food}} \cdot v_{\text{eat}}$ 大，也就是 <code>food</code> 在空间里靠近 <code>eat</code>；</li>
+    <li>聚合关系要求 $v_{\text{drink}}$ 靠近 $v_{\text{eat}}$。</li>
+  </ul>
+  <p>于是 <code>food</code>、<code>eat</code>、<code>drink</code> 被同一个几何量约束到一起，两种关系混在一个点积里。由此无法区分两个向量点积大是因为常常一起出现还是因为可以在同一位置进行替换</p>
+  <p>分成两个矩阵之后，两种关系由不同的机制承担：</p>
+  <ul>
+    <li>组合关系由点积直接表达：$u_{\text{food}} \cdot v_{\text{eat}}$ 大意味着两个词常常一起出现。</li>
+    <li>聚合关系是训练的二阶结果：<code>eat</code> 和 <code>drink</code> 的上下文相同，所以 $v_{\text{eat}}$ 和 $v_{\text{drink}}$ 在训练中被同一批 $u$ 向量沿相同方向更新，最终位置相近。它们之间的点积<mark>从来没有被直接优化过</mark>。</li>
+  </ul>
+  <p>这就是<a href="#s1">相似性不是训练目标里的一项</a>的具体含义。训练过程中 $\mathbf{V}$ 的行只会因为 $\mathbf{U}$ 的行而改变，$\mathbf{U}$ 的行只会因为 $\mathbf{V}$ 的行而改变，同一个矩阵内部的两行从未被直接比较。<a href="#fig-train">二维训练演示</a>会把这个过程画出来。</p>
+
+  <h3 id="self-term">自身项</h3>
+  <p>还有一个技术上的原因。softmax 的分母对词表里每一个词求和，其中包括 $w = c$ 这一项。共享向量时这一项是 $\exp(v_c \cdot v_c) = \exp(\|v_c\|^2)$，恒为正且随模长增大，模型会系统性地给"一个词出现在自己旁边"分配较高的概率，而语料里这种情况很少发生。分成两个矩阵之后，这一项是 $\exp(u_c \cdot v_c)$，是一个可以被训练压低的自由量。</p>
+
+  <h3 id="tied">同一个问题在 Transformer 里</h3>
+  <p>"要不要让输入 embedding 和输出头共享参数"这个问题在 Transformer 语言模型里再次出现，叫 tied embeddings 或 weight tying：把 embedding 矩阵和 LM head 的权重设为同一个矩阵，参数量减少 $|V| \times d$。不同模型的选择不同。它的取舍和本节讨论的是同一件事：共享节省参数并且让两个空间对齐，不共享让"作为输入"和"作为输出"两种角色各自有自由度。读到这类模型的配置时，可以回到本节的例子想一遍。</p>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>训练：loss、梯度、一步更新</h2>
+  <p class="sub">一个样本的 loss 是什么，对哪些参数有梯度，一步更新改变了什么。</p>
+
+  <h3 id="ce">cross entropy 与 label</h3>
+  <p>Skip-gram 是一个 $|V|$ 类的分类器，训练它用的就是普通的 cross entropy。对样本 $(c, o)$，模型的输出是词表上的分布 $p = \mathrm{softmax}(\mathbf{U} v_c)$，label 是 $o$ 的 one-hot 向量 $y$，只有第 $o$ 位是 1。cross entropy 是</p>
+  <div class="math-block">$$-\sum_{w=1}^{|V|} y_w \log p_w = -\log p_o = -\log P(o \mid c).$$</div>
+  <p>求和里只有 $w = o$ 一项非零，所以 cross entropy 化简成一个对数。<a href="#objective">Skip-gram 的目标函数</a>里的 $\log P(w_{t+j} \mid w_t)$ 不是"只有 pred 没有 label"，label 在下标里。</p>
+
+  <h3 id="grad">梯度</h3>
+  <p>上一段已经得到：对于样本 $(c, o)$，损失是模型给真实上下文词 $o$ 分配的概率的负对数。将前向过程中的 softmax 概率代入，再利用 $\log(a/b)=\log a-\log b$，可以逐步展开。下面的 $[\operatorname{softmax}(\mathbf{U}v_c)]_o$ 表示 softmax 输出中第 $o$ 个分量，即模型给真实上下文词 $o$ 分配的概率：</p>
+  <div class="math-block">$$\begin{aligned}
+  \ell(c,o)
+  &= -\log P(o\mid c) \\
+  &= -\log\left([\operatorname{softmax}(\mathbf{U}v_c)]_o\right) \\
+  &= -\log\frac{\exp(u_o\cdot v_c)}{\sum_{w=1}^{|V|}\exp(u_w\cdot v_c)} \\
+  &= -\log\exp(u_o\cdot v_c)+\log\sum_{w=1}^{|V|}\exp(u_w\cdot v_c) \\
+  &= -u_o\cdot v_c+\log\sum_{w=1}^{|V|}\exp(u_w\cdot v_c).
+  \end{aligned}$$</div>
+  <p>下面推导完整 softmax 的梯度，且 $\mathbf{V}$ 与 $\mathbf{U}$ 不共享参数。求导时把词的编号 $c$、$o$ 当作固定值，向量均按列向量处理。</p>
+  <p><strong>第一步：先对每个词的分数求导。</strong>记 $s_w = u_w^{\top}v_c$，并用 $Z$ 表示 softmax 的分母：</p>
+  <div class="math-block">$$Z = \sum_{j=1}^{|V|} e^{s_j}, \qquad p_w = \frac{e^{s_w}}{Z}, \qquad \ell = -s_o + \log Z.$$</div>
+  <p>这里 $w$ 表示当前正在求导的那一个词。$-s_o$ 对 $s_w$ 的导数只有在 $w=o$ 时才是 $-1$；对 $\log Z$ 使用链式法则：</p>
+  <div class="math-block">$$\begin{aligned}
+  \frac{\partial \ell}{\partial s_w}
+  &= -\mathbb{1}[w=o] + \frac{1}{Z}\frac{\partial Z}{\partial s_w} \\
+  &= -\mathbb{1}[w=o] + \frac{e^{s_w}}{Z} \\
+  &= p_w-y_w.
+  \end{aligned}$$</div>
+  <p>其中 $y_w=\mathbb{1}[w=o]$ 表示真实标签：真实上下文词对应的位置为 1，其他位置为 0。因此，每个分数的梯度都是<mark>预测概率减去真实标签</mark>。</p>
+  <p><strong>第二步：对中心词向量 $v_c$ 求导。</strong>先把点积按分量展开，$k$ 表示向量的第 $k$ 个分量：</p>
+  <div class="math-block">$$s_w=u_w^{\top}v_c=\sum_{k=1}^{d}u_{w,k}v_{c,k}.$$</div>
+  <p>对其中一个分量 $v_{c,k}$ 求导时，$u_w$ 保持不变，求和中只有第 $k$ 项依赖这个分量，因此：</p>
+  <div class="math-block">$$\frac{\partial s_w}{\partial v_{c,k}}=u_{w,k}, \qquad
+  \frac{\partial s_w}{\partial v_c}
+  =\begin{bmatrix}u_{w,1}\\ \vdots\\ u_{w,d}\end{bmatrix}=u_w.$$</div>
+  <p>也就是说，把各个分量的偏导数组成列向量，就得到 $u_w$。由于每个分数 $s_w$ 都依赖同一个 $v_c$，接下来使用链式法则，累加所有分数的贡献：</p>
+  <div class="math-block">$$\begin{aligned}
+  \frac{\partial \ell}{\partial v_c}
+  &= \sum_{w=1}^{|V|}\frac{\partial \ell}{\partial s_w}\frac{\partial s_w}{\partial v_c} \\
+  &= \sum_{w=1}^{|V|}(p_w-y_w)u_w \\
+  &= \sum_{w=1}^{|V|}p_wu_w-u_o.
+  \end{aligned}$$</div>
+  <p>最后一步利用了 $y$ 的 one-hot 性质：$\sum_w y_wu_w=u_o$。本次前向计算只取出了 $\mathbf{V}$ 的第 $c$ 行，所以其他输入向量 $v_i$（$i\ne c$）的梯度为零。</p>
+  <p><strong>第三步：对上下文向量 $u_w$ 求导。</strong>$u_w$ 只直接出现在分数 $s_w=u_w^{\top}v_c$ 中，且 $\partial s_w/\partial u_w=v_c$，因此：</p>
+  <div class="math-block">$$\begin{aligned}
+  \frac{\partial \ell}{\partial u_w}
+  &= \frac{\partial \ell}{\partial s_w}\frac{\partial s_w}{\partial u_w} \\
+  &= (p_w-y_w)v_c \\
+  &= \begin{cases}
+  (p_o-1)v_c, & w=o, \\
+  p_wv_c, & w\ne o.
+  \end{cases}
+  \end{aligned}$$</div>
+  <p>虽然 $u_w$ 只直接参与一个分数的计算，但这个分数会通过 softmax 的分母影响所有输出概率；这部分影响已经包含在第一步的 $p_w-y_w$ 中。</p>
+  <p><strong>第四步：用梯度更新参数。</strong>设学习率为 $\eta$，用更新前的参数计算上面所有梯度，再执行：</p>
+  <div class="math-block">$$\begin{aligned}
+  v_c^{\mathrm{new}} &= v_c-\eta\left(\sum_{w=1}^{|V|}p_wu_w-u_o\right), \\
+  u_w^{\mathrm{new}} &= u_w-\eta(p_w-y_w)v_c, \qquad w=1,\ldots,|V|.
+  \end{aligned}$$</div>
+  <p>两个式子右侧都使用更新前的向量，不能先更新 $v_c$，再用新的 $v_c$ 代替已经算好的输出向量梯度。由这些公式可以看出：</p>
+  <ul>
+    <li>$v_c$ 的梯度是"模型当前预测的上下文向量的期望"减去"真实的上下文向量"。梯度下降让 $v_c$ 沿 $u_o$ 的方向增加，沿期望方向减少。当模型的预测分布集中在 $o$ 上时，两项抵消，梯度接近零。</li>
+    <li>完整 softmax 的梯度计算涉及 $\mathbf{U}$ 的每一行。对 $w = o$，系数是 $P(o \mid c) - 1$，为负，$u_o$ 沿 $v_c$ 的方向增加；对其他每一个 $w$，系数是 $P(w \mid c)$，为正，$u_w$ 沿 $v_c$ 的反方向减少，减少的幅度正比于模型当前给 $w$ 的概率。在分数有限时，$P(w \mid c)$ 对任何 $w$ 都大于零，因此通常每一行都会更新；但如果 $v_c=0$，所有 $u_w$ 的梯度都是零。本节的完整 softmax 计算需要遍历全部 $|V|$ 个输出向量，而不是只处理真实上下文词对应的一行，这就是它的主要开销。</li>
+  </ul>
+  <p>把第二点放回<a href="#fig-window">滑动窗口的例子</a>：样本是 (banking, crises)，但 <code>into</code> 的上下文向量 $u_{\text{into}}$ 也被更新了，因为模型给 $P(\text{into} \mid \text{banking})$ 分配了非零概率，而这个样本说明这个位置上出现的不是 into。</p>
+
+  <h3 id="fig-step">演示：一步更新</h3>
+  <figure id="fig-sgd">
+    <div class="controls">
+      <label>中心词 $c$ <select id="sg-c"></select></label>
+      <label>上下文词 $o$ <select id="sg-o"></select></label>
+      <label>学习率 $\eta$ <input type="range" id="sg-lr" min="0.05" max="1" step="0.05" value="0.5"><span class="v" id="sg-lr-v">0.50</span></label>
+      <button class="btn" type="button" id="sg-step">执行一步更新</button>
+      <button class="btn quiet" type="button" id="sg-reset">重置参数</button>
+    </div>
+    <div class="sg-grid">
+      <div class="sg-panel">
+        <h4>$P(w \mid c)$，词表上的分布</h4>
+        <svg id="sg-bars" viewBox="0 0 320 200" role="img" aria-label="当前预测分布的柱状图"></svg>
+      </div>
+      <div class="sg-panel">
+        <h4>本步的梯度系数</h4>
+        <table class="sg-table" id="sg-table"></table>
+      </div>
+    </div>
+    <div class="chart-status" id="sg-status"></div>
+    <figcaption>词表是<a href="#fig-window">滑动窗口演示中的 8 个词</a>，$d = 2$，参数用固定种子随机初始化。左图是当前模型给出的 $P(w \mid c)$，蓝色是 label $o$。右表列出这一步每一行参数的梯度系数：$v_c$ 一行是梯度向量本身，$u_w$ 各行是系数 $P(w \mid c) - \mathbb{1}[w = o]$，乘上 $v_c$ 就是该行的梯度。点"执行一步更新"做一次梯度下降，观察 $P(o \mid c)$ 上升、其余概率下降，以及 8 行 $u_w$ 全部发生变化。学习率取得比实际训练大，是为了让单步的变化看得见。</figcaption>
+  </figure>
+
+  <h3 id="loop">完整流程</h3>
+  <ol>
+    <li>随机初始化 $\mathbf{V}$ 和 $\mathbf{U}$。</li>
+    <li>按<a href="#window">窗口内配对的规则</a>把语料变成样本 $(c, o)$ 的序列。</li>
+    <li>取一个样本，前向计算 $P(\cdot \mid c)$，按上面的公式算梯度，更新 $v_c$ 和 $\mathbf{U}$ 的各行。</li>
+    <li>回到第 3 步，直到语料遍历完，这是一个 epoch。跑若干个 epoch，学习率随进度线性下降。</li>
+    <li>取 $\mathbf{V}$ 作为词向量。</li>
+  </ol>
+
+  <h3 id="order">样本顺序</h3>
+  <p>样本是按语料顺序产生的，靠前的文本先更新参数。实现里没有打乱：C 代码按文件偏移把语料切给多个线程，每个线程在自己的区间内顺序处理；gensim 把语料切成固定大小的批次放进队列，多个线程从队列取，同样不打乱。这会不会造成系统性偏差？</p>
+  <ul>
+    <li>目标函数是所有样本 loss 的总和，顺序不出现在里面。顺序影响的是随机梯度下降走过的路径，不是它要逼近的目标。</li>
+    <li>每个词在语料里出现很多次，分散在各处。早期的更新对最终位置的贡献被后来的大量更新稀释。</li>
+    <li>语料遍历多个 epoch，学习率逐渐下降。前面的文本先被处理这件事在每个 epoch 都发生一次，但后面的 epoch 步长更小，最终位置由整个语料共同决定。</li>
+  </ul>
+  <p>真正会造成问题的是学习率下降太快，导致靠后的样本几乎不更新参数。这是超参数的问题，不是顺序的问题。</p>
+</section>
+
+<section id="s6">
+  <h2><span class="n">06</span>完整训练：向量在平面上的移动</h2>
+  <p class="sub">前面几节的论断，包括"上下文相同的词向量相近"、"共现的词不一定相近"、"共享矩阵会把两种关系混在一起"，都可以在一个小语料上直接看到。这一节在浏览器里跑完整的训练，$d = 2$，每个词的向量就是平面上的一个点。</p>
+  <p>语料由一条规则生成：每句三个词，主语、动词、宾语。主语从 6 个代词里选，动词从"吃"或"喝"的 3 种形式里选，宾语根据动词从 5 种食物或 5 种饮料里选。共 300 句，23 个词，窗口大小 1。在这个语料里，同一组的词（比如 5 种食物）上下文完全相同，但从不共现；动词和它的宾语总是共现，但上下文不同。</p>
+
+  <h3 id="fig-train">演示：二维训练</h3>
+  <figure id="fig-tr">
+    <div class="controls">
+      <label>目标函数 <select id="tr-mode"><option value="softmax">完整 softmax</option><option value="ns">负采样，k = 10</option></select></label>
+      <label><input type="checkbox" id="tr-shared"> 共享 U = V</label>
+      <label><input type="checkbox" id="tr-showU"> 同时显示 U</label>
+      <button class="btn" type="button" id="tr-run">开始</button>
+      <button class="btn quiet" type="button" id="tr-one">跑 1 个 epoch</button>
+      <button class="btn quiet" type="button" id="tr-reset">重置</button>
+    </div>
+    <div class="legend" id="tr-legend"></div>
+    <div class="plotwrap"><svg id="tr-svg" viewBox="0 0 640 400" role="img" aria-label="词向量在二维平面上的位置"></svg></div>
+    <div class="chart-status" id="tr-status"></div>
+    <figcaption>每个点是 $\mathbf{V}$ 的一行，颜色表示词所属的组。坐标轴随数据范围自动缩放，所以看相对位置，不看绝对数值。完整 softmax 跑 60 个 epoch，学习率从 0.05 线性下降；负采样跑 150 个 epoch，学习率从 0.1 线性下降，$k = 10$。勾选"共享 U = V"后两个矩阵是同一个，重置后生效。勾选"同时显示 U"会用空心点画出 $\mathbf{U}$ 的各行。参数用固定种子初始化，每次重置得到相同的起点。</figcaption>
+  </figure>
+
+  <h3 id="observe">看什么</h3>
+  <ul>
+    <li><strong>同组的词聚成一簇。</strong>训练结束后，6 个主语、3 个"吃"、3 个"喝"、5 种食物、5 种饮料各自聚在一起。它们从未共现，靠近是因为上下文相同，这是<a href="#share">相同上下文通过参数更新使词向量相近</a>的结果。</li>
+    <li><strong>共现的词不靠近。</strong>eat 和 bread 在语料里总是相邻，但在 $\mathbf{V}$ 里相距很远。勾选"同时显示 U"可以看到 $u_{\text{bread}}$ 和 $v_{\text{eat}}$ 的方向关系：点积大靠的是 $\mathbf{U}$ 和 $\mathbf{V}$ 之间的位置关系，不是 $\mathbf{V}$ 内部的。</li>
+    <li><strong>共享矩阵改变几何。</strong>勾选"共享 U = V"后重新训练，每个动词簇挨着它的宾语簇，主语簇夹在两个动词簇之间，也就是共现的词变成了邻居。状态栏里的距离可以直接对比：不共享时 eat–bread 的距离大于 eat–drink，共享后反过来，同时 bread–rice 这类同组距离也接近零，整个图被压成沿共现关系排列的一条带。最终 loss 也比不共享时高。这体现了<a href="#share">共享矩阵会用同一个点积同时约束共现关系与上下文相似关系</a>。</li>
+    <li><strong>负采样得到的结构不同。</strong>切换到负采样，簇仍然会形成，但需要更多 epoch，簇之间的相对位置和 softmax 版本不同。两种目标函数对"什么样的向量是好的"有不同的要求。</li>
+  </ul>
+  <p>两点限制。$d = 2$ 只是为了能画出来，实际使用的 100 到 300 维空间里，簇的结构更丰富，不会像这里一样只有五团。语料是人造的，规则完全规整，真实语料里一个词的上下文分布要宽得多，簇的边界也模糊得多。</p>
+</section>
+  </article>
+</div>
+
+<script>
+window.MathJax = { tex:{ inlineMath:[['$','$'],['\\(','\\)']], displayMath:[['$$','$$']] }, svg:{ fontCache:'global' }, options:{ skipHtmlTags:['script','noscript','style','textarea','pre','code'] } };
+</script>
+<script src="../../shared/vendor/mathjax/3.2.2/tex-svg.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ---------- 第 2 节：滑动窗口 ---------- */
+(function(){
+  const words = ['problems','turning','into','banking','crises','as','has','happened'];
+  const svg = document.getElementById('win-svg');
+  const tIn = document.getElementById('win-t'), mIn = document.getElementById('win-m');
+  const tV = document.getElementById('win-t-v'), mV = document.getElementById('win-m-v');
+  const pairsEl = document.getElementById('win-pairs'), status = document.getElementById('win-status');
+  tIn.max = words.length;
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (name, attrs, text) => { const n = document.createElementNS(NS, name); for (const k in attrs) n.setAttribute(k, attrs[k]); if (text != null) n.textContent = text; return n; };
+  const W = 720, gap = 8, padX = 10, rowY = 150, boxH = 34;
+  // 每个词的宽度按字符数估算，等宽字体 14px 约 8.4px 一个字符。
+  const widths = words.map(w => Math.max(52, w.length * 8.4 + 22));
+  const total = widths.reduce((a, b) => a + b, 0) + gap * (words.length - 1);
+  const scale = Math.min(1, (W - 2 * padX) / total);
+  const xs = []; let x = padX + ((W - 2 * padX) - total * scale) / 2;
+  for (let i = 0; i < words.length; i++) { xs.push(x); x += widths[i] * scale + gap; }
+  const cx = i => xs[i] + widths[i] * scale / 2;
+
+  // 样本总数：每个位置的窗口在两端截断。
+  function totalPairs(m) { let n = 0; for (let t = 0; t < words.length; t++) n += Math.min(t, m) + Math.min(words.length - 1 - t, m); return n; }
+
+  function render() {
+    const t = +tIn.value, m = +mIn.value, ti = t - 1;
+    tV.textContent = t; mV.textContent = m;
+    svg.replaceChildren();
+    const defs = el('defs', {});
+    const marker = el('marker', { id: 'arrow', viewBox: '0 0 8 8', refX: '7', refY: '4', markerWidth: '7', markerHeight: '7', orient: 'auto-start-reverse' });
+    marker.appendChild(el('path', { d: 'M0,0 L8,4 L0,8 z', fill: 'var(--ctx)' }));
+    defs.appendChild(marker); svg.appendChild(defs);
+
+    const lo = Math.max(0, ti - m), hi = Math.min(words.length - 1, ti + m);
+    // 弧线与标签：偏移越大弧线越高。
+    for (let i = lo; i <= hi; i++) {
+      if (i === ti) continue;
+      const j = i - ti, h = 34 + Math.abs(j) * 30;
+      const x0 = cx(ti), x1 = cx(i), y0 = rowY - 2;
+      const d = `M${x0},${y0} Q${(x0 + x1) / 2},${y0 - h * 1.6} ${x1},${y0}`;
+      svg.appendChild(el('path', { class: 'arc', d }));
+      const sub = j < 0 ? `t−${-j}` : `t+${j}`;
+      // 负偏移的标签向左对齐，正偏移的向右对齐，避免 j = ±1 的两个标签在中心词上方重叠。
+      const lbl = el('text', { class: 'lbl', x: (x0 + x1) / 2 + (j < 0 ? 6 : -6), y: y0 - h * .8 - 4, 'text-anchor': j < 0 ? 'end' : 'start' });
+      lbl.appendChild(el('tspan', {}, 'P(w'));
+      lbl.appendChild(el('tspan', { dy: '4', 'font-size': '9px' }, sub));
+      lbl.appendChild(el('tspan', { dy: '-4' }, ' | w'));
+      lbl.appendChild(el('tspan', { dy: '4', 'font-size': '9px' }, 't'));
+      lbl.appendChild(el('tspan', { dy: '-4' }, ')'));
+      svg.appendChild(lbl);
+    }
+    // 词框
+    words.forEach((w, i) => {
+      const g = el('g', { class: 'tok' + (i === ti ? ' center' : (i >= lo && i <= hi ? ' ctx' : '')), tabindex: '0', role: 'button', 'aria-label': `把 ${w} 设为中心词` });
+      g.appendChild(el('rect', { x: xs[i], y: rowY, width: widths[i] * scale, height: boxH, rx: 4 }));
+      g.appendChild(el('text', { x: cx(i), y: rowY + boxH / 2 + 5, 'text-anchor': 'middle' }, w));
+      g.appendChild(el('text', { class: 'idx', x: cx(i), y: rowY + boxH + 16, 'text-anchor': 'middle' }, String(i + 1)));
+      const set = () => { tIn.value = i + 1; render(); };
+      g.addEventListener('click', set);
+      g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); set(); } });
+      svg.appendChild(g);
+    });
+    // 括线与说明
+    const braceY = rowY + boxH + 26;
+    const brace = (a, b, cls, text) => {
+      const x0 = xs[a], x1 = xs[b] + widths[b] * scale;
+      svg.appendChild(el('path', { class: 'brace', d: `M${x0},${braceY} v6 H${x1} v-6` }));
+      svg.appendChild(el('text', { class: 'cap ' + cls, x: (x0 + x1) / 2, y: braceY + 24, 'text-anchor': 'middle' }, text));
+    };
+    if (lo < ti) brace(lo, ti - 1, '', `左侧上下文，${ti - lo} 个`);
+    brace(ti, ti, 'c', `中心词 w_t，t = ${t}`);
+    if (hi > ti) brace(ti + 1, hi, '', `右侧上下文，${hi - ti} 个`);
+
+    // 样本列表
+    const pairs = [];
+    for (let i = lo; i <= hi; i++) if (i !== ti) pairs.push(`<span>(<b>${words[ti]}</b>, <i>${words[i]}</i>)</span>`);
+    pairsEl.innerHTML = pairs.join('');
+    const n = pairs.length, all = totalPairs(m);
+    status.textContent = `位置 t = ${t} 产生 ${n} 个样本${n < 2 * m ? '（窗口在语料边界被截断）' : ''}；这句话共 ${words.length} 个位置，m = ${m} 时一共产生 ${all} 个样本，上限 2mT = ${2 * m * words.length}。`;
+  }
+  tIn.addEventListener('input', render); mIn.addEventListener('input', render);
+  render();
+})();
+
+/* ---------- 第 3 节：形状图的网格 ---------- */
+document.querySelectorAll('#fig-shapes .g').forEach(g => {
+  const rows = +g.dataset.rows, cols = +g.dataset.cols, hl = g.dataset.hl, cIdx = 3, oIdx = 6;
+  g.style.gridTemplateColumns = `repeat(${cols}, 16px)`;
+  for (let r = 0; r < rows; r++) for (let k = 0; k < cols; k++) {
+    const i = document.createElement('i');
+    if ((hl === 'c' && r === cIdx) || hl === 'all-c') i.className = 'c';
+    else if (hl === 'o' && r === oIdx) i.className = 'o';
+    else if (hl === 'all-u') i.className = r === oIdx ? 'o' : 'u';
+    g.appendChild(i);
+  }
+});
+
+/* ---------- 共用：随机数与 softmax 一步 ---------- */
+function mulberry32(a){ return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const sig = x => x >= 0 ? 1 / (1 + Math.exp(-x)) : Math.exp(x) / (1 + Math.exp(x));
+// 完整 softmax 的前向：返回词表上的分布
+function softmaxDist(V, U, n, d, c){
+  const s = new Float64Array(n); let mx = -Infinity;
+  for (let w = 0; w < n; w++){ let t = 0; for (let k = 0; k < d; k++) t += U[w*d+k] * V[c*d+k]; s[w] = t; if (t > mx) mx = t; }
+  let Z = 0; for (let w = 0; w < n; w++){ s[w] = Math.exp(s[w] - mx); Z += s[w]; }
+  for (let w = 0; w < n; w++) s[w] /= Z;
+  return s;
+}
+// 完整 softmax 的一步更新，返回 loss。共享矩阵时传入同一个数组即可。
+function stepSoftmax(V, U, n, d, c, o, lr){
+  const p = softmaxDist(V, U, n, d, c);
+  const loss = -Math.log(p[o]);
+  const gv = new Float64Array(d);
+  for (let w = 0; w < n; w++){ const g = p[w] - (w === o ? 1 : 0); for (let k = 0; k < d; k++) gv[k] += g * U[w*d+k]; }
+  const vc = Array.from(V.subarray(c*d, c*d+d));
+  for (let w = 0; w < n; w++){ const g = p[w] - (w === o ? 1 : 0); for (let k = 0; k < d; k++) U[w*d+k] -= lr * g * vc[k]; }
+  for (let k = 0; k < d; k++) V[c*d+k] -= lr * gv[k];
+  return loss;
+}
+
+/* ---------- 第 5 节：一步更新 ---------- */
+(function(){
+  const words = ['problems','turning','into','banking','crises','as','has','happened'];
+  const n = words.length, d = 2;
+  let V, U;
+  const cSel = document.getElementById('sg-c'), oSel = document.getElementById('sg-o');
+  const lrIn = document.getElementById('sg-lr'), lrV = document.getElementById('sg-lr-v');
+  const bars = document.getElementById('sg-bars'), table = document.getElementById('sg-table'), status = document.getElementById('sg-status');
+  words.forEach((w, i) => { cSel.appendChild(new Option(w, i)); oSel.appendChild(new Option(w, i)); });
+  cSel.value = 3; oSel.value = 4;
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (name, attrs, text) => { const nn = document.createElementNS(NS, name); for (const k in attrs) nn.setAttribute(k, attrs[k]); if (text != null) nn.textContent = text; return nn; };
+  function reset(){
+    const rng = mulberry32(7);
+    V = new Float64Array(n*d); U = new Float64Array(n*d);
+    for (let i = 0; i < n*d; i++) V[i] = (rng() - .5) * 2;
+    for (let i = 0; i < n*d; i++) U[i] = (rng() - .5) * 2;
+    render(null);
+  }
+  function render(prev){
+    const c = +cSel.value, o = +oSel.value;
+    const p = softmaxDist(V, U, n, d, c);
+    // 柱状图
+    bars.replaceChildren();
+    const W = 320, H = 200, left = 8, bottom = 166, top = 14, bw = (W - 2*left) / n;
+    const ymax = Math.max(0.3, ...p) * 1.1;   // 纵轴随最大概率缩放，数值标在柱顶
+    bars.appendChild(el('line', { class: 'axis', x1: left, y1: bottom, x2: W - left, y2: bottom }));
+    for (let w = 0; w < n; w++){
+      const h = p[w] / ymax * (bottom - top), x = left + w * bw + 4;
+      bars.appendChild(el('rect', { class: 'bar' + (w === o ? ' o' : w === c ? ' c' : ''), x, y: bottom - h, width: bw - 8, height: h, rx: 2 }));
+      bars.appendChild(el('text', { class: 'val', x: x + (bw - 8) / 2, y: bottom - h - 4, 'text-anchor': 'middle' }, p[w].toFixed(2)));
+      // 词标签分两行交错，避免相邻标签重叠
+      bars.appendChild(el('text', { class: 'lbl', x: x + (bw - 8) / 2, y: bottom + (w % 2 ? 26 : 13), 'text-anchor': 'middle' }, words[w]));
+    }
+    // 梯度表
+    const gv = [0, 0];
+    for (let w = 0; w < n; w++){ const g = p[w] - (w === o ? 1 : 0); gv[0] += g * U[w*d]; gv[1] += g * U[w*d+1]; }
+    const rows = [`<tr class="c"><td class="w">∂ℓ/∂v_${words[c]}</td><td class="n">(${gv[0].toFixed(2)}, ${gv[1].toFixed(2)})</td><td></td></tr>`];
+    for (let w = 0; w < n; w++){
+      const g = p[w] - (w === o ? 1 : 0);
+      rows.push(`<tr class="${w === o ? 'o' : ''}"><td class="w">u_${words[w]}</td><td class="n">${g >= 0 ? '+' : ''}${g.toFixed(3)}</td><td><span class="gb ${g < 0 ? 'neg' : 'pos'}" style="width:${Math.min(80, Math.abs(g) * 80)}px"></span></td></tr>`);
+    }
+    table.innerHTML = rows.join('');
+    const loss = -Math.log(p[o]);
+    status.textContent = (prev == null ? '' : `P(${words[o]} | ${words[c]}) 从 ${prev.toFixed(3)} 变为 ${p[o].toFixed(3)}；`) + `当前 loss = −log P(${words[o]} | ${words[c]}) = ${loss.toFixed(3)}。`;
+    status.dataset.p = p[o].toFixed(6);
+  }
+  document.getElementById('sg-step').addEventListener('click', () => {
+    const c = +cSel.value, o = +oSel.value, prev = softmaxDist(V, U, n, d, c)[o];
+    stepSoftmax(V, U, n, d, c, o, +lrIn.value); render(prev);
+  });
+  document.getElementById('sg-reset').addEventListener('click', reset);
+  cSel.addEventListener('change', () => render(null)); oSel.addEventListener('change', () => render(null));
+  lrIn.addEventListener('input', () => { lrV.textContent = (+lrIn.value).toFixed(2); });
+  reset();
+})();
+
+/* ---------- 第 6 节：二维训练 ---------- */
+(function(){
+  const GROUPS = [
+    { name: '主语', color: '#4a3aa7', words: ['i','you','we','they','he','she'] },
+    { name: '吃', color: '#e34948', words: ['eat','ate','eats'] },
+    { name: '喝', color: '#2a78d6', words: ['drink','drank','drinks'] },
+    { name: '食物', color: '#eda100', words: ['bread','rice','apple','cake','soup'] },
+    { name: '饮料', color: '#1baf7a', words: ['tea','coffee','water','milk','juice'] },
+  ];
+  const vocab = GROUPS.flatMap(g => g.words), n = vocab.length, d = 2;
+  const idx = Object.fromEntries(vocab.map((w, i) => [w, i]));
+  const colorOf = vocab.map(w => GROUPS.find(g => g.words.includes(w)).color);
+  const pick = (rng, a) => a[Math.floor(rng() * a.length)];
+  // 语料：固定种子，300 句
+  const sents = (() => { const rng = mulberry32(11), out = [];
+    for (let i = 0; i < 300; i++){ const eat = rng() < .5;
+      out.push([idx[pick(rng, GROUPS[0].words)], idx[pick(rng, eat ? GROUPS[1].words : GROUPS[2].words)], idx[pick(rng, eat ? GROUPS[3].words : GROUPS[4].words)]]); }
+    return out; })();
+  // 负采样表：unigram^0.75 的累积分布
+  const counts = new Float64Array(n); sents.flat().forEach(w => counts[w]++);
+  const pw = Array.from(counts, c => Math.pow(c, .75)), Z = pw.reduce((a, b) => a + b, 0);
+  const cum = []; let acc = 0; for (const x of pw){ acc += x / Z; cum.push(acc); }
+  const sampleNeg = rng => { const r = rng(); let lo = 0, hi = n - 1; while (lo < hi){ const mid = (lo + hi) >> 1; if (cum[mid] < r) lo = mid + 1; else hi = mid; } return lo; };
+
+  const svg = document.getElementById('tr-svg'), status = document.getElementById('tr-status');
+  const modeSel = document.getElementById('tr-mode'), sharedIn = document.getElementById('tr-shared'), showU = document.getElementById('tr-showU');
+  const runBtn = document.getElementById('tr-run'), oneBtn = document.getElementById('tr-one'), resetBtn = document.getElementById('tr-reset');
+  document.getElementById('tr-legend').innerHTML = GROUPS.map(g => `<span style="--c:${g.color}"><i></i>${g.name}</span>`).join('') + '<span><i style="background:none;border:1.5px solid var(--ink-3)"></i>U 的行（勾选后显示）</span>';
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (name, attrs, text) => { const nn = document.createElementNS(NS, name); for (const k in attrs) nn.setAttribute(k, attrs[k]); if (text != null) nn.textContent = text; return nn; };
+
+  let V, U, rng, epoch, E, lr0, mode, shared, timer = null, lastLoss = NaN, k = 10;
+  function reset(){
+    stop();
+    mode = modeSel.value; shared = sharedIn.checked;
+    E = mode === 'softmax' ? 60 : 150; lr0 = mode === 'softmax' ? 0.05 : 0.1;
+    rng = mulberry32(1);
+    V = new Float64Array(n*d); for (let i = 0; i < n*d; i++) V[i] = (rng() - .5) / d;
+    U = shared ? V : new Float64Array(n*d);
+    epoch = 0; lastLoss = NaN; draw();
+  }
+  function stepNS(c, o, lr){
+    let loss = 0; const gv = new Float64Array(d); const vc = Array.from(V.subarray(c*d, c*d+d));
+    for (let j = 0; j <= k; j++){
+      let w, label; if (j === 0){ w = o; label = 1; } else { w = sampleNeg(rng); if (w === o) continue; label = 0; }
+      let x = 0; for (let q = 0; q < d; q++) x += U[w*d+q] * vc[q];
+      const p = sig(x); loss += label ? -Math.log(p + 1e-12) : -Math.log(1 - p + 1e-12);
+      const g = p - label;
+      for (let q = 0; q < d; q++){ gv[q] += g * U[w*d+q]; U[w*d+q] -= lr * g * vc[q]; }
+    }
+    for (let q = 0; q < d; q++) V[c*d+q] -= lr * gv[q];
+    return loss;
+  }
+  function runEpoch(){
+    const lr = lr0 * (1 - epoch / E) + 0.0005; let loss = 0, cnt = 0;
+    for (const s of sents) for (let t = 0; t < s.length; t++) for (const j of [-1, 1]){
+      const u = t + j; if (u < 0 || u >= s.length) continue;
+      loss += mode === 'softmax' ? stepSoftmax(V, U, n, d, s[t], s[u], lr) : stepNS(s[t], s[u], lr); cnt++;
+    }
+    epoch++; lastLoss = loss / cnt;
+  }
+  function draw(){
+    svg.replaceChildren();
+    const W = 640, H = 400, pad = 36;
+    const pts = []; for (let i = 0; i < n; i++) pts.push([V[i*d], V[i*d+1]]);
+    if (showU.checked && !shared) for (let i = 0; i < n; i++) pts.push([U[i*d], U[i*d+1]]);
+    let xmin = Infinity, xmax = -Infinity, ymin = Infinity, ymax = -Infinity;
+    for (const [x, y] of pts){ xmin = Math.min(xmin, x); xmax = Math.max(xmax, x); ymin = Math.min(ymin, y); ymax = Math.max(ymax, y); }
+    const span = Math.max(xmax - xmin, ymax - ymin, 0.2) * 1.15, cx = (xmin + xmax) / 2, cy = (ymin + ymax) / 2;
+    const sx = x => W / 2 + (x - cx) / span * (W - 2*pad), sy = y => H / 2 - (y - cy) / span * (H - 2*pad);
+    // 坐标轴（通过原点）
+    if (sx(0) > 0 && sx(0) < W) svg.appendChild(el('line', { class: 'axis', x1: sx(0), y1: 0, x2: sx(0), y2: H }));
+    if (sy(0) > 0 && sy(0) < H) svg.appendChild(el('line', { class: 'axis', x1: 0, y1: sy(0), x2: W, y2: sy(0) }));
+    if (showU.checked && !shared) for (let i = 0; i < n; i++){
+      svg.appendChild(el('circle', { class: 'pu', cx: sx(U[i*d]), cy: sy(U[i*d+1]), r: 4.5, stroke: colorOf[i] }));
+      svg.appendChild(el('text', { class: 'lab u', x: sx(U[i*d]) + 7, y: sy(U[i*d+1]) + 3.5 }, vocab[i]));
+    }
+    for (let i = 0; i < n; i++){
+      svg.appendChild(el('circle', { class: 'pt', cx: sx(V[i*d]), cy: sy(V[i*d+1]), r: 5, fill: colorOf[i] }));
+      svg.appendChild(el('text', { class: 'lab', x: sx(V[i*d]) + 7, y: sy(V[i*d+1]) + 3.5 }, vocab[i]));
+    }
+    const dist = (a, b) => Math.hypot(V[idx[a]*d] - V[idx[b]*d], V[idx[a]*d+1] - V[idx[b]*d+1]).toFixed(2);
+    status.textContent = `epoch ${epoch} / ${E}` + (isNaN(lastLoss) ? '' : `，平均 loss ${lastLoss.toFixed(3)}`) + `，${mode === 'softmax' ? '完整 softmax' : '负采样 k = 10'}${shared ? '，共享 U = V' : ''}。V 里的距离：eat–bread ${dist('eat','bread')}，eat–drink ${dist('eat','drink')}，bread–rice ${dist('bread','rice')}。`;
+    status.dataset.epoch = epoch;
+  }
+  function tick(){
+    if (epoch >= E){ stop(); return; }
+    runEpoch(); draw();
+    timer = requestAnimationFrame(tick);
+  }
+  function start(){ if (epoch >= E) return; runBtn.textContent = '暂停'; timer = requestAnimationFrame(tick); }
+  function stop(){ if (timer) cancelAnimationFrame(timer); timer = null; runBtn.textContent = '开始'; }
+  runBtn.addEventListener('click', () => timer ? stop() : start());
+  oneBtn.addEventListener('click', () => { stop(); if (epoch < E){ runEpoch(); draw(); } });
+  resetBtn.addEventListener('click', reset);
+  modeSel.addEventListener('change', reset); sharedIn.addEventListener('change', reset);
+  showU.addEventListener('change', draw);
+  reset();
+})();
+
+/* ---------- toc ---------- */
+(function(){
+  const nav=document.querySelector('.toc');
+  const links=[...nav.querySelectorAll('a')];
+  const targets=links.map(a=>document.getElementById(a.hash.slice(1)));
+  const toggle=nav.querySelector('.toc-toggle');
+  const narrow=matchMedia('(max-width:1000px)');
+  function resetToggle(){toggle.setAttribute('aria-expanded',String(!narrow.matches));}
+  resetToggle(); narrow.addEventListener('change',resetToggle);
+  toggle.addEventListener('click',()=>toggle.setAttribute('aria-expanded',String(toggle.getAttribute('aria-expanded')!=='true')));
+  nav.addEventListener('click',e=>{if(e.target.closest('a')&&narrow.matches)toggle.setAttribute('aria-expanded','false');});
+  let pending=false;
+  function update(){
+    pending=false;
+    const line=Math.min(160,innerHeight*.2);
+    let current=0;
+    targets.forEach((target,i)=>{if(target.getBoundingClientRect().top<=line)current=i;});
+    if(scrollY+innerHeight>=document.documentElement.scrollHeight-2)current=targets.length-1;
+    const section=targets[current].closest('section');
+    links.forEach((a,i)=>{
+      a.classList.toggle('on',i===current);
+      a.classList.toggle('in-section',a.hash==='#'+section.id&&i!==current);
+      if(i===current)a.setAttribute('aria-current','location');else a.removeAttribute('aria-current');
+    });
+  }
+  function schedule(){if(!pending){pending=true;requestAnimationFrame(update);}}
+  addEventListener('scroll',schedule,{passive:true});
+  addEventListener('resize',schedule); addEventListener('hashchange',schedule); addEventListener('load',schedule);
+  if('ResizeObserver' in window)new ResizeObserver(schedule).observe(document.querySelector('article'));
+  update();
+})();
+})();
+</script>
+</body></html>
