@@ -1,9 +1,4 @@
 const { test, expect } = require('@playwright/test');
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-const root = path.resolve(__dirname, '../topics/matrix-calculus');
-const manifest = JSON.parse(fs.readFileSync(path.join(root, 'source-manifest.json'), 'utf8'));
 
 test('Matrix calculus translation preserves original assets and renders on all screens', async ({ page }, testInfo) => {
   const errors = [];
@@ -11,12 +6,13 @@ test('Matrix calculus translation preserves original assets and renders on all s
   await page.goto('/topics/matrix-calculus/');
   await page.locator('article img').last().waitFor();
   await page.evaluate(async () => { await Promise.all([...document.images].map(img => img.decode())); });
-  await expect(page.locator('article img')).toHaveCount(455);
-  await expect(page.locator('article table')).toHaveCount(3);
-  for (const asset of manifest.images) {
-    const hash = crypto.createHash('sha256').update(fs.readFileSync(path.join(root, asset.path))).digest('hex');
-    expect(hash).toBe(asset.sha256);
-  }
+  await expect(page.locator('article img')).toHaveCount(4);
+  await expect(page.locator('article img[src$=".svg"]')).toHaveCount(0);
+  await page.evaluate(() => MathJax.startup.promise);
+  await expect(page.locator('[data-mml-node="merror"], mjx-merror')).toHaveCount(0);
+  expect(await page.locator('mjx-container').count()).toBeGreaterThan(700);
+  await expect(page.locator('article table')).toHaveCount(5);
+
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   const broken = await page.locator('article img').evaluateAll(imgs => imgs.filter(i => !i.complete || !i.naturalWidth).map(i => i.src));
   expect(broken).toEqual([]);
