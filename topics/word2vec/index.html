@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>word2vec</title>
-<meta name="description" content="从分布假设出发，解释 Skip-gram 为什么被设计成一个预测任务，模型的输入、参数与输出分别是什么，以及为什么每个词有两个向量。">
+<title>word2vec - skip-gram</title>
+<meta name="description" content="从分布假设出发，解释 Skip-gram 的设计，训练和预测。">
 <link rel="icon" type="image/svg+xml" href="favicon.svg" sizes="any">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/lxgwwenkai-regular.css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&display=swap">
@@ -264,8 +264,8 @@ figcaption{font-size:14px; color:var(--ink-2); line-height:1.7; margin-top:12px;
       <li><a href="#s3">模型：前向过程</a>
         <ol>
           <li><a href="#forward">前向过程</a></li>
-          <li><a href="#head">U 就是输出头</a></li>
-          <li><a href="#dot">为什么用点积而不是 cosine 相似度</a></li>
+          <li><a href="#head">V 是 Embedding，U 是输出头</a></li>
+          <li><a href="#dot">点积 or 余弦相似度</a></li>
         </ol>
       </li>
       <li><a href="#s4">为什么每个词有两个向量</a>
@@ -314,8 +314,7 @@ figcaption{font-size:14px; color:var(--ink-2); line-height:1.7; margin-top:12px;
   <article>
 <section id="s1">
   <h2><span class="n">01</span>为什么能从上下文学到词向量</h2>
-  <blockquote><p>word2vec 没有直接定义"词义"，也没有直接优化"相似的词向量要相近"。它设定了一个预测任务让模型完成，词向量是模型完成这个任务时学到的参数。</p></blockquote>
-  <p>为什么预测周围的词能够帮助我们学习词向量？我们先从词义与上下文的关系说起。</p>
+  <p>我们先从词义与上下文的关系说起。</p>
 
   <h3 id="meaning">词义没有公式</h3>
   <p>我们想要的性质是：<mark>意思相近的词，向量也相近</mark>。这个目标无法直接优化，因为"意思相近"没有定义。需要一个可以从语料里计算出来的替代量。</p>
@@ -324,16 +323,15 @@ figcaption{font-size:14px; color:var(--ink-2); line-height:1.7; margin-top:12px;
   <p>以 <code>banking</code> 为例，它在语料里的邻居通常是 <code>money</code>、<code>loan</code>、<code>crisis</code>、<code>regulation</code> 这类词；<code>finance</code> 的邻居和它高度重合；<code>apple</code> 的邻居则几乎不重合。分布假设把"意思相近"替换成了"邻居的分布相近"。</p>
   <p>于是学习目标变成一个可操作的版本：</p>
   <blockquote><p>上下文分布相似的词，向量应该相似。</p></blockquote>
-  <p>这个目标里有一个隐含的要求：向量必须由上下文决定。只要向量是从上下文里算出来的，上下文相似的词就自然得到相似的向量。word2vec 的全部设计都在回答"怎么从上下文算出向量"这一个问题。</p>
-
-  <h3 id="routes">计数与预测两条路线</h3>
+  <p>这个目标里有一个隐含的要求：<mark>向量必须由上下文决定</mark>。只要向量是从上下文里算出来的，上下文相似的词就自然得到相似的向量。</p>
+  <p>由此来看，word2vec 没有直接定义"词义"，也没有直接优化"相似的词向量要相近"。它设定了一个预测任务让模型完成，词向量是模型完成这个任务时学到的参数。</p>
+  <h3 id="routes">计数与预测</h3>
   <p>从上下文得到向量有两条路线。</p>
   <ul>
-    <li><strong>计数。</strong>统计一张共现矩阵，第 $i$ 行第 $j$ 列是词 $i$ 和词 $j$ 在窗口内一起出现的次数，再用 SVD 降维，取前 $d$ 个奇异向量作为词向量。本文不展开。</li>
-    <li><strong>预测。</strong>训练一个模型，给它一个词，让它预测周围会出现哪些词。如果它预测得准，说明它内部对这个词的表示已经包含了"这个词通常和谁一起出现"的信息。word2vec 走的是这条路线。</li>
+    <li><strong>计数。</strong>统计一张共现矩阵，也就是第 $i$ 行第 $j$ 列是词 $i$ 和词 $j$ 在窗口内一起出现的次数，再用 SVD 降维，取前 $d$ 个奇异向量作为词向量。本文不展开。</li>
+    <li><strong>预测。</strong>训练一个模型，给它一个词（中心词），让它预测周围会出现哪些词。如果它预测得准，说明它内部对这个词的表示已经包含了"这个词通常和谁一起出现"的信息。word2vec 走的是这条路线。</li>
   </ul>
   <p>计数方法可以得到有用的词向量，但当词表和语料规模增大时，构建共现矩阵并进行分解会带来计算与存储压力。word2vec 提供了另一种训练方式：直接从文本中提取训练样本，逐步更新低维词向量。这使它更便于在<mark>大规模语料上训练</mark>，但不意味着计数方法的效果比它差。</p>
-  <p>两条路线用的是同一份信息，都来自窗口内的共现。区别在于计数路线一次性算出整张矩阵再分解，预测路线用随机梯度下降逐个样本学习。Levy 和 Goldberg 在 2014 年证明 <mark>Skip-gram 加负采样在最优解处</mark>等价于对一张经过平移的 PMI（pointwise mutual information）矩阵做隐式分解。</p>
 </section>
 
 <section id="s2">
@@ -343,9 +341,9 @@ figcaption{font-size:14px; color:var(--ink-2); line-height:1.7; margin-top:12px;
   <h3 id="window">窗口与训练数据</h3>
   <p>记语料为一个长度为 $T$ 的词序列 $w_1, w_2, \dots, w_T$，窗口大小为 $m$。对每一个位置 $t$，中心词是 $w_t$，上下文词是 $w_{t+j}$，其中 $j$ 取 $-m$ 到 $m$ 之间除 0 以外的整数。模型要给出的是条件概率</p>
   <div class="math-block">$$P(w_{t+j} \mid w_t), \qquad -m \le j \le m,\; j \ne 0.$$</div>
-  <p>名字来自 n-gram。bigram 指两个连续词组成的组合，而 skip-gram 允许组合中的词不连续。在 word2vec 的 Skip-gram 模型中，每个中心词会分别与窗口内的上下文词组成训练样本（如 $w_t$ 和 $w_{t+2}$），因此模型既学习相邻词之间的关系，也学习中间隔着其他词的关系。CBOW（continuous bag-of-words）是同一个思路的反方向：给窗口内的词，预测中心词。本文只讲 Skip-gram。</p>
+  <p>在 word2vec 的 Skip-gram 模型中，每个中心词会分别与窗口内的上下文词组成训练样本（如 $w_t$ 和 $w_{t+2}$），因此模型既学习相邻词之间的关系，也学习中间隔着其他词的关系。CBOW（continuous bag-of-words）是同一个思路的反方向：给窗口内的词，预测中心词。本文只讲 Skip-gram。</p>
   <p>训练数据：每一个位置 $t$ 和每一个偏移 $j$ 产生一个样本 $(c, o)$，$c = w_t$ 是中心词，$o = w_{t+j}$ 是上下文词。整个语料被拆成一个样本列表，样本之间相互独立，模型看不到两个样本来自同一个窗口。窗口在语料两端被截断，位置 1 只有右侧上下文。一个长度为 $T$ 的语料产生的样本数略少于 $2mT$。</p>
-
+  <p>PS: Skip-gram 的名字来自 n-gram。bigram 指两个连续词组成的组合，而 skip-gram 允许组合中的词不连续。
   <h3 id="fig-window">演示：滑动窗口</h3>
   <figure id="fig-win">
     <div class="controls">
@@ -357,15 +355,25 @@ figcaption{font-size:14px; color:var(--ink-2); line-height:1.7; margin-top:12px;
     <div class="chart-status" id="win-status"></div>
     <figcaption>位置 $t$ 的中心词用红色标出，窗口内的上下文词用蓝色标出，每条弧线对应一个要预测的条件概率，也对应一个训练样本 $(c, o)$。拖动 $t$ 让窗口沿语料移动，拖动 $m$ 改变窗口大小。点击任意一个词可以直接把它设为中心词。</figcaption>
   </figure>
-  <p>"滑动窗口"指的就是 $t$ 从 1 递增到 $T$。窗口本身不是模型的一部分，它只是把语料转换成样本列表的规则。</p>
+  <p>"滑动窗口"指的就是 $t$ 从 1 递增到 $T$。</p>
 
   <h3 id="objective">目标函数</h3>
-  <p>把所有样本的对数概率加起来，取负号和平均，就是 Skip-gram 的损失函数：</p>
+  <p>上一小节把语料拆成了样本 $(c, o)$。目标函数把模型在全部样本上的表现合成一个数。从一个样本出发，分四步得到它。</p>
+  <ol>
+    <li><strong>一个样本。</strong>模型给真实上下文词的概率是 $P(o \mid c;\, \theta)$，$\theta$ 是模型的全部参数，在<a href="#s3">第 3 节</a>里就是 $\mathbf{V}$ 和 $\mathbf{U}$ 两个矩阵。这个概率越接近 1，模型在这个样本上表现越好。</li>
+    <li><strong>全部样本。</strong>样本之间相互独立，整个语料的概率是所有样本概率的乘积。这是 $\theta$ 的似然函数，训练要找让它最大的 $\theta$：
+      <div class="math-block">$$L(\theta) = \prod_{t=1}^{T}\;\prod_{\substack{-m \le j \le m \\ j \ne 0}} P(w_{t+j} \mid w_t;\, \theta).$$</div>
+    </li>
+    <li><strong>取对数。</strong>为了更方便计算和更好的数值稳定性，进行取对数操作。$\log$ 单调递增，确保 $L$ 最大的 $\theta$ 也让 $\log L$ 最大。连续小于 1 的概率相乘会下溢到 0，对数相加不会。</li>
+    <li><strong>取负号，除以 $T$。</strong>取负号把最大化改写成最小化，符合损失函数的习惯。除以 $T$ 是按位置取平均，让损失的数量级不随语料长度变化。这两步都不改变最优的 $\theta$。</li>
+  </ol>
+  <p>结果就是 Skip-gram 的损失函数：</p>
   <div class="math-block">$$J(\theta) = -\frac{1}{T}\sum_{t=1}^{T}\;\sum_{\substack{-m \le j \le m \\ j \ne 0}} \log P(w_{t+j} \mid w_t;\, \theta).$$</div>
-  <p>$\theta$ 是模型的全部参数，<a href="#forward">模型的前向过程</a>会说明它具体是哪两个矩阵。这个式子里有两点值得先注意：</p>
+  <p>对照<a href="#fig-window">滑动窗口演示</a>读这个式子：外层 $\sum_t$ 是窗口沿语料滑过每一个位置，内层 $\sum_j$ 是一个窗口里的每一条弧线，最里面的 $\log P(w_{t+j} \mid w_t;\, \theta)$ 是一条弧线对应的样本 $(c, o)$ 的得分。$J$ 越小，模型给真实上下文词的概率越大。</p>
+  <p>式子本身还说明两件事：</p>
   <ul>
     <li>损失是所有样本的总和，样本的顺序不出现在式子里。训练时按什么顺序处理样本，影响的是优化路径，不是被优化的目标。</li>
-    <li>每一项是一个条件概率的对数。要计算它，需要模型对词表中每一个词都给出一个概率。</li>
+    <li>每一项是一个条件概率的对数。要计算它，模型必须对词表中每一个词都给出一个概率。怎么给出，是<a href="#s3">第 3 节</a>的内容。</li>
   </ul>
 
   <h3 id="pretext">预测本身不是目的</h3>
@@ -411,15 +419,26 @@ figcaption{font-size:14px; color:var(--ink-2); line-height:1.7; margin-top:12px;
       <span>$\mathbf{V}$：中心词向量矩阵</span><span>$\mathbf{U}$：上下文词向量矩阵</span>
       <span>$v_c$：中心词 $c$ 的向量</span><span>$u_o$：上下文词 $o$ 的向量</span>
     </div>
-    <figcaption>前向过程中每一步的形状，图中 $|V| = 9$，$d = 3$，实际 $|V|$ 在几万到几百万，$d$ 在 100 到 300。红色标出中心词 $c$ 对应的位置；$\mathbf{U}$ 中蓝框标出第 $o$ 行，即上下文词 $o$ 的向量 $u_o$，它与 $v_c$ 的点积得到分数 $s_o$。右侧蓝框对应 $s_o$ 与 $P(o \mid c)$。图中的 $v_c$ 按行向量展示，维度为 $1 \times d$；代入上方矩阵乘法时使用其列向量形式。</figcaption>
+    <figcaption>图中 $|V| = 9$，$d = 3$，实际 $|V|$ 在几万到几百万，$d$ 在 100 到 300。右侧蓝框对应 $s_o$ 与 $P(o \mid c)$。</figcaption>
   </figure>
   <p>两个矩阵之间没有非线性激活，没有 bias。从 one-hot 到分数是两次线性变换，整个模型是一个线性打分器加 softmax。这也是它在大语料上能跑得快的原因之一。</p>
 
 
-  <h3 id="head">U 就是输出头</h3>
-  <p>一个标准分类器的尾部是：隐藏层向量 $h \in \mathbb{R}^{d}$，过一个线性层 $\mathrm{Linear}(d, K)$ 得到 $K$ 个分数，再过 softmax。这个线性层就是输出头，它的权重是一个 $K \times d$ 的矩阵。对到 Skip-gram 上，$h$ 是 $v_c$，$K$ 是 $|V|$，线性层的权重矩阵就是 $\mathbf{U}$。所以 $u_w \cdot v_c$ 这个"点积打分"不是一个特殊设计，它是一个不带 bias 的全连接层在逐类别地计算。把 $\mathbf{U}$ 读成"每个词一个上下文向量"，只是换了一个角度读同一个矩阵的行。</p>
-  <p>现代语言模型的最后一层叫 LM head，也是一个 $\mathrm{Linear}(d, |V|)$ 加 softmax，结构和 $\mathbf{U}$ 完全相同，区别只在于前面的 $h$ 不再是一次查表的结果，而是经过了很多层 Transformer。</p>
-  <p>Skip-gram 比常见模型简单的地方不在于缺输出头，而在于 embedding 层和输出头之间什么都没有。</p>
+  <h3 id="head">对应到大模型中，V 是 Embedding，U 是输出头</h3>
+  <p>前向过程的每一步，在大模型里都有对应的部件：</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Skip-gram</th><th>大模型</th><th>形状</th></tr></thead>
+    <tbody>
+      <tr><td>$v_c = \mathbf{V}^{\top} x$，按行查表</td><td>embedding 层，<code>nn.Embedding</code></td><td>$|V| \times d$</td></tr>
+      <tr><td>没有任何计算</td><td>若干层 Transformer</td><td>$d \to d$</td></tr>
+      <tr><td>$s = \mathbf{U} v_c$</td><td>LM head，<code>Linear(d, |V|, bias=False)</code></td><td>$|V| \times d$</td></tr>
+      <tr><td>softmax，得到上下文词的分布</td><td>softmax，得到下一个词的分布</td><td>$|V|$</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>$\mathbf{V}$ 是 embedding 层。</strong>one-hot 向量乘 $\mathbf{V}^{\top}$ 等于取出 $\mathbf{V}$ 的一行，<code>nn.Embedding</code> 做的就是这件事，只是省掉了那次乘法。大模型的 token embedding 矩阵形状同样是 $|V| \times d$，Hugging Face 把它叫 input embeddings。</p>
+  <p><strong>$\mathbf{U}$ 是输出头。</strong>一个标准分类器的尾部是：隐藏层向量 $h \in \mathbb{R}^{d}$，过一个线性层 $\mathrm{Linear}(d, K)$ 得到 $K$ 个分数，再过 softmax。这个线性层就是输出头，PyTorch 把它的权重存成 $K \times d$。对到 Skip-gram 上，$h$ 是 $v_c$，$K$ 是 $|V|$，权重矩阵就是 $\mathbf{U}$。所以 $u_w \cdot v_c$ 这个"点积打分"不是一个特殊设计，它是一个不带 bias 的全连接层在逐类别地计算。大模型的 LM head 也是 $\mathrm{Linear}(d, |V|)$ 加 softmax，Hugging Face 把它叫 output embeddings，<code>get_output_embeddings()</code> 返回的就是这个矩阵。这个命名和本文把 $\mathbf{U}$ 读成"每个词一个上下文向量"是同一个意思：输出头的每一行也是一个词向量。</p>
+  <p>两者的差别有两处。一是中间层：Skip-gram 的 embedding 层直接接输出头，中间什么都没有；大模型在中间有很多层 Transformer，所以送进输出头的 $h$ 不再是一次查表的结果。二是预测目标：Skip-gram 预测窗口内任意位置的词，语言模型预测下一个词。这两处差别都不改变 $\mathbf{V}$ 和 $\mathbf{U}$ 的角色。</p>
+  <p>要不要把 $\mathbf{V}$ 和 $\mathbf{U}$ 设为同一个矩阵，在大模型里叫 weight tying，<a href="#tied">第 4 节</a>会讲。</p>
 
   <h3 id="dot">为什么用点积而不是 cosine 相似度</h3>
   <p>cosine 相似度等于点积除以两个向量的模长，所以"用点积还是用 cosine"的区别只在于模长要不要参与打分。训练时用点积，有三个原因。</p>
@@ -575,7 +594,7 @@ figcaption{font-size:14px; color:var(--ink-2); line-height:1.7; margin-top:12px;
     </div>
     <div class="sg-detail" id="sg-detail" aria-live="polite"></div>
     <div class="chart-status" id="sg-status" aria-live="polite"></div>
-    <figcaption>每个向量有两个分量，数值保留 3 位小数；参数底色蓝色表示正值，红色表示负值，深浅表示绝对值大小。c 是中心词，o 是真实上下文词。更新使用完整精度，并同时应用于 V 的中心词行和 U 的全部行。</figcaption>
+    <figcaption>更新同时应用于 V 的中心词行和 U 的全部行。</figcaption>
   </figure>
 
   <h3 id="loop">完整流程</h3>

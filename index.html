@@ -91,7 +91,7 @@ h2{font-family:var(--serif);font-size:calc(18px*var(--k));margin:0;line-height:1
     { id: 'bpe', cat: 'tokenize', title: 'BPE 分词', href: 'topics/bpe/',
       summary: '按 Sennrich et al. (2016) 的算法逐步合并最高频符号对，再用学到的合并顺序切分新词。', tags: ['sennrich', 'bpe'] },
     { id: 'word2vec', cat: 'repr', title: 'word2vec：Skip-gram 是怎么来的', href: 'topics/word2vec/',
-      summary: '从分布假设出发，解释 Skip-gram 为什么是一个预测任务、每个词为什么有两个向量，并在浏览器里训练二维词向量。', tags: ['Skip-gram', '负采样', 'Mikolov 2013'] },
+      summary: '从分布假设出发，解释 Skip-gram 为什么是一个预测任务、如何与大模型进行对比，并在浏览器里训练二维词向量。', tags: ['skip-gram', 'mikolov 2013'] },
     { id: 'llm-act-fns', cat: 'arch', title: '大模型里的激活函数', href: 'topics/llm-act-fns/',
       summary: '从 ReLU 到 SwiGLU：比较各函数的输出、导数和极限行为，参数可调。', tags: ['GELU', 'SiLU', 'GLU'] },
     { id: 'mixed-precision-training', cat: 'train', title: '混合精度训练', href: 'topics/mixed-precision-training/',

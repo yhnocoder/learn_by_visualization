@@ -144,7 +144,7 @@ mjx-container[display="true"]{margin:8px 0 1.3em!important;overflow-x:auto;overf
 <li><a href="#sec:1.4">矩阵微积分</a>
 <ul>
 <li><a href="#sec:1.4.1">Jacobian 的一般形式</a></li>
-<li><a href="#sec:1.4.2">向量逐元素二元运算的导数</a></li>
+<li><a href="#sec:1.4.2">向量element-wise二元运算的导数</a></li>
 <li><a href="#sec:1.4.3">涉及标量扩展的导数</a></li>
 <li><a href="#sec:1.4.4">向量求和归约</a></li>
 <li><a href="#sec:1.4.5">链式法则</a></li>
@@ -161,7 +161,7 @@ mjx-container[display="true"]{margin:8px 0 1.3em!important;overflow-x:auto;overf
 <li><a href="#reference">矩阵微积分速查</a>
 <ul>
 <li><a href="#sec:1.8.1">梯度与 Jacobian</a></li>
-<li><a href="#sec:1.8.2">向量的逐元素运算</a></li>
+<li><a href="#sec:1.8.2">向量的element-wise运算</a></li>
 <li><a href="#sec:1.8.3">标量扩展</a></li>
 <li><a href="#sec:1.8.4">向量归约</a></li>
 <li><a href="#sec:1.8.5">链式法则</a></li>
@@ -377,9 +377,9 @@ $$</div>
 $$</div>
 <p>继续阅读之前，请确认自己能推导出上面的每一步。如果遇到困难，就分别考虑矩阵中的每个元素，并应用通常的标量求导规则。这是一种普遍有用的方法：将向量表达式展开成一组标量表达式，求出所有偏导数，最后再按正确的方式组合成向量和矩阵。</p>
 <p>还要注意矩阵的方向：是竖直的 $\mathbf{x}$，还是水平的 $\mathbf{x}^T$；其中 $\mathbf{x}^T$ 表示 $\mathbf{x}$ 的转置。同时也要分清一个表达式是标量值函数 $y = ...\,$，还是函数组成的向量（或向量值函数）$\mathbf{y} = ...\,$。</p>
-<h3 id="sec:1.4.2">向量逐元素二元运算的导数</h3>
-<p>向量的逐元素二元运算，例如向量加法 $\mathbf{w} + \mathbf{x}$，非常重要，因为许多常见向量运算，例如向量乘以标量，都可以表示成逐元素二元运算。“逐元素二元运算”就是对两个向量的第一个元素应用某个运算符，得到输出的第一个元素；再对两个输入的第二个元素执行该运算，得到输出的第二个元素，依此类推。例如，numpy 或 tensorflow 默认就以这种方式应用各种基本数学运算符。深度学习中经常出现的例子包括 $max(\mathbf{w},\mathbf{x})$ 和 $\mathbf{w} &gt; \mathbf{x}$（返回由 1 和 0 组成的向量）。</p>
-<p>可以用记号 $\mathbf{y} = \mathbf{f(w)} \bigcirc \mathbf{g(x)}$ 概括逐元素二元运算，其中 $m=n=|y|=|w|=|x|$。（提醒一下：$|x|$ 是 $x$ 中的元素个数。）符号 $\bigcirc$ 表示任意逐元素运算符，例如 $+$，而不是函数复合运算符 $\circ$。将方程 $\mathbf{y} = \mathbf{f(w)} \bigcirc \mathbf{g(x)}$ 展开为标量方程后，形式如下：</p>
+<h3 id="sec:1.4.2">向量element-wise二元运算的导数</h3>
+<p>向量的element-wise二元运算，例如向量加法 $\mathbf{w} + \mathbf{x}$，非常重要，因为许多常见向量运算，例如向量乘以标量，都可以表示成element-wise二元运算。“element-wise二元运算”就是对两个向量的第一个元素应用某个运算符，得到输出的第一个元素；再对两个输入的第二个元素执行该运算，得到输出的第二个元素，依此类推。例如，numpy 或 tensorflow 默认就以这种方式应用各种基本数学运算符。深度学习中经常出现的例子包括 $max(\mathbf{w},\mathbf{x})$ 和 $\mathbf{w} &gt; \mathbf{x}$（返回由 1 和 0 组成的向量）。</p>
+<p>可以用记号 $\mathbf{y} = \mathbf{f(w)} \bigcirc \mathbf{g(x)}$ 概括element-wise二元运算，其中 $m=n=|y|=|w|=|x|$。（提醒一下：$|x|$ 是 $x$ 中的元素个数。）符号 $\bigcirc$ 表示任意element-wise运算符，例如 $+$，而不是函数复合运算符 $\circ$。将方程 $\mathbf{y} = \mathbf{f(w)} \bigcirc \mathbf{g(x)}$ 展开为标量方程后，形式如下：</p>
 <div>$$
 \begin{bmatrix}
 y_1\\
@@ -393,7 +393,7 @@ f_{2}(\mathbf{w}) \bigcirc g_{2}(\mathbf{x})\\
 f_{n}(\mathbf{w}) \bigcirc g_{n}(\mathbf{x})\\
 \end{bmatrix}
 $$</div>
-<p>这里将 $n$ 个方程（不是 $m$ 个）竖直排列，是为了强调逐元素运算的结果是大小为 $m=n$ 的向量。</p>
+<p>这里将 $n$ 个方程（不是 $m$ 个）竖直排列，是为了强调element-wise运算的结果是大小为 $m=n$ 的向量。</p>
 <p>运用上一节的思路可知，关于 $\mathbf{w}$ 的 Jacobian 在一般情况下是如下方阵：</p>
 <div>$$
 J_\mathbf{w} = 
@@ -414,17 +414,17 @@ J_\mathbf{x} =
 \frac{\partial}{\partial x_1} ( f_{n}(\mathbf{w}) \bigcirc g_{n}(\mathbf{x}) ) &amp; \frac{\partial}{\partial x_2} ( f_{n}(\mathbf{w}) \bigcirc g_{n}(\mathbf{x}) ) &amp; \ldots &amp; \frac{\partial}{\partial x_n} ( f_{n}(\mathbf{w}) \bigcirc g_{n}(\mathbf{x}) )\\
 \end{bmatrix}
 $$</div>
-<p>这个表达式相当复杂，但幸运的是，Jacobian 经常是对角矩阵，即除了对角线以外，所有位置都为零的矩阵。由于这会大大简化 Jacobian，我们来详细看看，逐元素运算的 Jacobian 在什么情况下会化简为对角矩阵。</p>
+<p>这个表达式相当复杂，但幸运的是，Jacobian 经常是对角矩阵，即除了对角线以外，所有位置都为零的矩阵。由于这会大大简化 Jacobian，我们来详细看看，element-wise运算的 Jacobian 在什么情况下会化简为对角矩阵。</p>
 <p>在对角 Jacobian 中，所有非对角元素都为零，即 $\frac{\partial}{\partial w_j} ( f_i(\mathbf{w}) \bigcirc g_i(\mathbf{x}) ) = 0$，其中 $j \neq i$。（注意，我们是在对 $w_{j}$ 而不是 $w_{i}$ 求偏导。）这些非对角元素在什么条件下为零？恰好是在 $f_{i}$ 和 $g_{i}$ 关于 $w_{j}$ 为常数，即 $\frac{\partial}{\partial w_j} f_i(\mathbf{w}) = \frac{\partial}{\partial w_j} g_i(\mathbf{x}) = 0$ 时。不论使用哪个运算符，只要这些偏导数为零，相应的求导结果就为零；无论如何都有 $0 \bigcirc 0 = 0$，而常数的偏导数为零。</p>
-<p>当 $f_{i}$ 和 $g_{i}$ 不是 $w_{j}$ 的函数时，这些偏导数就为零。我们知道，逐元素运算意味着 $f_{i}$ 只是 $w_{i}$ 的函数，而 $g_{i}$ 只是 $x_{i}$ 的函数。例如，$\mathbf{w}+\mathbf{x}$ 计算的是 $w_i + x_i$ 的和。因此，$f_i(\mathbf{w}) \bigcirc g_i(\mathbf{x})$ 简化为 $f_i(w_i) \bigcirc g_i(x_i)$，我们的目标就变成 $\frac{\partial}{\partial w_j} f_i(w_i) = \frac{\partial}{\partial w_j} g_i(x_i) = 0$。当 $j \neq i$ 时，对于关于 $w_{j}$ 的偏导运算符而言，$f_i(w_i)$ 和 $g_i(x_i)$ 都是常数，所以非对角位置的偏导数为零。（严格来说，$f_i(w_i)$ 的写法不完全符合此前的记号约定，因为 $f_{i}$ 和 $g_{i}$ 是向量的函数，而不是单个元素的函数。我们本应写成类似 $\hat f_{i}(w_i) = f_{i}(\mathbf{w})$ 的形式，但这会使公式更加复杂，而程序员通常习惯于函数重载，因此这里仍沿用这一记法。）</p>
-<p>后面会利用这一简化。我们把 $f_i(\mathbf{w})$ 和 $g_i(\mathbf{x})$ 分别最多只访问 $w_{i}$ 和 $x_{i}$ 的限制，称为<i>逐元素对角条件</i>。</p>
+<p>当 $f_{i}$ 和 $g_{i}$ 不是 $w_{j}$ 的函数时，这些偏导数就为零。我们知道，element-wise运算意味着 $f_{i}$ 只是 $w_{i}$ 的函数，而 $g_{i}$ 只是 $x_{i}$ 的函数。例如，$\mathbf{w}+\mathbf{x}$ 计算的是 $w_i + x_i$ 的和。因此，$f_i(\mathbf{w}) \bigcirc g_i(\mathbf{x})$ 简化为 $f_i(w_i) \bigcirc g_i(x_i)$，我们的目标就变成 $\frac{\partial}{\partial w_j} f_i(w_i) = \frac{\partial}{\partial w_j} g_i(x_i) = 0$。当 $j \neq i$ 时，对于关于 $w_{j}$ 的偏导运算符而言，$f_i(w_i)$ 和 $g_i(x_i)$ 都是常数，所以非对角位置的偏导数为零。（严格来说，$f_i(w_i)$ 的写法不完全符合此前的记号约定，因为 $f_{i}$ 和 $g_{i}$ 是向量的函数，而不是单个元素的函数。我们本应写成类似 $\hat f_{i}(w_i) = f_{i}(\mathbf{w})$ 的形式，但这会使公式更加复杂，而程序员通常习惯于函数重载，因此这里仍沿用这一记法。）</p>
+<p>后面会利用这一简化。我们把 $f_i(\mathbf{w})$ 和 $g_i(\mathbf{x})$ 分别最多只访问 $w_{i}$ 和 $x_{i}$ 的限制，称为<i>element-wise对角条件</i>。</p>
 <p>在这一条件下，Jacobian 对角线上的元素为 $\frac{\partial}{\partial w_i} ( f_i(w_i) \bigcirc g_i(x_i) )$：</p>
 <div>$$
 \frac{\partial \mathbf{y}}{\partial \mathbf{w}}  = \begin{bmatrix}
 \frac{\partial}{\partial w_1} ( f_{1}(w_1) \bigcirc g_{1}(x_1) )\\
-&amp; \frac{\partial}{\partial w_2} (f_{2}(w_2) \bigcirc g_{2}(x_2) ) &amp; &amp; \text{\huge0}\\
+&amp; \frac{\partial}{\partial w_2} (f_{2}(w_2) \bigcirc g_{2}(x_2) ) &amp; &amp; {\huge 0}\\
 &amp; &amp; \ldots \\
-\text{\huge0}&amp; &amp; &amp; \frac{\partial}{\partial w_n} (f_{n}(w_n) \bigcirc g_{n}(x_n) )
+{\huge 0}&amp; &amp; &amp; \frac{\partial}{\partial w_n} (f_{n}(w_n) \bigcirc g_{n}(x_n) )
 \end{bmatrix}
 $$</div>
 <p>（较大的“0”表示所有非对角元素均为 0。）</p>
@@ -437,7 +437,7 @@ $$</div>
 \frac{\partial \mathbf{y}}{\partial \mathbf{x}} = diag \left( \frac{\partial}{\partial x_1}(f_{1}(w_1) \bigcirc g_{1}(x_1)),~ \frac{\partial}{\partial x_2}(f_{2}(w_2) \bigcirc g_{2}(x_2)),~ \ldots,~ \frac{\partial}{\partial x_n}(f_{n}(w_n) \bigcirc g_{n}(x_n)) \right)
 $$</div>
 <p>其中，$diag(\mathbf{x})$ 构造一个矩阵，其对角元素取自向量 $\mathbf{x}$。</p>
-<p>由于我们经常进行简单的向量算术，逐元素二元运算中的一般函数 $\mathbf{f(w)}$，往往就是向量 $\mathbf{w}$ 本身。只要这个一般函数就是一个向量，$f_i(\mathbf{w})$ 就会简化为 $f_i(w_i) = w_i$。例如，向量加法 $\mathbf{w + x}$ 满足逐元素对角条件，因为 $\mathbf{f(w)} + \mathbf{g(x)}$ 对应的标量方程 $y_i = f_i(\mathbf{w}) + g_i(\mathbf{x})$ 可以简化为 $y_i = f_i(w_i) + g_i(x_i) = w_i + x_i$，其偏导数为：</p>
+<p>由于我们经常进行简单的向量算术，element-wise二元运算中的一般函数 $\mathbf{f(w)}$，往往就是向量 $\mathbf{w}$ 本身。只要这个一般函数就是一个向量，$f_i(\mathbf{w})$ 就会简化为 $f_i(w_i) = w_i$。例如，向量加法 $\mathbf{w + x}$ 满足element-wise对角条件，因为 $\mathbf{f(w)} + \mathbf{g(x)}$ 对应的标量方程 $y_i = f_i(\mathbf{w}) + g_i(\mathbf{x})$ 可以简化为 $y_i = f_i(w_i) + g_i(x_i) = w_i + x_i$，其偏导数为：</p>
 <div>$$
 \frac{\partial}{\partial w_i} ( f_{i}(w_i) + g_{i}(x_i) ) = \frac{\partial}{\partial w_i}(w_i + x_i) = 1 + 0 = 1
 $$</div>
@@ -445,10 +445,10 @@ $$</div>
 \frac{\partial}{\partial x_i} ( f_{i}(w_i) + g_{i}(x_i) ) = \frac{\partial}{\partial x_i}(w_i + x_i) = 0 + 1 = 1
 $$</div>
 <p>这就得到单位矩阵 $\frac{\partial (\mathbf{w+x})}{\partial \mathbf{w}} = \frac{\partial (\mathbf{w+x})}{\partial \mathbf{x}} = I$，因为对角线上的每个元素都是 1。$I$ 表示适当维度的方形单位矩阵，除了全为 1 的对角线以外，其他位置均为零。</p>
-<p>在 $f_i(\mathbf{w})$ 简化为 $f_i(w_i)$ 这一简单的特殊情况下，你应该已经能够推导出常见向量逐元素二元运算的 Jacobian：</p>
+<p>在 $f_i(\mathbf{w})$ 简化为 $f_i(w_i)$ 这一简单的特殊情况下，你应该已经能够推导出常见向量element-wise二元运算的 Jacobian：</p>
 <div>$$
 \begin{array}{lllllllll}
-        \text{\textbf{Op}} &amp;  &amp; {\text{\textbf{Partial with respect to }}} \mathbf{w} \\
+        \textbf{Op} &amp;  &amp; {\textbf{Partial with respect to }} \mathbf{w} \\
         + &amp;  &amp; \frac{\partial (\mathbf{w+x})}{\partial \mathbf{w}} = diag(\ldots \frac{\partial (w_i + x_i)}{\partial w_i} \ldots) = diag(\overrightarrow{\mathbf 1}) = I \\\\
         - &amp;  &amp; \frac{\partial (\mathbf{w-x})}{\partial \mathbf{w}}  =  diag(\ldots\frac{\partial (w_i - x_i)}{\partial w_i}\ldots) =  diag(\overrightarrow{\mathbf 1})  =  I \\\\
         \otimes &amp;  &amp; \frac{\partial (\mathbf{w \otimes x})}{\partial \mathbf{w}}  =  diag(\ldots\frac{\partial (w_i \times x_i)}{\partial w_i} \ldots)  =  diag(\mathbf{x}) \\\\
@@ -457,21 +457,21 @@ $$</div>
 $$</div>
 <div>$$
 \begin{array}{lllllllll}
-        \text{\textbf{Op}} &amp;  &amp;  {\text{\textbf{Partial with respect to }}}\mathbf{x}\\
+        \textbf{Op} &amp;  &amp;  {\textbf{Partial with respect to }}\mathbf{x}\\
         + &amp;  &amp; \frac{\partial (\mathbf{w+x})}{\partial \mathbf{x}} =  I\\\\
         - &amp;  &amp; \frac{\partial (\mathbf{w-x})}{\partial \mathbf{x}}  =  diag(\ldots\frac{\partial (w_i - x_i)}{\partial x_i}\ldots)  =  diag(-\overrightarrow{\mathbf 1})  =  -I \\\\
         \otimes &amp;  &amp;  \frac{\partial (\mathbf{w \otimes x})}{\partial \mathbf{x}}  =  diag(\mathbf{w})\\\\
         \oslash &amp;  &amp;  \frac{\partial (\mathbf{w \oslash x})}{\partial \mathbf{x}}  =  diag(\ldots \frac{-w_i}{x_i^2} \ldots)\\
 \end{array}
 $$</div>
-<p>运算符 $\otimes$ 和 $\oslash$ 分别表示逐元素乘法和除法；$\otimes$ 有时称为 <i>Hadamard product</i>。逐元素乘除没有统一的标准记号，因此这里采用与一般二元运算记号一致的写法。</p>
+<p>运算符 $\otimes$ 和 $\oslash$ 分别表示element-wise乘法和除法；$\otimes$ 有时称为 <i>Hadamard product</i>。element-wise乘除没有统一的标准记号，因此这里采用与一般二元运算记号一致的写法。</p>
 <h3 id="sec:1.4.3">涉及标量扩展的导数</h3>
-<p>将标量与向量相乘或相加时，我们实际上隐式地把标量扩展为一个向量，然后执行逐元素二元运算。例如，把标量 $z$ 加到向量 $\mathbf{x}$ 上，即 $\mathbf{y} = \mathbf{x} + z$，实际上是 $\mathbf{y} = \mathbf{f(x)} + \mathbf{g}(z)$，其中 $\mathbf{f(x)} = \mathbf{x}$，且 $\mathbf{g}(z) = \overrightarrow{\mathbf 1} z$。（记号 $\overrightarrow{\mathbf 1}$ 表示适当长度的全 1 向量。）$z$ 可以是任何不依赖 $\mathbf{x}$ 的标量，这很有用，因为对任意 $x_{i}$ 都有 $\frac{\partial z}{\partial x_i} = 0$，能够简化偏导数计算。（在这里的讨论中，可以把变量 $z$ 看成常数。）类似地，标量乘法 $\mathbf{y} = \mathbf{x} z$ 实际上是 $\mathbf{y} = \mathbf{f(x)} \otimes \mathbf{g}(z) = \mathbf{x} \otimes \overrightarrow{\mathbf 1}z$，其中 $\otimes$ 表示两个向量的逐元素乘积，即 Hadamard product。</p>
-<p>对于向量与标量的加法和乘法，关于向量 $\mathbf{x}$ 的偏导数可以使用逐元素规则：</p>
+<p>将标量与向量相乘或相加时，我们实际上隐式地把标量扩展为一个向量，然后执行element-wise二元运算。例如，把标量 $z$ 加到向量 $\mathbf{x}$ 上，即 $\mathbf{y} = \mathbf{x} + z$，实际上是 $\mathbf{y} = \mathbf{f(x)} + \mathbf{g}(z)$，其中 $\mathbf{f(x)} = \mathbf{x}$，且 $\mathbf{g}(z) = \overrightarrow{\mathbf 1} z$。（记号 $\overrightarrow{\mathbf 1}$ 表示适当长度的全 1 向量。）$z$ 可以是任何不依赖 $\mathbf{x}$ 的标量，这很有用，因为对任意 $x_{i}$ 都有 $\frac{\partial z}{\partial x_i} = 0$，能够简化偏导数计算。（在这里的讨论中，可以把变量 $z$ 看成常数。）类似地，标量乘法 $\mathbf{y} = \mathbf{x} z$ 实际上是 $\mathbf{y} = \mathbf{f(x)} \otimes \mathbf{g}(z) = \mathbf{x} \otimes \overrightarrow{\mathbf 1}z$，其中 $\otimes$ 表示两个向量的element-wise乘积，即 Hadamard product。</p>
+<p>对于向量与标量的加法和乘法，关于向量 $\mathbf{x}$ 的偏导数可以使用element-wise规则：</p>
 <div>$$
 \frac{\partial \mathbf{y}}{\partial \mathbf{x}} = diag \left( \ldots \frac{\partial}{\partial x_i} ( f_i(x_i) \bigcirc g_i(z) ) \ldots \right)
 $$</div>
-<p>这是因为函数 $\mathbf{f(x)} = \mathbf{x}$ 和 $\mathbf{g}(z) = \overrightarrow{\mathbf 1} z$ 显然满足 Jacobian 的逐元素对角条件：$f_i(\mathbf{x})$ 最多只引用 $x_{i}$，而 $g_i(z)$ 引用的是向量 $\overrightarrow{\mathbf 1}z$ 中的第 $i^{th}$ 个元素。</p>
+<p>这是因为函数 $\mathbf{f(x)} = \mathbf{x}$ 和 $\mathbf{g}(z) = \overrightarrow{\mathbf 1} z$ 显然满足 Jacobian 的element-wise对角条件：$f_i(\mathbf{x})$ 最多只引用 $x_{i}$，而 $g_i(z)$ 引用的是向量 $\overrightarrow{\mathbf 1}z$ 中的第 $i^{th}$ 个元素。</p>
 <p>使用通常的标量偏导规则，可以得到向量与标量相加时 Jacobian 的如下对角元素：</p>
 <div>$$
 \frac{\partial}{\partial x_i} ( f_i(x_i) + g_i(z) ) = \frac{\partial (x_i + z)}{\partial x_i} = \frac{\partial x_i}{\partial x_i} + \frac{\partial z}{\partial x_i} = 1 + 0 = 1
@@ -854,7 +854,7 @@ $$</div>
 $$</div>
 <p>其中，$m=|f|$、$n=|x|$，且 $k=|g|$。所得 Jacobian 的大小为 $m \times n$（一个 $m \times k$ 矩阵与一个 $k \times n$ 矩阵相乘）。</p>
 <p>即使对于这个 $\frac{\partial \mathbf{f}}{\partial \mathbf{g}}\frac{\partial\mathbf{g}}{\partial \mathbf{x}}$ 的公式，仍可继续简化，因为在许多应用中，Jacobian 是方阵（$m=n$），而且非对角元素为零。神经网络相关的数学计算，本质上处理的是以向量为参数的函数，而不是由函数组成的向量。例如，神经元的仿射函数包含 $sum(\mathbf{w}\otimes\mathbf{x})$，激活函数则是 $max(0,\mathbf{x})$；下一节将讨论这些函数的导数。</p>
-<p>前面已经看到，对向量 $\mathbf{w}$ 和 $\mathbf{x}$ 执行逐元素运算，会得到元素为 $\frac{\partial w_i}{\partial x_i}$ 的对角矩阵，因为 $w_{i}$ 只依赖 $x_{i}$，而不依赖 $j \neq i$ 时的 $x_{j}$。这里也一样：当 $f_{i}$ 只依赖 $g_{i}$，并且 $g_{i}$ 只依赖 $x_{i}$ 时：</p>
+<p>前面已经看到，对向量 $\mathbf{w}$ 和 $\mathbf{x}$ 执行element-wise运算，会得到元素为 $\frac{\partial w_i}{\partial x_i}$ 的对角矩阵，因为 $w_{i}$ 只依赖 $x_{i}$，而不依赖 $j \neq i$ 时的 $x_{j}$。这里也一样：当 $f_{i}$ 只依赖 $g_{i}$，并且 $g_{i}$ 只依赖 $x_{i}$ 时：</p>
 <div>$$
 \frac{\partial \mathbf{f}}{\partial \mathbf{g}} = diag(\frac{\partial f_i}{\partial g_i})
 $$</div>
@@ -875,7 +875,7 @@ activation(\mathbf{x}) = max(0, \mathbf{w} \cdot \mathbf{x} + b)
 $$</div>
 <p>（这里表示的是一个采用全连接权重和整流线性单元激活函数的神经元。其他仿射函数，例如卷积，以及其他激活函数，例如指数线性单元，也遵循类似的计算逻辑。）</p>
 <p>先不考虑 $max$，集中计算 $\frac{\partial}{\partial \mathbf{w}} (\mathbf{w} \cdot \mathbf{x} + b)$ 和 $\frac{\partial}{\partial b} (\mathbf{w} \cdot \mathbf{x} + b)$。（回顾一下，神经网络通过优化权重和偏置来学习。）我们还没有讨论点积的导数 $y = \mathbf{f(w)} \cdot \mathbf{g(x)}$，但可以使用链式法则，而不必再记住一条规则。（注意，结果是标量而非向量，所以使用记号 $y$，而不是 $\mathbf{y}$。）</p>
-<p>点积 $\mathbf{w} \cdot \mathbf{x}$ 就是逐元素相乘后求和：$\sum_i^n (w_i x_i) = sum(\mathbf{w} \otimes \mathbf{x})$。（记住线性代数记号 $\mathbf{w} \cdot \mathbf{x} = \mathbf{w}^{T} \mathbf{x}$ 也可能有帮助。）我们已经知道如何计算 $sum(\mathbf{x})$ 和 $\mathbf{w} \otimes \mathbf{x}$ 的偏导，但还没有讨论 $sum(\mathbf{w} \otimes \mathbf{x})$ 的偏导。这需要链式法则，因此可以像使用单变量链式法则时一样，引入一个中间向量变量 $\mathbf{u}$：</p>
+<p>点积 $\mathbf{w} \cdot \mathbf{x}$ 就是element-wise相乘后求和：$\sum_i^n (w_i x_i) = sum(\mathbf{w} \otimes \mathbf{x})$。（记住线性代数记号 $\mathbf{w} \cdot \mathbf{x} = \mathbf{w}^{T} \mathbf{x}$ 也可能有帮助。）我们已经知道如何计算 $sum(\mathbf{x})$ 和 $\mathbf{w} \otimes \mathbf{x}$ 的偏导，但还没有讨论 $sum(\mathbf{w} \otimes \mathbf{x})$ 的偏导。这需要链式法则，因此可以像使用单变量链式法则时一样，引入一个中间向量变量 $\mathbf{u}$：</p>
 <div>$$
 \begin{array}{lllllllll}
  \mathbf{u} &amp;=&amp; \mathbf{w} \otimes \mathbf{x}\\
@@ -920,7 +920,7 @@ $$</div>
 	\frac{dz}{dz}=1 &amp; z &gt; 0\\
 \end{cases}
 $$</div>
-<p><hr/>补充说明如何将函数广播到各个标量。当 $max$ 的一个或两个参数是向量，例如 $max(0,\mathbf{x})$，我们就将单变量函数 $max$ 广播到各个元素。这是逐元素一元运算的一个例子。具体写出来就是：<p></p>
+<p><hr/>补充说明如何将函数广播到各个标量。当 $max$ 的一个或两个参数是向量，例如 $max(0,\mathbf{x})$，我们就将单变量函数 $max$ 广播到各个元素。这是element-wise一元运算的一个例子。具体写出来就是：<p></p>
 <div>$$
 max(0,\mathbf{x}) = \begin{bmatrix}
  max(0,x_1)\\
@@ -1149,8 +1149,8 @@ $$</div>
 \end{bmatrix}
 $$</div>
 <p>恒等函数 $\mathbf{f(x)} = \mathbf{x}$ 的 Jacobian 为 $I$。</p>
-<h3 id="sec:1.8.2">向量的逐元素运算</h3>
-<p>使用运算符 $\bigcirc$ 定义向量 $\mathbf{w}$ 与 $\mathbf{x}$ 上的一般<i>逐元素运算</i>，例如 $+$：</p>
+<h3 id="sec:1.8.2">向量的element-wise运算</h3>
+<p>使用运算符 $\bigcirc$ 定义向量 $\mathbf{w}$ 与 $\mathbf{x}$ 上的一般<i>element-wise运算</i>，例如 $+$：</p>
 <div>$$
 \begin{bmatrix}
 y_1\\
@@ -1174,14 +1174,14 @@ J_\mathbf{w} =
 \frac{\partial}{\partial w_1} ( f_{n}(\mathbf{w}) \bigcirc g_{n}(\mathbf{x}) ) &amp; \frac{\partial}{\partial w_2} ( f_{n}(\mathbf{w}) \bigcirc g_{n}(\mathbf{x}) ) &amp; \ldots &amp; \frac{\partial}{\partial w_n} ( f_{n}(\mathbf{w}) \bigcirc g_{n}(\mathbf{x}) )\\
 \end{bmatrix}
 $$</div>
-<p>当 $f_i(\mathbf{w})$ 和 $g_i(\mathbf{x})$ 分别最多只访问 $w_{i}$ 和 $x_{i}$，即满足<i>逐元素对角条件</i>时，Jacobian 化简为对角矩阵：</p>
+<p>当 $f_i(\mathbf{w})$ 和 $g_i(\mathbf{x})$ 分别最多只访问 $w_{i}$ 和 $x_{i}$，即满足<i>element-wise对角条件</i>时，Jacobian 化简为对角矩阵：</p>
 <div>$$
 \frac{\partial \mathbf{y}}{\partial \mathbf{w}} = diag \left( \frac{\partial}{\partial w_1}(f_{1}(w_1) \bigcirc g_{1}(x_1)),~ \frac{\partial}{\partial w_2}(f_{2}(w_2) \bigcirc g_{2}(x_2)),~ \ldots,~ \frac{\partial}{\partial w_n}(f_{n}(w_n) \bigcirc g_{n}(x_n)) \right)
 $$</div>
-<p>以下是一些逐元素运算符的例子：</p>
+<p>以下是一些element-wise运算符的例子：</p>
 <div>$$
 \begin{array}{lll}
- \text{textbf{Op}} &amp; \text{textbf{Partial with respect to }} \mathbf{w} &amp; \text{textbf{ Partial with respect to }}\mathbf{x}\\
+ \textbf{Op} &amp; \textbf{Partial with respect to } \mathbf{w} &amp; \textbf{ Partial with respect to }\mathbf{x}\\
  + &amp; \frac{\partial (\mathbf{w+x})}{\partial \mathbf{w}} = I &amp; \frac{\partial (\mathbf{w+x})}{\partial \mathbf{x}} =  I\\
  - &amp; \frac{\partial (\mathbf{w-x})}{\partial \mathbf{w}}  = I &amp; \frac{\partial (\mathbf{w-x})}{\partial \mathbf{x}}  = -I \\
  \otimes &amp; \frac{\partial (\mathbf{w \otimes x})}{\partial \mathbf{w}}  =  diag(\mathbf{x}) &amp; \frac{\partial (\mathbf{w \otimes x})}{\partial \mathbf{x}}  =  diag(\mathbf{w})\\
