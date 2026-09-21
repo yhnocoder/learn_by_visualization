@@ -1,0 +1,815 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>深度学习所需的矩阵微积分</title><meta name="description" content="Terence Parr 与 Jeremy Howard 原文的完整中文翻译，保留原文公式、图片、表格和链接。"><link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/lxgwwenkai-regular.css"><style>
+:root{
+  color-scheme:light;
+  --ground:#f5f6f4; --surface:#ffffff; --surface-2:#eef0ec;
+  --ink:#161a1d; --ink-2:#4f575e; --ink-3:#7d858c;
+  --rule:#dde1dc; --rule-2:#c7ccc6;
+  --accent:#985b57; --accent-soft:#f1e7c8;
+  --grid:#e6e8e3; --axis:#b9bfb8;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#4a3aa7; --s8:#e34948;
+  --bad:#e34948; --bad-soft:#fbe7e6; --ok:#1baf7a; --ok-soft:#e3f5ee; --warn:#eda100; --warn-soft:#fbf1da;
+  --code-bg:#eef0ec;
+  --shadow:0 1px 2px rgba(22,26,29,.06), 0 6px 20px rgba(22,26,29,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#111413; --surface:#1a1e1c; --surface-2:#222724;
+    --ink:#e9ece7; --ink-2:#b4bab5; --ink-3:#848b86;
+    --rule:#2c312e; --rule-2:#3a403c;
+    --accent:#d8a39c; --accent-soft:#49402b;
+    --grid:#262b28; --axis:#4a504c;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+    --bad:#e66767; --bad-soft:#3a2323; --ok:#199e70; --ok-soft:#1d3129; --warn:#c98500; --warn-soft:#3a3019;
+    --code-bg:#222724;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#111413; --surface:#1a1e1c; --surface-2:#222724;
+  --ink:#e9ece7; --ink-2:#b4bab5; --ink-3:#848b86;
+  --rule:#2c312e; --rule-2:#3a403c;
+  --accent:#d8a39c; --accent-soft:#49402b;
+  --grid:#262b28; --axis:#4a504c;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+  --bad:#e66767; --bad-soft:#3a2323; --ok:#199e70; --ok-soft:#1d3129; --warn:#c98500; --warn-soft:#3a3019;
+  --code-bg:#222724;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0; background:var(--ground); color:var(--ink); font-family:"Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; font-size:16.5px; line-height:1.85; padding-block:0 96px; padding-inline:20px}
+a{color:var(--accent); text-decoration:none; border-bottom:1px solid color-mix(in srgb,var(--accent) 35%,transparent)}
+a:hover{border-bottom-color:var(--accent)}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.frame{max-width:1360px; margin:0 auto; display:grid; grid-template-columns:220px minmax(0,820px); gap:56px; justify-content:center}
+@media (max-width:1240px){ .frame{grid-template-columns:minmax(0,820px)} }
+.mast{grid-column:1/-1; padding-block:56px 40px; border-bottom:1px solid var(--rule-2); margin-bottom:40px}
+.mast .eyebrow{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); margin:0 0 14px}
+.mast h1{font-family:"LXGW WenKai","KaiTi","STKaiti","SimSun",serif; font-weight:700; font-size:clamp(34px,5vw,52px); line-height:1.2; margin:0 0 18px; text-wrap:balance; letter-spacing:-.01em}
+.mast p.lede{font-size:18px; color:var(--ink-2); max-width:52em; margin:0 0 26px; line-height:1.8}
+.toc{position:sticky; top:28px; align-self:start; font-size:13.5px; line-height:1.6; max-height:calc(100dvh - 56px); overflow-y:auto; scrollbar-width:thin; overscroll-behavior:contain}
+.toc-toggle{display:none}
+.toc .t{font-family:"JetBrains Mono",ui-monospace,monospace; font-size:11.5px; letter-spacing:.14em; color:var(--ink-3); margin:0 0 12px}
+.toc ol{list-style:none; margin:0; padding:0; border-left:1px solid var(--rule-2)}
+.toc li a{display:block; padding:5px 8px 5px 14px; color:var(--ink-2); border:0; margin-left:-1px; border-left:2px solid transparent}
+.toc ol ol{border:0; margin:2px 0 7px}
+.toc ol ol a{padding-left:26px; font-size:12.5px; color:var(--ink-3)}
+.toc li a:hover{color:var(--ink)}
+.toc li a.in-section{color:var(--accent); font-weight:500}
+.toc li a.on{color:var(--accent); border-left-color:var(--accent)}
+article section,article h3{scroll-margin-top:24px}
+@media (max-width:1240px){
+  .toc{position:static; max-height:none; margin-bottom:24px}
+  .toc .t{display:none}
+  .toc-toggle{display:flex; align-items:center; justify-content:space-between; width:100%; padding:12px 14px; font:inherit; color:var(--ink); background:var(--surface); border:1px solid var(--rule-2); border-radius:6px; cursor:pointer}
+  .toc-toggle::after{content:'−'}
+  .toc-toggle[aria-expanded="false"]::after{content:'+'}
+  .toc > ol{margin-top:12px; max-height:60dvh; overflow-y:auto}
+  .toc-toggle[aria-expanded="false"] + ol{display:none}
+}
+article{min-width:0}
+section{margin-bottom:72px}
+h2{font-family:"LXGW WenKai","KaiTi","STKaiti",serif; font-weight:700; font-size:30px; line-height:1.3; margin:0 0 6px; text-wrap:balance}
+h2 .n{font-family:"JetBrains Mono",ui-monospace,monospace; font-weight:500; font-size:13px; color:var(--ink-3); letter-spacing:.1em; display:block; margin-bottom:10px}
+h3{font-family:"LXGW WenKai","KaiTi","STKaiti",serif; font-weight:600; font-size:21px; line-height:1.4; margin:40px 0 8px; text-wrap:balance}
+p{margin:0 0 1.15em}
+strong{font-weight:600}
+code{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.86em; background:var(--code-bg); padding:.1em .4em; border-radius:4px}
+pre{font-family:"JetBrains Mono",ui-monospace,monospace; font-size:13.5px; line-height:1.6; background:var(--code-bg); border-radius:8px; padding:14px 16px; overflow-x:auto; margin:8px 0 1.3em}
+pre code{background:none; padding:0; font-size:inherit}
+.math-block{margin:8px 0 1.3em; overflow-x:auto; padding:6px 0}
+mjx-container[display="true"]{margin:.4em 0 !important}
+mjx-container svg{display:inline-block; width:auto; height:auto}
+.aside{border-left:3px solid var(--accent); background:var(--accent-soft); padding:14px 18px; margin:22px 0 28px; border-radius:0 8px 8px 0; font-size:15.5px; line-height:1.8}
+.aside p:last-child{margin-bottom:0}
+.aside .k{font-family:"JetBrains Mono",ui-monospace,monospace; font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); display:block; margin-bottom:4px}
+figure{margin:26px 0 30px; background:var(--surface); border:1px solid var(--rule); border-radius:10px; padding:18px 18px 12px; box-shadow:var(--shadow)}
+figure h4{margin:0 0 10px; font-size:15px; font-weight:600; color:var(--ink)}
+figcaption{font-size:14px; color:var(--ink-2); line-height:1.7; margin-top:12px; padding-top:10px; border-top:1px solid var(--rule)}
+figcaption p:last-child{margin-bottom:0}
+.plot{position:relative}
+.plot svg{width:100%; height:auto; display:block; touch-action:none}
+.plot text{font:11px "JetBrains Mono",ui-monospace,monospace; fill:var(--ink-3)}
+.plot text.lab{font-size:12px; fill:var(--ink-2)}
+.plot text.ann{font-size:11.5px; fill:var(--ink-2)}
+.legend{display:flex; flex-wrap:wrap; gap:6px 18px; font-size:13px; color:var(--ink-2); margin:6px 0 10px; font-family:"JetBrains Mono",ui-monospace,monospace}
+.legend span{display:inline-flex; align-items:center; gap:7px}
+.legend i{display:inline-block; width:14px; height:10px; background:var(--c); border-radius:2px}
+.legend i.line{height:2px}
+.controls{display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center; font-size:13.5px; margin:4px 0 12px; color:var(--ink-2)}
+.controls label{display:inline-flex; align-items:center; gap:8px; cursor:pointer}
+.controls input[type=range]{width:150px; accent-color:var(--accent)}
+.controls input[type=number],.controls input[type=text]{font:inherit; font-family:"JetBrains Mono",ui-monospace,monospace; font-size:13px; width:8.5em; color:var(--ink); background:var(--surface); border:1px solid var(--rule-2); border-radius:4px; padding:3px 6px}
+.controls select{font:inherit; font-size:13px; color:var(--ink); background:var(--surface); border:1px solid var(--rule-2); border-radius:4px; padding:3px 6px}
+.controls .v{font-family:"JetBrains Mono",ui-monospace,monospace; min-width:3.2em; color:var(--ink); font-variant-numeric:tabular-nums}
+.btn{font:inherit; font-size:13px; color:var(--ink); background:var(--surface); border:1px solid var(--rule-2); border-radius:6px; padding:5px 12px; cursor:pointer}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn.primary{background:var(--accent); border-color:var(--accent); color:#fff}
+.btn.primary:hover{color:#fff; filter:brightness(1.08)}
+.status{font-size:13px; color:var(--ink-2); margin:6px 0 10px; font-family:"JetBrains Mono",ui-monospace,monospace; line-height:1.7}
+.status b{color:var(--ink); font-weight:500}
+.tbl{overflow-x:auto; margin:22px 0 28px; border:1px solid var(--rule); border-radius:10px; background:var(--surface)}
+figure .tbl{margin:10px 0 6px; border-radius:8px}
+table{border-collapse:collapse; width:100%; font-size:14.5px; line-height:1.6}
+th,td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--rule); vertical-align:top}
+th{font-weight:500; color:var(--ink-3); font-size:12.5px; letter-spacing:.06em; font-family:"JetBrains Mono",ui-monospace,monospace; background:var(--surface-2); white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.m{font-family:"JetBrains Mono",ui-monospace,monospace; font-size:13px; white-space:nowrap; font-variant-numeric:tabular-nums}
+td.r,th.r{text-align:right}
+.pill{display:inline-block; font-size:11.5px; font-family:"JetBrains Mono",ui-monospace,monospace; padding:1px 8px; border-radius:99px; border:1px solid var(--rule-2); color:var(--ink-2); white-space:nowrap}
+.pill.bad{background:var(--bad-soft); border-color:transparent; color:var(--bad)}
+.pill.ok{background:var(--ok-soft); border-color:transparent; color:var(--ok)}
+.pill.warn{background:var(--warn-soft); border-color:transparent; color:var(--warn)}
+
+.frame{gap:40px 56px}.mast{margin-bottom:0;padding-bottom:28px}.mast .watermark{font-size:13px;color:var(--ink-2);margin-bottom:14px}.mast h1{margin-bottom:14px}
+article h2{border-top:1px solid var(--rule-2);padding-top:36px;margin:64px 0 22px}article h3{margin-top:42px;margin-bottom:18px}article h4{font-size:18px;margin:32px 0 16px}article :is(h2,h3,h4){scroll-margin-top:24px}article p{margin:0 0 1.25em}article p:empty{display:none}article{overflow-wrap:break-word}article a{overflow-wrap:anywhere}
+mark{color:var(--accent);font-weight:600;background:linear-gradient(transparent 72%,var(--accent-soft) 72%);padding:0 .06em;box-decoration-break:clone;-webkit-box-decoration-break:clone}i{font-style:normal}span.eqn,sub.eqn{font-family:Georgia,"Times New Roman",serif;font-style:italic}span.eqnvec{font-family:Georgia,"Times New Roman",serif;font-weight:bold}
+article img{max-width:none}img.inline-equation{display:inline-block;height:auto}img.original-diagram{display:block;max-width:min(100%,420px);max-height:320px;width:auto;height:auto;object-fit:contain;margin:26px auto;padding:0}
+.equation-scroll{overflow-x:auto;max-width:100%;margin:8px 0 1.3em;padding:6px 0;text-align:center}.equation-scroll img{display:inline-block;vertical-align:middle!important;height:auto;max-width:none}.table-scroll{overflow-x:auto;margin:24px 0;border:1px solid var(--rule);border-radius:8px;background:var(--surface)}table{width:100%;border-collapse:collapse}td,th{padding:14px;min-width:120px;vertical-align:middle}table .equation-scroll{border:0;padding:5px;margin:0;background:none;overflow:visible}table img{vertical-align:middle!important}center{overflow-x:auto;max-width:100%}li{margin-bottom:10px}article ol{padding-left:1.6em}
+.toc ul{list-style:none;margin:0;padding:0;border-left:1px solid var(--rule-2)}.toc li{margin:0}.toc li a{display:block;color:var(--ink-2);font-size:13px;padding:5px 8px 5px 14px;border:0}.toc ul ul{margin-left:12px;border:0}.toc ul ul a{font-size:12px}.toc a.on{color:var(--accent);font-weight:600;border-left:2px solid var(--accent)}.toc_title{font-size:12px;color:var(--ink-3);letter-spacing:.1em}.toc ul:empty{display:none}
+:root[data-theme="dark"] img.inline-equation,:root[data-theme="dark"] img.blkeqn{filter:invert(.9) hue-rotate(180deg);mix-blend-mode:screen}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) img.inline-equation,:root:not([data-theme="light"]) img.blkeqn{filter:invert(.9) hue-rotate(180deg);mix-blend-mode:screen}}
+@media(max-width:1240px){.toc{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:16px}.toc>ul{columns:2}.toc li{break-inside:avoid}.frame{row-gap:28px}}
+@media(max-width:600px){body{padding-inline:16px;font-size:16px}.mast{padding-top:32px}.mast h1{font-size:34px}.toc>ul{columns:1}.toc{max-height:300px;overflow-y:auto}.equation-scroll{text-align:left;padding:6px 0}article h2{font-size:27px}article h3{font-size:22px}img.original-diagram{max-height:260px}}
+@media print{.toc{display:none}.frame{display:block}body{background:white;color:black;padding:0;font-size:11pt}.equation-scroll,.table-scroll{overflow:visible;break-inside:avoid}img{filter:none!important}h2,h3,h4{break-after:avoid}}
+</style></head><body><div class="frame"><header class="mast"><div class="watermark"><i>原文由 <a href="https://explained.ai/matrix-calculus/index.html">explained.ai</a> 提供，本文为中文翻译</i><br/></div><h1>深度学习所需的矩阵微积分</h1></header><div aria-label="文章目录" class="toc" id="toc">
+<p class="toc_title">目录</p>
+<ul>
+<li><a href="#intro">引言</a><ul></ul></li>
+<li><a href="#sec:1.2">复习：标量求导规则</a><ul></ul></li>
+<li><a href="#sec:1.3">向量微积分与偏导数入门</a><ul></ul></li>
+<li><a href="#sec:1.4">矩阵微积分</a>
+<ul>
+<li><a href="#sec:1.4.1">Jacobian 的一般形式</a></li>
+<li><a href="#sec:1.4.2">向量逐元素二元运算的导数</a></li>
+<li><a href="#sec:1.4.3">涉及标量扩展的导数</a></li>
+<li><a href="#sec:1.4.4">向量求和归约</a></li>
+<li><a href="#sec:1.4.5">链式法则</a></li>
+</ul>
+</li>
+<li><a href="#sec:1.5">神经元激活值的梯度</a><ul></ul></li>
+<li><a href="#sec:1.6">神经网络损失函数的梯度</a>
+<ul>
+<li><a href="#sec:1.6.1">关于权重的梯度</a></li>
+<li><a href="#sec:1.6.2">关于偏置的导数</a></li>
+</ul>
+</li>
+<li><a href="#sec:1.7">总结</a><ul></ul></li>
+<li><a href="#reference">矩阵微积分速查</a>
+<ul>
+<li><a href="#sec:1.8.1">梯度与 Jacobian</a></li>
+<li><a href="#sec:1.8.2">向量的逐元素运算</a></li>
+<li><a href="#sec:1.8.3">标量扩展</a></li>
+<li><a href="#sec:1.8.4">向量归约</a></li>
+<li><a href="#sec:1.8.5">链式法则</a></li>
+</ul>
+</li>
+<li><a href="#notation">符号说明</a><ul></ul></li>
+<li><a href="#sec:1.10">参考资源</a><ul></ul></li>
+</ul>
+</div><article>
+
+
+<p></p>
+<p><a href="https://www.linkedin.com/in/terence-parr/">Terence Parr</a> 与 <a href="http://www.fast.ai/about/#jeremy">Jeremy Howard</a></p>
+<p>（Terence 是 Google 的技术负责人，曾在<a href="https://www.usfca.edu/arts-sciences/graduate-programs/data-science">旧金山大学数据科学硕士项目</a>担任计算机科学与数据科学教授。你可能知道，Terence 是 ANTLR 解析器生成器的创建者。如需更多资料，可以查看 Jeremy 的<a href="http://course.fast.ai/">fast.ai 课程</a>，以及旧金山大学 Data Institute 的<a href="https://www.usfca.edu/data-institute/certificates/deep-learning-part-one">深度学习线下课程</a>。）
+<p>如有意见、建议或需要更正之处，请联系 <a href="mailto:terence@parr.us">Terence</a>。</p>
+<p><a href="https://arxiv.org/abs/1802.01528">可打印版本</a>（本 HTML 由标记文本通过 <a href="https://github.com/parrt/bookish">bookish</a> 生成）。另有一个<a href="https://explained.ai/matrix-calculus/%E7%9F%A9%E9%98%B5%E5%BE%AE%E7%A7%AF%E5%88%86%E8%AF%91%E6%96%87.pdf">中文版本</a>（我们尚未核实其内容）。</p>
+<p></p>
+<p><mark>摘要</mark></p>
+<p>本文尝试讲清楚理解深度神经网络训练所需的全部矩阵微积分知识。我们假定你只具备微积分入门课程所教授的数学知识，并在需要时提供链接，帮助你复习相关内容。请注意，在开始学习如何实际训练和使用深度学习模型之前，你<mark>不需要</mark>先掌握本文内容；本文面向已经熟悉神经网络基础、希望进一步理解其背后数学原理的读者。如果读到某处遇到困难，不必担心：回去重读上一节，并试着写出一些例子，亲自完成计算。如果仍有疑问，我们很乐意在 <a href="http://forums.fast.ai/c/theory">forums.fast.ai 的 Theory 分区</a>回答。<mark>注意</mark>：文章末尾有一个<a href="#reference">速查部分</a>，汇总了本文讨论的所有重要矩阵微积分规则和术语。</p>
+
+<h2 id="intro">引言</h2>
+<p>对我们大多数人来说，上一次接触微积分还是在学校里，但导数是机器学习的重要组成部分，尤其是通过优化损失函数来训练的深度神经网络。打开一篇机器学习论文，或者 <a href="http://pytorch.org/">PyTorch</a> 等库的文档，你就会再次遇到微积分。而且，出现的不只是普通的标量微积分：你需要的是将<a href="https://en.wikipedia.org/wiki/Linear_algebra">线性代数</a>与<a href="https://en.wikipedia.org/wiki/Multivariable_calculus">多元微积分</a>结合起来的<i>矩阵微分</i>。</p>
+<p>也许“<i>需要</i>”并不十分准确。Jeremy 的课程表明，借助现代深度学习库内置的自动微分，只需少量标量微积分知识，就能成为世界一流的深度学习实践者。但如果你确实想理解这些库的内部工作原理，并读懂讨论模型训练技术最新进展的学术论文，就需要掌握矩阵微积分中的部分知识。</p>
+<p>例如，神经网络中单个计算单元的激活值，通常先通过边权重向量 <span class="eqnvec">w</span> 与输入向量 <span class="eqnvec">x</span> 的点积（线性代数中的运算），再加上一个标量偏置（阈值）来计算：<img class="inline-equation" data-original-image="0" src="assets/592f80bc190dbd6be743.svg" style="vertical-align:-3.4754999pt"/>。函数 <img class="inline-equation" data-original-image="1" src="assets/0b684f0b2b0ab37634be.svg" style="vertical-align:-3.4125pt"/> 称为该单元的<i>仿射函数</i>，之后再应用一个<a href="https://goo.gl/7BXceK">整流线性单元</a>，将负值截断为零：<img class="inline-equation" data-original-image="2" src="assets/06280fbae86a443ee8d9.svg" style="vertical-align:-3.4125pt"/>。这样的计算单元有时也称为“人工神经元”，其结构如下：</p>
+<p></p><center>
+<a href="https://explained.ai/matrix-calculus/images/neuron.png">
+<img alt="neuron.png" class="original-diagram" data-original-image="3" src="assets/980dcd86f65d15f3626d.png" url="images/neuron.png" width="30%"/>
+</a>
+</center>
+<p></p>
+<p>神经网络由许多这样的单元组成，它们被组织成多个神经元集合，称为<i>层</i>。一层中各单元的激活值成为下一层各单元的输入。最后一层中一个或多个单元的激活值称为网络输出。</p>
+<p><i>训练</i>这个神经元，就是选择权重 <span class="eqnvec">w</span> 和偏置 <span class="eqn">b</span>，使我们对全部 <span class="eqn">N</span> 个输入 <span class="eqnvec">x</span> 都能得到期望的输出。为此，我们最小化一个<i>损失函数</i>：它针对所有输入向量 <span class="eqnvec">x</span>，比较网络最终的 <img class="inline-equation" data-original-image="4" src="assets/ca6165a8c492089ae378.svg" style="vertical-align:-3.4125pt"/> 与 <img class="inline-equation" data-original-image="5" src="assets/af4b25e4108d0714828d.svg" style="vertical-align:-3.4125pt"/>（<span class="eqnvec">x</span> 对应的期望输出）。为了最小化损失，我们使用某种梯度下降方法，例如普通的<a href="https://en.wikipedia.org/wiki/Stochastic_gradient_descent">随机梯度下降</a>（SGD）、带动量的 SGD，或 <a href="https://en.wikipedia.org/wiki/Stochastic_gradient_descent#Adam">Adam</a>。这些方法都需要 <img class="inline-equation" data-original-image="6" src="assets/ca6165a8c492089ae378.svg" style="vertical-align:-3.4125pt"/> 关于模型参数 <span class="eqnvec">w</span> 和 <span class="eqn">b</span> 的偏导数（梯度）。我们的目标是逐步调整 <span class="eqnvec">w</span> 和 <span class="eqn">b</span>，使所有输入 <span class="eqnvec">x</span> 上的总损失持续减小。</p>
+<p>如果足够仔细，我们可以对一种常见损失函数（均方误差）的标量形式求导，从而推导出梯度：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="7" src="assets/bd36abd0280b2830202d.svg" url="images/blkeqn-FEE44D816921C28B1DB3F31B7EE7E7EC.svg"/></div></div>
+<p>但这只是一个神经元，而神经网络必须同时训练所有层中所有神经元的权重和偏置。由于存在多个输入，也可能存在多个网络输出，我们需要函数关于向量求导的一般规则，甚至需要向量值函数关于向量求导的规则。</p>
+<p>本文将逐步推导一些关于向量求偏导的重要规则，尤其是对训练神经网络有用的规则。这个领域称为<i>矩阵微积分</i>。好消息是，我们只需要其中很小的一部分，本文将介绍这些内容。虽然网上有很多多元微积分和线性代数的资料，但这两者通常作为两门独立的本科课程教授，因此大多数资料也是分别讨论的。真正讨论矩阵微积分的页面，往往只是列出规则而很少解释，或者只介绍一部分内容。由于符号密集、对基础概念的讨论又很少，除了少数数学专业读者，这些资料通常很难理解。（请参阅文末附有说明的资源列表。）</p>
+<p>因此，我们将重新推导并逐步得出一些关键的矩阵微积分规则，以解释这些规则。矩阵微积分其实没有那么难：需要学习的并不是几十条新规则，而是几个关键概念。我们希望这篇短文能帮助你快速入门与神经网络训练有关的矩阵微积分。我们假定你已经熟悉神经网络结构与训练的基础。如果还不熟悉，请先学习 <a href="http://course.fast.ai/">Jeremy 的课程</a>并完成第一部分，再回来阅读本文。（请注意，与许多更偏学术的学习方式不同，我们强烈建议<i>先</i>在实践中学习训练和使用神经网络，<i>再</i>研究背后的数学。有了实际背景，数学会容易理解得多；而且，要成为有效的实践者，也不必先彻底掌握这里的全部微积分。）</p>
+<p><i>关于符号的说明</i>：Jeremy 的课程完全使用代码而非数学符号来解释概念，因为代码中不熟悉的函数很容易搜索和实验。本文则相反：我们使用大量数学符号，因为本文的目标之一，就是帮助你理解深度学习论文和书籍中出现的记号。在<a href="#notation">文章末尾</a>，你会看到一份简短的符号表，其中也列出了可用于搜索更多信息的词或短语。</p>
+<h2 id="sec:1.2">复习：标量求导规则</h2>
+<p>希望你还记得以下一些主要的标量求导规则。如果记忆有些模糊，可以看看 <a href="https://www.khanacademy.org/math/ap-calculus-ab/ab-derivative-rules">Khan Academy 关于标量求导规则的视频</a>。</p>
+<center>
+<div aria-label="原文表格，可横向滚动" class="table-scroll" role="group" tabindex="0"><table>
+<thead>
+<tr>
+<th align="center" valign="top" width="20%">规则<th align="center" valign="top"><img class="inline-equation" data-original-image="8" src="assets/7afa9647efe688105a87.svg" style="vertical-align:-3.4125pt"/><th align="center" valign="top" width="30%">标量导数记号，求导变量为 <span class="eqn">x</span><th align="center" valign="top">例子</th>
+</th></th></th></tr>
+</thead>
+<tbody>
+<tr>
+<td align="center" valign="top"><mark>常数</mark><td align="center" valign="top"> <span class="eqn">c</span><td align="center" valign="top"><img class="inline-equation" data-original-image="9" src="assets/4943239b543f74991c38.svg" style="vertical-align:-0.5pt"/><td align="center" valign="top"> <img class="inline-equation" data-original-image="10" src="assets/f7ffe48e8bd4fdbf9eb4.svg" style="vertical-align:-4.8089995pt"/></td>
+</td></td></td></tr>
+<tr>
+<td align="center" valign="top"><mark>乘以常数</mark><td align="center" valign="top"> <span class="eqn">cf</span> <td align="center" valign="top"><img class="inline-equation" data-original-image="11" src="assets/153b08719f26f4b5cc28.svg" style="vertical-align:-4.8089995pt"/><td align="center" valign="top"><img class="inline-equation" data-original-image="12" src="assets/b38f641af4989abbf5d6.svg" style="vertical-align:-4.8089995pt"/></td>
+</td></td></td></tr>
+<tr>
+<td align="center" valign="top"><mark>幂函数法则</mark><td align="center" valign="top"><img class="inline-equation" data-original-image="13" src="assets/060cfddd835c101a1f6d.svg" style="vertical-align:-0.5pt"/> <td align="center" valign="top"><img class="inline-equation" data-original-image="14" src="assets/05f6377ff8606fe0525d.svg" style="vertical-align:-0.5pt"/><td align="center" valign="top"><img class="inline-equation" data-original-image="15" src="assets/0e920003b2704246e968.svg" style="vertical-align:-4.8089995pt"/></td>
+</td></td></td></tr>
+<tr>
+<td align="center" valign="top"><mark>加法法则</mark><td align="center" valign="top"><img class="inline-equation" data-original-image="16" src="assets/00dd9e3a4b8052e45f36.svg" style="vertical-align:-2.856pt"/><td align="center" valign="top"><img class="inline-equation" data-original-image="17" src="assets/cad1bc4d25180a6c6ff4.svg" style="vertical-align:-4.8089995pt"/><td align="center" valign="top"><img class="inline-equation" data-original-image="18" src="assets/7d7649e549fd8299edac.svg" style="vertical-align:-4.8089995pt"/></td>
+</td></td></td></tr>
+<tr>
+<td align="center" valign="top"><mark>减法法则</mark><td align="center" valign="top"><img class="inline-equation" data-original-image="19" src="assets/a6d32f889013cfdd3130.svg" style="vertical-align:-2.856pt"/><td align="center" valign="top"><img class="inline-equation" data-original-image="20" src="assets/b34059e56bfd05954ec1.svg" style="vertical-align:-4.8089995pt"/><td align="center" valign="top"><img class="inline-equation" data-original-image="21" src="assets/044db851cc864b3a9568.svg" style="vertical-align:-4.8089995pt"/></td>
+</td></td></td></tr>
+<tr>
+<td align="center" valign="top"><mark>乘积法则</mark><td align="center" valign="top"><span class="eqn">fg</span><td align="center" valign="top"><img class="inline-equation" data-original-image="22" src="assets/1d8ee2be038c0514e315.svg" style="vertical-align:-4.8089995pt"/><td align="center" valign="top"><img class="inline-equation" data-original-image="23" src="assets/548cf030d416e8418aab.svg" style="vertical-align:-4.8089995pt"/></td>
+</td></td></td></tr>
+<tr>
+<td align="center" valign="top"><mark>链式法则</mark><td align="center" valign="top"><img class="inline-equation" data-original-image="24" src="assets/3e619ed3b81641d41547.svg" style="vertical-align:-3.4125pt"/><td align="center" valign="top"><img class="inline-equation" data-original-image="25" src="assets/fe3bb2cdbbfcfb322655.svg" style="vertical-align:-4.8089995pt"/>，令 <img class="inline-equation" data-original-image="26" src="assets/89714b31b0b7d63c8d0d.svg" style="vertical-align:-3.4125pt"/><td align="center" valign="top"><img class="inline-equation" data-original-image="27" src="assets/39276347531c26619360.svg" style="vertical-align:-4.8405pt"/></td>
+</td></td></td></tr>
+</tbody>
+</table></div>
+</center>
+<p>此外还有三角函数、指数函数等的求导规则，可以在 <a href="https://www.khanacademy.org/math/differential-calculus">Khan Academy 的微分课程</a>中找到。</p>
+<p>当函数只有一个参数时，例如 <img class="inline-equation" data-original-image="28" src="assets/7afa9647efe688105a87.svg" style="vertical-align:-3.4125pt"/> 时，你经常会看到用 <img class="inline-equation" data-original-image="29" src="assets/6645b0b29e8cb6d66cd9.svg" style="vertical-align:-2.856pt"/> 和 <img class="inline-equation" data-original-image="30" src="assets/83dc4487d6b32594da2a.svg" style="vertical-align:-3.4125pt"/> 作为 <img class="inline-equation" data-original-image="31" src="assets/7c97ee168fc5a13a9cde.svg" style="vertical-align:-4.8089995pt"/> 的简写。我们不推荐这种记法，因为它没有明确指出求导所针对的变量。</p>
+<p>可以将 <img class="inline-equation" data-original-image="32" src="assets/1d5f63319abe364508d3.svg" style="vertical-align:-4.8089995pt"/> 看作一个运算符，它把一个单参数函数映射成另一个函数。也就是说，<img class="inline-equation" data-original-image="33" src="assets/7c97ee168fc5a13a9cde.svg" style="vertical-align:-4.8089995pt"/> 将 <img class="inline-equation" data-original-image="34" src="assets/7afa9647efe688105a87.svg" style="vertical-align:-3.4125pt"/> 映射为它关于 <span class="eqn">x</span> 的导数，这与 <img class="inline-equation" data-original-image="35" src="assets/f22792621087b0f9b642.svg" style="vertical-align:-4.8089995pt"/> 相同。此外，如果 <img class="inline-equation" data-original-image="36" src="assets/4aef1b621ae8f2db7374.svg" style="vertical-align:-3.4125pt"/>，那么 <img class="inline-equation" data-original-image="37" src="assets/fa0758e50cb20846cf03.svg" style="vertical-align:-4.8089995pt"/>。将求导看成运算符，有助于简化复杂导数，因为它满足分配性质，并允许我们提出常数。例如在下式中，我们可以提出常数 9，再将求导运算分别应用于括号内的各项。</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="38" src="assets/c52cfa85e53aba9776ec.svg" url="images/blkeqn-EBF5FE53A7BB81EBF698EC22D698D70A.svg"/></div></div>
+<p>这个过程把对 <img class="inline-equation" data-original-image="39" src="assets/63ec4eeb98f86f69dce7.svg" style="vertical-align:-3.4125pt"/> 求导，化简为一些算术运算以及对 <span class="eqn">x</span> 和 <img class="inline-equation" data-original-image="40" src="assets/5d149d2a06f3677a264a.svg" style="vertical-align:-0.5pt"/> 求导；后两者比原来的求导问题容易得多。</p>
+<h2 id="sec:1.3">向量微积分与偏导数入门</h2>
+<p>神经网络层并不是只有一个参数的单个函数 <img class="inline-equation" data-original-image="41" src="assets/7afa9647efe688105a87.svg" style="vertical-align:-3.4125pt"/>。因此，我们继续考虑 <img class="inline-equation" data-original-image="42" src="assets/5f9552616e5f349629e1.svg" style="vertical-align:-3.4125pt"/> 这样的多参数函数。例如，<span class="eqn">xy</span>（即 <span class="eqn">x</span> 与 <span class="eqn">y</span> 的乘积）的导数是什么？换句话说，改变变量时，乘积 <span class="eqn">xy</span> 会如何变化？这取决于改变的是 <span class="eqn">x</span> 还是 <span class="eqn">y</span>。每次只对一个变量（参数）求导，就会为这个双参数函数得到两个不同的<i>偏导数</i>：一个针对 <span class="eqn">x</span>，另一个针对 <span class="eqn">y</span>。偏导数不使用运算符 <img class="inline-equation" data-original-image="43" src="assets/1d5f63319abe364508d3.svg" style="vertical-align:-4.8089995pt"/>，而使用 <img class="inline-equation" data-original-image="44" src="assets/d6651189d04a110e8840.svg" style="vertical-align:-4.9035pt"/>（这是变体的 <span class="eqn">d</span>，不是希腊字母 <img class="inline-equation" data-original-image="45" src="assets/f1ee5eda8c3cf6287245.svg" style="vertical-align:-0.5pt"/>）。因此，<img class="inline-equation" data-original-image="46" src="assets/b59cd2c8ab9590693bfe.svg" style="vertical-align:-4.9035pt"/> 和 <img class="inline-equation" data-original-image="47" src="assets/e1b35c644d9368139ebb.svg" style="vertical-align:-6.657pt"/> 是 <span class="eqn">xy</span> 的偏导数，英文中也常简称为 <i>partials</i>。对于足够光滑的单参数函数，运算符 <img class="inline-equation" data-original-image="48" src="assets/d6651189d04a110e8840.svg" style="vertical-align:-4.9035pt"/> 与 <img class="inline-equation" data-original-image="49" src="assets/1d5f63319abe364508d3.svg" style="vertical-align:-4.8089995pt"/> 等价。不过，使用 <img class="inline-equation" data-original-image="50" src="assets/1d5f63319abe364508d3.svg" style="vertical-align:-4.8089995pt"/> 更好，因为它明确表示你指的是标量导数。</p>
+<p>关于 <span class="eqn">x</span> 的偏导数就是通常的标量导数，只是把等式中的其他变量全部视为常数。考虑函数 <img class="inline-equation" data-original-image="51" src="assets/41f22e759beae7c32083.svg" style="vertical-align:-3.4125pt"/>。它关于 <span class="eqn">x</span> 的偏导写成 <img class="inline-equation" data-original-image="52" src="assets/e7caffd93c44923ed524.svg" style="vertical-align:-4.9035pt"/>。从 <img class="inline-equation" data-original-image="53" src="assets/d6651189d04a110e8840.svg" style="vertical-align:-4.9035pt"/> 的角度来看，存在三个常数：3、2 和 <span class="eqn">y</span>。因此，<img class="inline-equation" data-original-image="54" src="assets/f02c5982b70f3db51e4b.svg" style="vertical-align:-4.9035pt"/>。关于 <span class="eqn">y</span> 的偏导则将 <span class="eqn">x</span> 视为常数：<img class="inline-equation" data-original-image="55" src="assets/b6b51484667ce059d9e5.svg" style="vertical-align:-6.657pt"/>。最好先亲自推导这些结果再继续阅读，否则后面的内容将难以理解。如需帮助，可以观看 <a href="https://www.khanacademy.org/math/multivariable-calculus/multivariable-derivatives/partial-derivative-and-gradient-articles/a/introduction-to-partial-derivatives">Khan Academy 关于偏导数的视频</a>。</p>
+<p>为了明确我们正在讨论向量微积分，而不只是多元微积分，来看看如何处理针对 <img class="inline-equation" data-original-image="60" src="assets/41f22e759beae7c32083.svg" style="vertical-align:-3.4125pt"/> 算出的偏导数 <img class="inline-equation" data-original-image="56" src="assets/cd09e6649869b932501c.svg" style="vertical-align:-4.9035pt"/> 和 <img class="inline-equation" data-original-image="57" src="assets/f828361b062e36aaddd3.svg" style="vertical-align:-6.657pt"/>（也就是 <img class="inline-equation" data-original-image="58" src="assets/af8853e6fbf72dea45ac.svg" style="vertical-align:-4.9035pt"/> 和 <img class="inline-equation" data-original-image="59" src="assets/9e274fdfae0b37abb114.svg" style="vertical-align:-6.657pt"/>）。与其让它们分散存在，不如将它们组织成一个水平向量。这个向量称为 <img class="inline-equation" data-original-image="61" src="assets/5f9552616e5f349629e1.svg" style="vertical-align:-3.4125pt"/> 的<i>梯度</i>，写成：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="62" src="assets/a9ec0ec759212f06be6f.svg" url="images/blkeqn-0C95BB61B2BFFB0C2A95A9DC5D8AF44E.svg"/></div></div>
+<p>因此，<img class="inline-equation" data-original-image="63" src="assets/5f9552616e5f349629e1.svg" style="vertical-align:-3.4125pt"/> 的梯度就是由它的偏导数组成的向量。梯度属于向量微积分的内容，这里处理的是将 <span class="eqn">n</span> 个标量参数映射到一个标量的函数。接下来，我们进一步考虑同时对多个函数求导。</p>
+<h2 id="sec:1.4">矩阵微积分</h2>
+<p>从对一个函数求导扩展到对多个函数求导，就从向量微积分进入了矩阵微积分。我们来计算两个函数的偏导数，每个函数都有两个参数。保留上一节的 <img class="inline-equation" data-original-image="64" src="assets/41f22e759beae7c32083.svg" style="vertical-align:-3.4125pt"/>，再引入 <img class="inline-equation" data-original-image="65" src="assets/3b3dfb87c566832939e2.svg" style="vertical-align:-3.4125pt"/>。<span class="eqn">g</span> 的梯度有两个分量，每个参数对应一个偏导数：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="66" src="assets/bc6afb8fcc206528935d.svg" url="images/blkeqn-FDB56AA8804E0D13E1555DB8E0E1AAEE.svg"/></div></div>
+<p>以及</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="67" src="assets/ab05fbf91b430dc82c61.svg" url="images/blkeqn-13AF8214DD5A2040D650C7B460C88129.svg"/></div></div>
+<p>因而得到梯度 <img class="inline-equation" data-original-image="68" src="assets/bf5cd5307fa09f0fc868.svg" style="vertical-align:-3.4125pt"/>。</p>
+<p>梯度向量组织了某个标量函数的全部偏导数。如果有两个函数，也可以将它们的梯度逐行排列成一个矩阵。这样得到的就是 <i>Jacobian 矩阵</i>（简称 <i>Jacobian</i>），其中每一行都是一个梯度：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="69" src="assets/1abb5c6377c03f258c44.svg" url="images/blkeqn-B45AD8AF1574CD63AE6980B44770D643.svg"/></div></div>
+<p>这就进入了矩阵微积分！</p>
+<p><mark>请注意，Jacobian 有多种表示方式。</mark>我们使用的是所谓的 <a href="https://en.wikipedia.org/wiki/Matrix_calculus#Layout_conventions">numerator layout</a>，但很多论文和软件使用 <i>denominator layout</i>。后者就是 numerator layout 下 Jacobian 的转置（沿对角线翻转）：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="70" src="assets/bb070839804c1738ee0e.svg" url="images/blkeqn-56D2916E9F9FCAC89A303AFADE00AB84.svg"/></div></div>
+<h3 id="sec:1.4.1">Jacobian 的一般形式</h3>
+<p>到目前为止，我们只看了一个具体的 Jacobian 矩阵例子。为了给出更一般的定义，将多个参数合并为一个向量参数：<img class="inline-equation" data-original-image="71" src="assets/d991a5c66acd886b81c7.svg" style="vertical-align:-3.4125pt"/>。（文献中有时也用 <img class="inline-equation" data-original-image="72" src="assets/0f00760b1567d3408c64.svg" style="vertical-align:-0.5pt"/> 表示向量。）<span class="eqnvec">x</span> 这样的粗体小写字母表示向量，<span class="eqn">x</span> 这样的斜体小写字母表示标量。<span class="eqn">x<sub>i</sub></span> 是向量 <span class="eqnvec">x</span> 的第 <img class="inline-equation" data-original-image="73" src="assets/9defcbbcaa6cc8219f3b.svg" style="vertical-align:-0.5pt"/> 个元素，使用斜体是因为单个向量元素是标量。我们还必须规定向量 <span class="eqnvec">x</span> 的方向。默认所有向量都是大小为 <img class="inline-equation" data-original-image="74" src="assets/c1722713c3eb44870653.svg" style="vertical-align:-1.08pt"/> 的竖直向量：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="75" src="assets/9b6747da9746400c148d.svg" url="images/blkeqn-D76C868C669197F65B05E96473454834.svg"/></div></div>
+<p>对于多个标量值函数，也可以像组织参数一样，把它们合并成一个向量。设 <img class="inline-equation" data-original-image="76" src="assets/19fc1246136876ef85c7.svg" style="vertical-align:-3.4125pt"/> 是由 <span class="eqn">m</span> 个标量值函数组成的向量，每个函数都接收长度为 <img class="inline-equation" data-original-image="77" src="assets/83dd5061ef9fcdb74a3a.svg" style="vertical-align:-3.4125pt"/> 的向量 <span class="eqnvec">x</span>；其中 <img class="inline-equation" data-original-image="78" src="assets/81fcf463f4c423ee5e37.svg" style="vertical-align:-3.4125pt"/> 表示 <span class="eqnvec">x</span> 中元素的基数，也就是个数。与上一节一样，<span class="eqnvec">f</span> 中的每个函数 <span class="eqn">f<sub>i</sub></span> 都返回一个标量：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="79" src="assets/d4a6582852b5d4599f61.svg" url="images/blkeqn-808B0EC49232D5E92C9299028ABAFA8E.svg"/></div></div>
+<p>例如，上一节的 <img class="inline-equation" data-original-image="80" src="assets/41f22e759beae7c32083.svg" style="vertical-align:-3.4125pt"/> 和 <img class="inline-equation" data-original-image="81" src="assets/3b3dfb87c566832939e2.svg" style="vertical-align:-3.4125pt"/> 可以表示为：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="82" src="assets/9072dbdc3d11a6d57cd6.svg" url="images/blkeqn-1085F139D721DD44566EAEF7FC842234.svg"/></div></div>
+<p>很多情况下有 <img class="inline-equation" data-original-image="83" src="assets/b459588799888928a428.svg" style="vertical-align:-0.5pt"/>，因为 <span class="eqnvec">x</span> 向量中的每个元素都对应一个标量函数结果。例如，考虑恒等函数 <img class="inline-equation" data-original-image="84" src="assets/a9938e4fe88b6cbe021b.svg" style="vertical-align:-3.4125pt"/>：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="85" src="assets/04d1ee4b46c272057e1c.svg" url="images/blkeqn-4BAF672444FD71616154DE2BE79A5DD6.svg"/></div></div>
+<p>这个例子中，我们有 <img class="inline-equation" data-original-image="86" src="assets/b459588799888928a428.svg" style="vertical-align:-0.5pt"/> 个函数和参数。但在一般情况下，Jacobian 矩阵是全部 <img class="inline-equation" data-original-image="87" src="assets/6f935b45b59d3fa6a52d.svg" style="vertical-align:-1.08pt"/> 个可能偏导数的集合（<span class="eqn">m</span> 行、<span class="eqn">n</span> 列），也就是将 <span class="eqn">m</span> 个关于 <span class="eqnvec">x</span> 的梯度逐行排列起来：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="88" src="assets/3ba28c9b3eeb89c7d0b7.svg" url="images/blkeqn-DC306E7A179A49A78AEB2B12B21D9E68.svg"/></div></div>
+<p>每个 <img class="inline-equation" data-original-image="89" src="assets/aa0d11ce4ba7475929bc.svg" style="vertical-align:-4.9035pt"/> 都是水平的 <span class="eqn">n</span> 维向量，因为偏导针对的是长度为 <img class="inline-equation" data-original-image="90" src="assets/83dd5061ef9fcdb74a3a.svg" style="vertical-align:-3.4125pt"/> 的向量 <span class="eqnvec">x</span>。如果对 <span class="eqnvec">x</span> 求偏导，Jacobian 的宽度就是 <span class="eqn">n</span>，因为可以改变的参数有 <span class="eqn">n</span> 个，每个参数都可能改变函数值。因此，对于 <span class="eqn">m</span> 个方程，Jacobian 总是有 <span class="eqn">m</span> 行。用图示观察 Jacobian 可能具有的形状，有助于理解：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="
+\begin{tabular}{c|ccl}
+  &amp; \begin{tabular}[t]{c}
+  scalar\\
+  \framebox(18,18){$x$}\\
+  \end{tabular} &amp; \begin{tabular}{c}
+  vector\\
+  \framebox(18,40){$\mathbf{x}$}
+  \end{tabular}\\
+\hline
+%\[\dimexpr-\normalbaselineskip+5pt]
+\begin{tabular}[b]{c}
+  scalar\\
+  \framebox(18,18){$f$}\\
+  \end{tabular} &amp;\framebox(18,18){$\frac{\partial f}{\partial {x}}$} &amp; \framebox(40,18){$\frac{\partial f}{\partial {\mathbf{x}}}$}&amp;\\
+\begin{tabular}[b]{c}
+  vector\\
+  \framebox(18,40){$\mathbf{f}$}\\
+  \end{tabular} &amp; \framebox(18,40){$\frac{\partial \mathbf{f}}{\partial {x}}$} &amp; \framebox(40,40){$\frac{\partial \mathbf{f}}{\partial \mathbf{x}}$}\\
+\end{tabular}
+" class="blkeqn" data-original-image="91" src="assets/b2a2e8a8d7925c3c4468.svg" url="images/latex-FEFCAA3AA3D0B051E4960CE52D92A7C0.svg"/></div></div>
+<p>对于恒等函数 <img class="inline-equation" data-original-image="92" src="assets/6f555270e05ceb61dabe.svg" style="vertical-align:-3.4125pt"/>，其中 <img class="inline-equation" data-original-image="93" src="assets/1b8bea68342e189981a1.svg" style="vertical-align:-3.4125pt"/>，它有 <span class="eqn">n</span> 个函数，每个函数都有 <span class="eqn">n</span> 个参数，这些参数存放在一个向量 <span class="eqnvec">x</span> 中。因此，由于 <img class="inline-equation" data-original-image="94" src="assets/b459588799888928a428.svg" style="vertical-align:-0.5pt"/>，它的 Jacobian 是一个方阵：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="
+\begin{eqnarray*}
+	\frac{\partial \mathbf{y}}{\partial \mathbf{x}} = \begin{bmatrix}
+	\frac{\partial}{\partial \mathbf{x}} f_1(\mathbf{x}) \\
+	\frac{\partial}{\partial \mathbf{x}} f_2(\mathbf{x})\\
+	\ldots\\
+	\frac{\partial}{\partial \mathbf{x}} f_m(\mathbf{x})
+	\end{bmatrix} &amp;=&amp; \begin{bmatrix}
+	\frac{\partial}{\partial {x_1}} f_1(\mathbf{x})~ \frac{\partial}{\partial {x_2}} f_1(\mathbf{x}) ~\ldots~  \frac{\partial}{\partial {x_n}} f_1(\mathbf{x}) \\
+	\frac{\partial}{\partial {x_1}} f_2(\mathbf{x})~ \frac{\partial}{\partial {x_2}} f_2(\mathbf{x}) ~\ldots~  \frac{\partial}{\partial {x_n}} f_2(\mathbf{x}) \\
+	\ldots\\
+	~\frac{\partial}{\partial {x_1}} f_m(\mathbf{x})~ \frac{\partial}{\partial {x_2}} f_m(\mathbf{x}) ~\ldots~ \frac{\partial}{\partial {x_n}} f_m(\mathbf{x}) \\
+	\end{bmatrix}\\\\
+	&amp; = &amp; \begin{bmatrix}
+	\frac{\partial}{\partial {x_1}} x_1~ \frac{\partial}{\partial {x_2}} x_1 ~\ldots~ \frac{\partial}{\partial {x_n}} x_1 \\
+	\frac{\partial}{\partial {x_1}} x_2~ \frac{\partial}{\partial {x_2}} x_2 ~\ldots~ \frac{\partial}{\partial {x_n}} x_2 \\
+	\ldots\\
+	~\frac{\partial}{\partial {x_1}} x_n~ \frac{\partial}{\partial {x_2}} x_n ~\ldots~ \frac{\partial}{\partial {x_n}} x_n \\
+	\end{bmatrix}\\\\
+	&amp; &amp; (\text{and since } \frac{\partial}{\partial {x_j}} x_i = 0 \text{ for } j \neq i)\\
+	 &amp; = &amp; \begin{bmatrix}
+	\frac{\partial}{\partial {x_1}} x_1 &amp; 0 &amp; \ldots&amp; 0 \\
+	0 &amp; \frac{\partial}{\partial {x_2}} x_2 &amp;\ldots &amp; 0 \\
+	&amp; &amp; \ddots\\
+	0 &amp; 0 &amp;\ldots&amp; \frac{\partial}{\partial {x_n}} x_n \\
+	\end{bmatrix}\\\\
+	 &amp; = &amp; \begin{bmatrix}
+	1 &amp; 0 &amp; \ldots&amp; 0 \\
+	0 &amp;1 &amp;\ldots &amp; 0 \\
+	&amp; &amp; \ddots\\
+	0 &amp; 0 &amp; \ldots &amp;1 \\
+	\end{bmatrix}\\\\
+	&amp; = &amp; I ~~~(I \text{ is the identity matrix with ones down the diagonal})\\
+	\end{eqnarray*}
+" class="blkeqn" data-original-image="95" src="assets/de44d3804122578e9395.svg" url="images/latex-A936169BDEA3E18A4B377A21C743CB21.svg"/></div></div>
+<p>继续阅读之前，请确认自己能推导出上面的每一步。如果遇到困难，就分别考虑矩阵中的每个元素，并应用通常的标量求导规则。这是一种普遍有用的方法：将向量表达式展开成一组标量表达式，求出所有偏导数，最后再按正确的方式组合成向量和矩阵。</p>
+<p>还要注意矩阵的方向：是竖直的 <span class="eqnvec">x</span>，还是水平的 <img class="inline-equation" data-original-image="96" src="assets/804b32a53cb1979740d9.svg" style="vertical-align:-0.5pt"/>；其中 <img class="inline-equation" data-original-image="97" src="assets/804b32a53cb1979740d9.svg" style="vertical-align:-0.5pt"/> 表示 <span class="eqnvec">x</span> 的转置。同时也要分清一个表达式是标量值函数 <img class="inline-equation" data-original-image="98" src="assets/b0d4ef5986f69be6798a.svg" style="vertical-align:-2.7825pt"/>，还是函数组成的向量（或向量值函数）<img class="inline-equation" data-original-image="99" src="assets/44bd7411e99a16f3a81d.svg" style="vertical-align:-2.4464998pt"/>。</p>
+<h3 id="sec:1.4.2">向量逐元素二元运算的导数</h3>
+<p>向量的逐元素二元运算，例如向量加法 <img class="inline-equation" data-original-image="100" src="assets/0b46231b014c60b3a7ba.svg" style="vertical-align:-1.06pt"/>，非常重要，因为许多常见向量运算，例如向量乘以标量，都可以表示成逐元素二元运算。“逐元素二元运算”就是对两个向量的第一个元素应用某个运算符，得到输出的第一个元素；再对两个输入的第二个元素执行该运算，得到输出的第二个元素，依此类推。例如，numpy 或 tensorflow 默认就以这种方式应用各种基本数学运算符。深度学习中经常出现的例子包括 <img class="inline-equation" data-original-image="101" src="assets/eb4a77849624477a05a1.svg" style="vertical-align:-3.4125pt"/> 和 <img class="inline-equation" data-original-image="102" src="assets/e8860e5edb386c05c917.svg" style="vertical-align:-0.51pt"/>（返回由 1 和 0 组成的向量）。</p>
+<p>可以用记号 <img class="inline-equation" data-original-image="103" src="assets/41d38c3e0adf170a7aff.svg" style="vertical-align:-3.4125pt"/> 概括逐元素二元运算，其中 <img class="inline-equation" data-original-image="104" src="assets/5a07bfa0b61a47a6f7e6.svg" style="vertical-align:-3.4125pt"/>。（提醒一下：<img class="inline-equation" data-original-image="105" src="assets/2e83a9a2d1b92d8ae7ed.svg" style="vertical-align:-3.4125pt"/> 是 <span class="eqn">x</span> 中的元素个数。）符号 <img class="inline-equation" data-original-image="106" src="assets/0555b0f785c677517d56.svg" style="vertical-align:-2.646pt"/> 表示任意逐元素运算符，例如 <img class="inline-equation" data-original-image="107" src="assets/b83d8e4df80e7ca37ace.svg" style="vertical-align:-1.06pt"/>，而不是函数复合运算符 <img class="inline-equation" data-original-image="108" src="assets/06ab87527f1fec37a929.svg" style="vertical-align:-0.5pt"/>。将方程 <img class="inline-equation" data-original-image="109" src="assets/41d38c3e0adf170a7aff.svg" style="vertical-align:-3.4125pt"/> 展开为标量方程后，形式如下：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="110" src="assets/028c8d3f273a7e396a42.svg" url="images/blkeqn-75C71D2F5C54E19F3EA46C048D8275D6.svg"/></div></div>
+<p>这里将 <span class="eqn">n</span> 个方程（不是 <span class="eqn">m</span> 个）竖直排列，是为了强调逐元素运算的结果是大小为 <img class="inline-equation" data-original-image="111" src="assets/b459588799888928a428.svg" style="vertical-align:-0.5pt"/> 的向量。</p>
+<p>运用上一节的思路可知，关于 <span class="eqnvec">w</span> 的 Jacobian 在一般情况下是如下方阵：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="112" src="assets/4a70c2c64827f381f89c.svg" url="images/blkeqn-54F95B3CFFD404740FAD218B308DEF70.svg"/></div></div>
+<p>而关于 <span class="eqnvec">x</span> 的 Jacobian 为：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="113" src="assets/2f38a7c47f3c7da78b0e.svg" url="images/blkeqn-2693C112F589CD0E26853EAD5ED36CFD.svg"/></div></div>
+<p>这个表达式相当复杂，但幸运的是，Jacobian 经常是对角矩阵，即除了对角线以外，所有位置都为零的矩阵。由于这会大大简化 Jacobian，我们来详细看看，逐元素运算的 Jacobian 在什么情况下会化简为对角矩阵。</p>
+<p>在对角 Jacobian 中，所有非对角元素都为零，即 <img class="inline-equation" data-original-image="114" src="assets/7d9e10e6cce271cae245.svg" style="vertical-align:-7.5705pt"/>，其中 <img class="inline-equation" data-original-image="115" src="assets/bcf9ebb69e8d1d99672a.svg" style="vertical-align:-2.856pt"/>。（注意，我们是在对 <span class="eqn">w<sub>j</sub></span> 而不是 <span class="eqn">w<sub>i</sub></span> 求偏导。）这些非对角元素在什么条件下为零？恰好是在 <span class="eqn">f<sub>i</sub></span> 和 <span class="eqn">g<sub>i</sub></span> 关于 <span class="eqn">w<sub>j</sub></span> 为常数，即 <img class="inline-equation" data-original-image="116" src="assets/cf58cca2df7d210f8f3a.svg" style="vertical-align:-7.5705pt"/> 时。不论使用哪个运算符，只要这些偏导数为零，相应的求导结果就为零；无论如何都有 <img class="inline-equation" data-original-image="117" src="assets/f6775d9b0f2610fe116b.svg" style="vertical-align:-2.646pt"/>，而常数的偏导数为零。</p>
+<p>当 <span class="eqn">f<sub>i</sub></span> 和 <span class="eqn">g<sub>i</sub></span> 不是 <span class="eqn">w<sub>j</sub></span> 的函数时，这些偏导数就为零。我们知道，逐元素运算意味着 <span class="eqn">f<sub>i</sub></span> 只是 <span class="eqn">w<sub>i</sub></span> 的函数，而 <span class="eqn">g<sub>i</sub></span> 只是 <span class="eqn">x<sub>i</sub></span> 的函数。例如，<img class="inline-equation" data-original-image="118" src="assets/0b46231b014c60b3a7ba.svg" style="vertical-align:-1.06pt"/> 计算的是 <img class="inline-equation" data-original-image="119" src="assets/be81ad21d14d5daf2ec6.svg" style="vertical-align:-2.1525pt"/> 的和。因此，<img class="inline-equation" data-original-image="120" src="assets/a896b067f99829e1af69.svg" style="vertical-align:-3.4125pt"/> 简化为 <img class="inline-equation" data-original-image="121" src="assets/1462993b8b3afa8a3a8c.svg" style="vertical-align:-3.4125pt"/>，我们的目标就变成 <img class="inline-equation" data-original-image="122" src="assets/0647fe508f7c455e93c0.svg" style="vertical-align:-7.5705pt"/>。当 <img class="inline-equation" data-original-image="125" src="assets/bcf9ebb69e8d1d99672a.svg" style="vertical-align:-2.856pt"/> 时，对于关于 <span class="eqn">w<sub>j</sub></span> 的偏导运算符而言，<img class="inline-equation" data-original-image="123" src="assets/ec5470fd1104c9e201c2.svg" style="vertical-align:-3.4125pt"/> 和 <img class="inline-equation" data-original-image="124" src="assets/a5018864043acacb2fe1.svg" style="vertical-align:-3.4125pt"/> 都是常数，所以非对角位置的偏导数为零。（严格来说，<img class="inline-equation" data-original-image="126" src="assets/ec5470fd1104c9e201c2.svg" style="vertical-align:-3.4125pt"/> 的写法不完全符合此前的记号约定，因为 <span class="eqn">f<sub>i</sub></span> 和 <span class="eqn">g<sub>i</sub></span> 是向量的函数，而不是单个元素的函数。我们本应写成类似 <img class="inline-equation" data-original-image="127" src="assets/6f50e77b8a93db501b3c.svg" style="vertical-align:-3.4125pt"/> 的形式，但这会使公式更加复杂，而程序员通常习惯于函数重载，因此这里仍沿用这一记法。）</p>
+<p>后面会利用这一简化。我们把 <img class="inline-equation" data-original-image="128" src="assets/918628f864b56df8d0af.svg" style="vertical-align:-3.4125pt"/> 和 <img class="inline-equation" data-original-image="129" src="assets/bbb37223ceacad34c736.svg" style="vertical-align:-3.4125pt"/> 分别最多只访问 <span class="eqn">w<sub>i</sub></span> 和 <span class="eqn">x<sub>i</sub></span> 的限制，称为<i>逐元素对角条件</i>。</p>
+<p>在这一条件下，Jacobian 对角线上的元素为 <img class="inline-equation" data-original-image="130" src="assets/2c0fccfd2b14337ef6f6.svg" style="vertical-align:-6.2159996pt"/>：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="131" src="assets/c3794195b32bb7753473.svg" url="images/blkeqn-4CFC6C644E4A95B5760435C5094BE095.svg"/></div></div>
+<p>（较大的“0”表示所有非对角元素均为 0。）</p>
+<p>更简洁地，可以写成：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="132" src="assets/8ba05bf8a4537742a03f.svg" url="images/blkeqn-3D114C6873F46EE41AF91BF8B1BB37CD.svg"/></div></div>
+<p>以及</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="133" src="assets/827c8c086f3106de4ea3.svg" url="images/blkeqn-78E1B2628221D9FD588A011D54670619.svg"/></div></div>
+<p>其中，<img class="inline-equation" data-original-image="134" src="assets/c873b03e4a5158b7e980.svg" style="vertical-align:-3.4125pt"/> 构造一个矩阵，其对角元素取自向量 <span class="eqnvec">x</span>。</p>
+<p>由于我们经常进行简单的向量算术，逐元素二元运算中的一般函数 <img class="inline-equation" data-original-image="135" src="assets/d29e303eb19eb0942c3f.svg" style="vertical-align:-3.4125pt"/>，往往就是向量 <span class="eqnvec">w</span> 本身。只要这个一般函数就是一个向量，<img class="inline-equation" data-original-image="136" src="assets/918628f864b56df8d0af.svg" style="vertical-align:-3.4125pt"/> 就会简化为 <img class="inline-equation" data-original-image="137" src="assets/4768835d6c75c53ba598.svg" style="vertical-align:-3.4125pt"/>。例如，向量加法 <img class="inline-equation" data-original-image="138" src="assets/0b46231b014c60b3a7ba.svg" style="vertical-align:-1.06pt"/> 满足逐元素对角条件，因为 <img class="inline-equation" data-original-image="139" src="assets/8892da260eda845f22c8.svg" style="vertical-align:-3.4125pt"/> 对应的标量方程 <img class="inline-equation" data-original-image="140" src="assets/94228647b22c799d887b.svg" style="vertical-align:-3.4125pt"/> 可以简化为 <img class="inline-equation" data-original-image="141" src="assets/3ed687ae5375f1bcc036.svg" style="vertical-align:-3.4125pt"/>，其偏导数为：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="142" src="assets/451089e6dbd83bbe9cdf.svg" url="images/blkeqn-A5DC35FE0CEC748B35BB5991933C4698.svg"/></div></div>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="143" src="assets/bf6d7a22bce3c9d4bfc2.svg" url="images/blkeqn-C2B0BF832F19994D832F90C18B1F04AF.svg"/></div></div>
+<p>这就得到单位矩阵 <img class="inline-equation" data-original-image="144" src="assets/bca44b31ef79a9bc4dfd.svg" style="vertical-align:-4.9035pt"/>，因为对角线上的每个元素都是 1。<span class="eqn">I</span> 表示适当维度的方形单位矩阵，除了全为 1 的对角线以外，其他位置均为零。</p>
+<p>在 <img class="inline-equation" data-original-image="145" src="assets/918628f864b56df8d0af.svg" style="vertical-align:-3.4125pt"/> 简化为 <img class="inline-equation" data-original-image="146" src="assets/ec5470fd1104c9e201c2.svg" style="vertical-align:-3.4125pt"/> 这一简单的特殊情况下，你应该已经能够推导出常见向量逐元素二元运算的 Jacobian：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="147" src="assets/a19d15573db9da97b448.svg" url="images/blkeqn-71B7180689F0C8BB7D610CFD5C41CCD8.svg"/></div></div>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="148" src="assets/c4ddbbfb368396480285.svg" url="images/blkeqn-B50DDF4EB7C7148BD5EED63AE5B83271.svg"/></div></div>
+<p>运算符 <img class="inline-equation" data-original-image="149" src="assets/777308d078e7a34e9cd6.svg" style="vertical-align:-1.08pt"/> 和 <img class="inline-equation" data-original-image="150" src="assets/e563fe7709e71ee00269.svg" style="vertical-align:-1.08pt"/> 分别表示逐元素乘法和除法；<img class="inline-equation" data-original-image="151" src="assets/777308d078e7a34e9cd6.svg" style="vertical-align:-1.08pt"/> 有时称为 <i>Hadamard product</i>。逐元素乘除没有统一的标准记号，因此这里采用与一般二元运算记号一致的写法。</p>
+<h3 id="sec:1.4.3">涉及标量扩展的导数</h3>
+<p>将标量与向量相乘或相加时，我们实际上隐式地把标量扩展为一个向量，然后执行逐元素二元运算。例如，把标量 <span class="eqn">z</span> 加到向量 <span class="eqnvec">x</span> 上，即 <img class="inline-equation" data-original-image="152" src="assets/e98b407c4a5e256aafab.svg" style="vertical-align:-2.4464998pt"/>，实际上是 <img class="inline-equation" data-original-image="153" src="assets/b7130345402f71a9ff16.svg" style="vertical-align:-3.4125pt"/>，其中 <img class="inline-equation" data-original-image="154" src="assets/6f555270e05ceb61dabe.svg" style="vertical-align:-3.4125pt"/>，且 <img class="inline-equation" data-original-image="155" src="assets/f9db16234f61f3e1ea98.svg" style="vertical-align:-3.4125pt"/>。（记号 <img class="inline-equation" data-original-image="156" src="assets/308849ac7aa54da743c0.svg" style="vertical-align:-0.5pt"/> 表示适当长度的全 1 向量。）<span class="eqn">z</span> 可以是任何不依赖 <span class="eqnvec">x</span> 的标量，这很有用，因为对任意 <span class="eqn">x<sub>i</sub></span> 都有 <img class="inline-equation" data-original-image="157" src="assets/db6a97986d956d7aa278.svg" style="vertical-align:-6.2159996pt"/>，能够简化偏导数计算。（在这里的讨论中，可以把变量 <span class="eqn">z</span> 看成常数。）类似地，标量乘法 <img class="inline-equation" data-original-image="158" src="assets/215948d30b226cd17e78.svg" style="vertical-align:-2.4464998pt"/> 实际上是 <img class="inline-equation" data-original-image="159" src="assets/5d945e24d3add8111ee4.svg" style="vertical-align:-3.4125pt"/>，其中 <img class="inline-equation" data-original-image="160" src="assets/777308d078e7a34e9cd6.svg" style="vertical-align:-1.08pt"/> 表示两个向量的逐元素乘积，即 Hadamard product。</p>
+<p>对于向量与标量的加法和乘法，关于向量 <span class="eqnvec">x</span> 的偏导数可以使用逐元素规则：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="161" src="assets/ee5e27fe753bcded4132.svg" url="images/blkeqn-66AE0770D566CAC52E54D7A15B0C7724.svg"/></div></div>
+<p>这是因为函数 <img class="inline-equation" data-original-image="162" src="assets/6f555270e05ceb61dabe.svg" style="vertical-align:-3.4125pt"/> 和 <img class="inline-equation" data-original-image="163" src="assets/f9db16234f61f3e1ea98.svg" style="vertical-align:-3.4125pt"/> 显然满足 Jacobian 的逐元素对角条件：<img class="inline-equation" data-original-image="164" src="assets/36294adce590f11ae5d2.svg" style="vertical-align:-3.4125pt"/> 最多只引用 <span class="eqn">x<sub>i</sub></span>，而 <img class="inline-equation" data-original-image="165" src="assets/dae8cb200b6ed8e7c4ab.svg" style="vertical-align:-3.4125pt"/> 引用的是向量 <img class="inline-equation" data-original-image="167" src="assets/b3f3bce2334eb9b6f856.svg" style="vertical-align:-1.05pt"/> 中的第 <img class="inline-equation" data-original-image="166" src="assets/9defcbbcaa6cc8219f3b.svg" style="vertical-align:-0.5pt"/> 个元素。</p>
+<p>使用通常的标量偏导规则，可以得到向量与标量相加时 Jacobian 的如下对角元素：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="168" src="assets/bb16c27c2cc232d59662.svg" url="images/blkeqn-6B4EFB58ED5F9EBD623321FE1975FA4E.svg"/></div></div>
+<p>所以，<img class="inline-equation" data-original-image="169" src="assets/6591dd274ced08997e87.svg" style="vertical-align:-4.9035pt"/>。</p>
+<p>不过，对标量参数 <span class="eqn">z</span> 求偏导，得到的是竖直向量，而不是对角矩阵。向量中的元素为：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="170" src="assets/5db0d008a09ff0e608c6.svg" url="images/blkeqn-BEDEE6A7649E77A8A0F767878AB6FE08.svg"/></div></div>
+<p>因此，<img class="inline-equation" data-original-image="171" src="assets/d28f33d66fef23fb7499.svg" style="vertical-align:-5.4809995pt"/>。</p>
+<p>向量与标量相乘时，Jacobian 的对角元素需要用到标量求导的乘积法则：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="172" src="assets/7b15eb17f3e6b476f693.svg" url="images/blkeqn-15E9C1F56A6E17941B0826DA6CC51781.svg"/></div></div>
+<p>所以，<img class="inline-equation" data-original-image="173" src="assets/8cc3675a7ed5024edd20.svg" style="vertical-align:-4.9035pt"/>。</p>
+<p>关于标量参数 <span class="eqn">z</span> 的偏导数是一个竖直向量，其元素为：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="174" src="assets/863ea7fbc29298d7859c.svg" url="images/blkeqn-C1C1AD1A9E7A6ECCAAACE952B8355BFB.svg"/></div></div>
+<p>由此得到 <img class="inline-equation" data-original-image="175" src="assets/2e527f549e2e5237a92c.svg" style="vertical-align:-5.4809995pt"/>。</p>
+<h3 id="sec:1.4.4">向量求和归约</h3>
+<p>对向量元素求和，是深度学习中的重要运算，例如网络损失函数就会使用它。我们也可以利用求和来简化向量点积以及其他将向量归约为标量的运算的导数计算。</p>
+<p>设 <img class="inline-equation" data-original-image="176" src="assets/5d57ac9f0a0f062b27e2.svg" style="vertical-align:-3.4754999pt"/>。注意，这里特意保留向量参数 <span class="eqnvec">x</span>，因为每个函数 <span class="eqn">f<sub>i</sub></span> 都可能使用向量中的全部值，而不只是 <span class="eqn">x<sub>i</sub></span>。求和针对的是函数的<mark>结果</mark>，不是参数。向量求和的梯度（<img class="inline-equation" data-original-image="177" src="assets/52c54d817cb55763cb5b.svg" style="vertical-align:-1.08pt"/> 的 Jacobian）为：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="178" src="assets/6608492716893a0fa891.svg" url="images/blkeqn-59EDF630C04A1F938FF8B1FBAADCA94D.svg"/></div></div>
+<p>（梯度元素内部的求和可能容易混淆，因此请确保记号前后一致。）</p>
+<p>来看一个简单的 <img class="inline-equation" data-original-image="179" src="assets/72f3911dde77f7e5852f.svg" style="vertical-align:-3.4125pt"/> 的梯度。和式中的函数就是 <img class="inline-equation" data-original-image="180" src="assets/1b8bea68342e189981a1.svg" style="vertical-align:-3.4125pt"/>，因此梯度为：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="181" src="assets/beafc94d64f9ffa49041.svg" url="images/blkeqn-B6DF766D85C48FF7434B8FFF7BEC9410.svg"/></div></div>
+<p>因为当 <img class="inline-equation" data-original-image="183" src="assets/bcf9ebb69e8d1d99672a.svg" style="vertical-align:-2.856pt"/> 时有 <img class="inline-equation" data-original-image="182" src="assets/11255ccdbb886c92fc8f.svg" style="vertical-align:-7.5705pt"/>，所以可以简化为：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="184" src="assets/457d9731100c209c2df6.svg" url="images/blkeqn-4EE81B2FBD96DC0263211EC42E3BBBFC.svg"/></div></div>
+<p>注意，结果是一个全 1 的水平向量，而不是竖直向量，因此梯度为 <img class="inline-equation" data-original-image="185" src="assets/1be8f870e13ba94520a3.svg" style="vertical-align:-0.5pt"/>。（<img class="inline-equation" data-original-image="186" src="assets/1be8f870e13ba94520a3.svg" style="vertical-align:-0.5pt"/> 的上标 <span class="eqn">T</span> 表示该向量的转置；这里将竖直向量变为水平向量。）务必始终分清每个向量和矩阵的形状，否则就无法计算复杂函数的导数。</p>
+<p>再看一个例子：将向量乘以一个常数标量后，对结果求和。如果 <img class="inline-equation" data-original-image="187" src="assets/a77e928b730988db7c35.svg" style="vertical-align:-3.4125pt"/>，那么 <img class="inline-equation" data-original-image="188" src="assets/fc9473b1aadb48962bfa.svg" style="vertical-align:-3.4125pt"/>。梯度为：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="189" src="assets/eac324c263501867e7e6.svg" url="images/blkeqn-4C28E3734FC6110AF58C567604ED3462.svg"/></div></div>
+<p>关于标量变量 <span class="eqn">z</span> 的导数为 <img class="inline-equation" data-original-image="190" src="assets/a656398cebc094ae2288.svg" style="vertical-align:-1.08pt"/>：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="191" src="assets/59288910c3967f52a735.svg" url="images/blkeqn-709809A15FF63948512A3F83DF9F04EA.svg"/></div></div>
+<h3 id="sec:1.4.5">链式法则</h3>
+<p>仅凭前面介绍的矩阵微积分基本规则，还无法计算非常复杂的函数的偏导数。例如，对于 <img class="inline-equation" data-original-image="192" src="assets/e5003fac5dc79859ca3f.svg" style="vertical-align:-3.4125pt"/> 这样的嵌套表达式，如果不把它展开为等价的标量形式，就无法直接求导。我们需要通过所谓的<i>向量链式法则</i>来组合基本向量规则。然而，多种求导规则都被称为“链式法则”，因此必须明确具体指的是哪一种。这里的目标之一，是清楚地定义并命名三种不同的链式法则，并说明它们分别适用于什么情况。首先从<i>单变量链式法则</i>开始：计算标量函数关于标量的导数。然后介绍一个重要概念——<i>全导数</i>，并用它定义一个名称较为严格的规则：<i>单变量全导数链式法则</i>。最后，我们就能完整地讨论神经网络所需的向量链式法则。</p>
+<p>从概念上说，链式法则采用分治策略，将复杂表达式拆成导数更容易计算的子表达式；快速排序也采用分治策略。它的作用在于，我们可以分别处理每个简单子表达式，再将中间结果组合起来，得到正确的整体结果。</p>
+<p>对由嵌套子表达式构成的表达式求导时，就需要链式法则。例如，遇到 <img class="inline-equation" data-original-image="193" src="assets/69a52870cc47aa7cf236.svg" style="vertical-align:-4.8089995pt"/> 这样的表达式时，最外层要对一个中间结果取 <span class="eqn">sin</span>，而这个中间结果来自对 <span class="eqn">x</span> 求平方的嵌套子表达式。具体而言，这里需要单变量链式法则，下面详细说明。</p>
+<h4 id="sec:1.4.5.1">单变量链式法则</h4>
+<p>先看嵌套表达式的求导结果：<img class="inline-equation" data-original-image="194" src="assets/bffa3ce967c14631611c.svg" style="vertical-align:-4.8089995pt"/>。不需要很高的数学水平，也能看出结果中的两个组成部分来自标量求导规则：<img class="inline-equation" data-original-image="195" src="assets/d1d8a64e7b1b5cecd1da.svg" style="vertical-align:-4.8089995pt"/> 和 <img class="inline-equation" data-original-image="196" src="assets/65c148e5f22f7470b5aa.svg" style="vertical-align:-4.8089995pt"/>。看起来，只需将外层表达式的导数与内层表达式的导数相乘，而这正是正确的做法。本节将说明其中的一般原理，并给出一种适用于单变量多层嵌套表达式的处理过程。</p>
+<p>链式法则通常通过嵌套函数定义，例如单变量情况下的 <img class="inline-equation" data-original-image="197" src="assets/6fca585e618cc3819669.svg" style="vertical-align:-3.4125pt"/>。（你也会看到使用函数复合 <img class="inline-equation" data-original-image="198" src="assets/7095355948734a21c2ec.svg" style="vertical-align:-3.4125pt"/> 定义链式法则，这两种写法是一回事。）有些资料用简写 <img class="inline-equation" data-original-image="199" src="assets/5416f6b445d3b98ea4ea.svg" style="vertical-align:-3.4125pt"/> 表示导数，但这隐藏了引入中间变量 <img class="inline-equation" data-original-image="200" src="assets/89714b31b0b7d63c8d0d.svg" style="vertical-align:-3.4125pt"/> 的过程，稍后我们会看到它。最好明确写出 <img class="inline-equation" data-original-image="201" src="assets/3e619ed3b81641d41547.svg" style="vertical-align:-3.4125pt"/> 的<a href="http://m.wolframalpha.com/input/?i=chain+rule">单变量链式法则</a>，这样就不会对错误的变量求导。我们推荐以下形式：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="202" src="assets/937e537877b058a0643b.svg" url="images/blkeqn-9D3919C42833D1FF1456DEA11D8CC927.svg"/></div></div>
+<p>使用单变量链式法则时，按以下步骤操作：</p>
+<ol>
+<li>对嵌套子表达式，以及二元和一元运算的子表达式，引入中间变量。例如，<img class="inline-equation" data-original-image="203" src="assets/aead495e35fb5ddc51d1.svg" style="vertical-align:-1.08pt"/> 是二元运算，而 <img class="inline-equation" data-original-image="204" src="assets/47395e1c8d93d13b6e4a.svg" style="vertical-align:-3.4125pt"/> 和其他三角函数通常是一元运算，因为只有一个操作数。这一步将所有方程规范为只包含一个运算符或一次函数应用的形式。</li>
+<li>计算各中间变量关于其参数的导数。</li>
+<li>将所有中间变量的导数相乘，组合成整体结果。</li>
+<li>如果求导结果中还引用了中间变量，就将其原表达式代回。</li>
+</ol>
+<p>第三步将中间结果依次相乘，这正是“链式法则”中“链式”的含义。把中间导数相乘，是各种形式的链式法则的共同特征。</p>
+<p>来把这一过程应用于 <img class="inline-equation" data-original-image="205" src="assets/e09db4287be9791f400d.svg" style="vertical-align:-3.4125pt"/>：</p>
+<ol>
+<li>引入中间变量。令 <img class="inline-equation" data-original-image="206" src="assets/f08f8904ef98d6ca9247.svg" style="vertical-align:-0.5pt"/> 表示子表达式 <img class="inline-equation" data-original-image="207" src="assets/5d149d2a06f3677a264a.svg" style="vertical-align:-0.5pt"/>（它是以下表达式的简写：<img class="inline-equation" data-original-image="208" src="assets/c312ed3c9c453c1d962c.svg" style="vertical-align:-3.4125pt"/>）。由此得到：
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="209" src="assets/9117c4045e7e5cd8622e.svg" url="images/blkeqn-D6D1C54038A47B31E5773FF46765845A.svg"/></div></div>
+<p>这些子表达式的排列顺序不影响答案，但我们建议按嵌套层次由内向外处理。这样，每个表达式及其导数都只依赖此前已经计算出的量。</p>
+</li>
+<li>计算导数。
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="210" src="assets/a114c2c209b25c89ffd3.svg" url="images/blkeqn-AC63667E483F3FB2A584B2ABB1A94749.svg"/></div></div>
+</li>
+<li>组合。
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="211" src="assets/5fc81913810f3b8fc546.svg" url="images/blkeqn-9D1B1984635759F4C2D23464EBBAA995.svg"/></div></div>
+</li>
+<li>代回。
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="212" src="assets/39ac87d3ac7f5a73f161.svg" url="images/blkeqn-6E1052BD462233E4BEA04D695437A984.svg"/></div></div>
+</li>
+</ol>
+<p>可以看到，单独计算每个中间变量的导数很容易。链式法则说明这样做是合法的，并告诉我们如何组合中间结果，得到 <img class="inline-equation" data-original-image="213" src="assets/25d68de00780485202da.svg" style="vertical-align:-3.4125pt"/>。</p>
+<p>链式法则中组合导数的步骤，也可以从单位约分来理解。假设 <span class="eqn">y</span> 的单位是英里，<span class="eqn">x</span> 表示油箱中的加仑数，<span class="eqn">u</span> 的单位也是加仑，那么 <img class="inline-equation" data-original-image="214" src="assets/4f6f409c6bea19f6bbd9.svg" style="vertical-align:-4.8089995pt"/> 就可以解释为 <img class="inline-equation" data-original-image="215" src="assets/39bc2791514157e92a57.svg" style="vertical-align:-6.657pt"/>。分母和分子中的 <span class="eqn">gallon</span> 相互约去。</p>
+<p>理解单变量链式法则的另一种方式，是将整个表达式画成数据流图或一系列运算；对熟悉编译器的读者来说，也就是<a href="https://en.wikipedia.org/wiki/Abstract_syntax_tree">抽象语法树</a>：</p>
+<p></p><center>
+<a href="https://explained.ai/matrix-calculus/images/sin-square.png">
+<img alt="sin-square.png" class="original-diagram" data-original-image="216" src="assets/2b8fdda59d9913ffe070.png" url="images/sin-square.png" width="20%"/>
+</a>
+</center>
+<p></p>
+<p>函数参数 <span class="eqn">x</span> 的变化先经过平方运算，再经过 <span class="eqn">sin</span> 运算，最终改变结果 <span class="eqn">y</span>。可以将 <img class="inline-equation" data-original-image="217" src="assets/a52f14a434708e23fe1f.svg" style="vertical-align:-4.8089995pt"/> 理解为“变化从 <span class="eqn">x</span> 传到 <span class="eqn">u</span>”，将 <img class="inline-equation" data-original-image="218" src="assets/25750480e179eb78a3c9.svg" style="vertical-align:-4.8089995pt"/> 理解为“变化从 <span class="eqn">u</span> 传到 <span class="eqn">y</span>”。从 <span class="eqn">x</span> 到 <span class="eqn">y</span> 需要经过一个中间步骤。按照惯例，链式法则通常从输出变量向参数的方向书写，即 <img class="inline-equation" data-original-image="219" src="assets/4f6f409c6bea19f6bbd9.svg" style="vertical-align:-4.8089995pt"/>。但如果从 <span class="eqn">x</span> 到 <span class="eqn">y</span> 的方向理解，反过来使用等价的 <img class="inline-equation" data-original-image="220" src="assets/d6b8b0f8806aca79b7b8.svg" style="vertical-align:-4.8089995pt"/> 会更加清楚。</p>
+<p><mark>单变量链式法则的适用条件</mark>。注意，从 <span class="eqn">x</span> 到根节点 <span class="eqn">y</span> 只有一条数据流路径。<span class="eqn">x</span> 的变化只能通过一种方式影响输出 <span class="eqn">y</span>。这就是可以应用单变量链式法则的条件。一个更容易记忆、但略不严格的条件是：各中间子表达式函数 <img class="inline-equation" data-original-image="221" src="assets/d7349c63421a04ec81c8.svg" style="vertical-align:-3.4125pt"/> 和 <img class="inline-equation" data-original-image="222" src="assets/129f47e8e0a4494e8c39.svg" style="vertical-align:-3.4125pt"/> 都至多只有一个参数。考虑 <img class="inline-equation" data-original-image="223" src="assets/033a77d7ce92da946566.svg" style="vertical-align:-3.4125pt"/>，引入中间变量 <span class="eqn">u</span> 后，它变为 <img class="inline-equation" data-original-image="224" src="assets/a7e4381eff2fa9fad39b.svg" style="vertical-align:-3.4125pt"/>。下一节会看到，<img class="inline-equation" data-original-image="225" src="assets/58140bdbed0181010f3c.svg" style="vertical-align:-3.4125pt"/> 中从 <span class="eqn">x</span> 到 <span class="eqn">y</span> 存在多条路径。为处理这种情况，我们将使用单变量全导数链式法则。</p>
+<p><hr/>为对自动微分感兴趣的读者补充说明：论文和库文档会使用以下术语：<i>前向微分</i>与<i>反向微分</i>（用于反向传播算法）。从数据流的角度来看，我们计算的是前向微分，因为它沿正常的数据流方向进行。反向微分则沿相反方向，所问的是输出的变化会如何影响函数参数 <span class="eqn">x</span>。由于反向微分能一次确定所有函数参数的变化，因此对于有大量参数的函数，它在计算导数时高效得多。相比之下，前向微分必须逐个考虑每个参数的变化如何影响函数输出 <span class="eqn">y</span>。下表着重展示了两种方法计算偏导数的顺序。<p></p>
+<center>
+<div aria-label="原文表格，可横向滚动" class="table-scroll" role="group" tabindex="0"><table>
+<thead>
+<tr>
+<th align="center" valign="top">前向微分，从 <span class="eqn">x</span> 到 <span class="eqn">y</span><th align="center" valign="top">从 <span class="eqn">y</span> 到 <span class="eqn">x</span> 的反向微分</th>
+</th></tr>
+</thead>
+<tbody>
+<tr>
+<td align="center" valign="top"><img class="inline-equation" data-original-image="226" src="assets/d6b8b0f8806aca79b7b8.svg" style="vertical-align:-4.8089995pt"/><td align="center" valign="top"><img class="inline-equation" data-original-image="227" src="assets/4f6f409c6bea19f6bbd9.svg" style="vertical-align:-4.8089995pt"/></td>
+</td></tr>
+</tbody>
+</table></div>
+</center>
+<p>自动微分不在本文的讨论范围内，但这里的内容为后续文章作了准备。<hr/><p></p>
+<p>许多读者可以心算出 <img class="inline-equation" data-original-image="228" src="assets/69a52870cc47aa7cf236.svg" style="vertical-align:-4.8089995pt"/>，但我们的目标是建立一种连非常复杂的表达式也能处理的过程。PyTorch 等库中的<a href="https://en.wikipedia.org/wiki/Automatic_differentiation">自动微分</a>也是这样工作的。因此，按这种方式手工求导，也是在学习如何在 PyTorch 中为自定义神经网络定义函数。</p>
+<p>对于深层嵌套表达式，可以按编译器展开嵌套函数调用的方式使用链式法则：把 <img class="inline-equation" data-original-image="229" src="assets/44b7677b7223a2ee9a6e.svg" style="vertical-align:-3.4125pt"/> 这样的调用展开成一系列调用。函数 <span class="eqn">f<sub>i</sub></span> 的返回值保存在称为寄存器的临时变量中，再作为参数传给 <img class="inline-equation" data-original-image="230" src="assets/daa65ef7be24cc301058.svg" style="vertical-align:-2.856pt"/>。现在把这个过程用于 <img class="inline-equation" data-original-image="231" src="assets/f556871fc2b9b7fcfdb6.svg" style="vertical-align:-3.4125pt"/> 这样一个多层嵌套的方程，看看具体如何计算：</p>
+<ol>
+<li>引入中间变量。
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="232" src="assets/0764e2fd3787ca790eeb.svg" url="images/blkeqn-A153933499426CFC383D252C30A87953.svg"/></div></div>
+</li>
+<li>计算导数。
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="233" src="assets/5a872751fb0869f51c0f.svg" url="images/blkeqn-D507866D3C9BAE7D693683832C47C5A4.svg"/></div></div>
+</li>
+<li>组合四个中间值。
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="234" src="assets/916e437f8095c05ec86d.svg" url="images/blkeqn-2CF824877C0FB75B7648CE66E56FB509.svg"/></div></div>
+</li>
+<li>代回。
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="235" src="assets/d762829695c031524ef2.svg" url="images/blkeqn-9BC49A78C13740AC58294EAA333AF3CC.svg"/></div></div>
+</li>
+</ol>
+<p>下图显示了数据从 <span class="eqn">x</span> 经过一系列运算到达 <span class="eqn">y</span> 的过程：</p>
+<p></p><center>
+<a href="https://explained.ai/matrix-calculus/images/chain-tree.png">
+<img alt="chain-tree.png" class="original-diagram" data-original-image="236" src="assets/7c3c0be1d98260a136da.png" url="images/chain-tree.png" width="20%"/>
+</a>
+</center>
+<p></p>
+<p>到这里，我们已经可以使用链式法则，对单变量 <span class="eqn">x</span> 的嵌套表达式求导，但条件是 <span class="eqn">x</span> 只能通过一条数据流路径影响 <span class="eqn">y</span>。为了处理更复杂的表达式，需要扩展这种方法，接下来就来讨论。</p>
+<h4 id="sec:1.4.5.2">单变量全导数链式法则</h4>
+<p>单变量链式法则的适用范围有限，因为所有中间变量都必须是单变量函数。但它说明了链式法则的核心机制：将所有中间子表达式的导数相乘。为了处理 <img class="inline-equation" data-original-image="237" src="assets/64a8ad39bd5114ce1a03.svg" style="vertical-align:-3.4125pt"/> 这样的更一般表达式，我们需要扩展这一基本规则。</p>
+<p>当然，我们可以立即看出 <img class="inline-equation" data-original-image="238" src="assets/3e04fbe1207f74cc4228.svg" style="vertical-align:-4.8089995pt"/>，但这使用的是标量加法求导规则，而不是链式法则。如果尝试应用单变量链式法则，就会得到错误答案。实际上，前面的链式法则在此没有意义，因为求导运算符 <img class="inline-equation" data-original-image="239" src="assets/1d5f63319abe364508d3.svg" style="vertical-align:-4.8089995pt"/> 不适用于多元函数，例如中间变量中的 <img class="inline-equation" data-original-image="240" src="assets/27b5db83490009fd3eae.svg" style="vertical-align:-2.0475pt"/>：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="241" src="assets/4651ae135abc1c532e24.svg" url="images/blkeqn-75071782A1332F464A55110F2E4C5728.svg"/></div></div>
+<p>我们仍然试一下，看看会发生什么。如果假定 <img class="inline-equation" data-original-image="242" src="assets/7b8b9dbe25cd2934852a.svg" style="vertical-align:-6.1424994pt"/> 且 <img class="inline-equation" data-original-image="243" src="assets/05c47c5872de1cb9f71c.svg" style="vertical-align:-4.8089995pt"/>，就会得到 <img class="inline-equation" data-original-image="244" src="assets/c315404f62d1cff70c67.svg" style="vertical-align:-6.1424994pt"/>，而不是正确答案 <img class="inline-equation" data-original-image="245" src="assets/25723e8735ad731593c6.svg" style="vertical-align:-1.06pt"/>。</p>
+<p>因为 <img class="inline-equation" data-original-image="246" src="assets/1b2fddbe31f93ebb3845.svg" style="vertical-align:-3.4125pt"/> 有多个参数，所以需要偏导数。先不加区分地对所有方程应用偏导运算符，看看结果：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="247" src="assets/60455122dd7064d0d7f3.svg" url="images/blkeqn-637FEB09B811F98C4B3D575AAD9D9367.svg"/></div></div>
+<p>这里的偏导数 <img class="inline-equation" data-original-image="248" src="assets/829cac1ffb9a24b98bff.svg" style="vertical-align:-4.9035pt"/> 是错误的，因为它违反了偏导数的一个关键假设。对 <span class="eqn">x</span> 求偏导时，其他变量不能随着 <span class="eqn">x</span> 改变，否则就无法把它们当作常数。然而，<img class="inline-equation" data-original-image="249" src="assets/ddeae8864ad58926ce66.svg" style="vertical-align:-3.4125pt"/> 显然是 <span class="eqn">x</span> 的函数，因此会随 <span class="eqn">x</span> 改变。由于 <img class="inline-equation" data-original-image="251" src="assets/bb7123eda57cda78107f.svg" style="vertical-align:-4.9035pt"/>，所以 <img class="inline-equation" data-original-image="250" src="assets/47f9efb8849392ee0a90.svg" style="vertical-align:-4.9035pt"/>。观察 <img class="inline-equation" data-original-image="252" src="assets/012704201cbda877cd24.svg" style="vertical-align:-3.4125pt"/> 的数据流图，可以发现从 <span class="eqn">x</span> 到 <span class="eqn">y</span> 有多条路径。这说明我们必须同时考虑对 <span class="eqn">x</span> 的直接依赖，以及通过 <img class="inline-equation" data-original-image="253" src="assets/87b7ea28b9908351c2e5.svg" style="vertical-align:-3.4125pt"/> 的间接依赖：</p>
+<p></p><center>
+<a href="https://explained.ai/matrix-calculus/images/plus-square.png">
+<img alt="plus-square.png" class="original-diagram" data-original-image="254" src="assets/f5f56412ec28f106a6fa.png" url="images/plus-square.png" width="20%"/>
+</a>
+</center>
+<p></p>
+<p><span class="eqn">x</span> 既作为加法的操作数，也作为平方运算的操作数，因此它的变化会通过这两种方式影响 <span class="eqn">y</span>。下面的方程描述了对 <span class="eqn">x</span> 的调整如何影响输出：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="255" src="assets/e3d31fc3b13ee74fa8f4.svg" url="images/blkeqn-69B14AB41D9A7514E8C105FDDF9649C5.svg"/></div></div>
+<p>于是得到 <img class="inline-equation" data-original-image="256" src="assets/5e4d746cf23576459ac5.svg" style="vertical-align:-2.7825pt"/>，可以理解为：“<span class="eqn">y</span> 的变化量，是原来的 <span class="eqn">y</span> 与调整 <span class="eqn">x</span> 后的 <span class="eqn">y</span> 之间的差。”</p>
+<p>如果令 <img class="inline-equation" data-original-image="257" src="assets/e26d87bc7e3e625c299c.svg" style="vertical-align:-0.5pt"/>，则 <img class="inline-equation" data-original-image="258" src="assets/4dd4bd38905db41518c2.svg" style="vertical-align:-2.7825pt"/>。如果将 <span class="eqn">x</span> 增加 1，即 <img class="inline-equation" data-original-image="259" src="assets/24686a62a2e5c8f0ca6f.svg" style="vertical-align:-0.5pt"/>，则 <img class="inline-equation" data-original-image="260" src="assets/6751e01145f38b42989d.svg" style="vertical-align:-3.4125pt"/>。<span class="eqn">y</span> 的变化量不是由 <img class="inline-equation" data-original-image="262" src="assets/32e909199d78e755a710.svg" style="vertical-align:-3.4125pt"/> 所暗示的 <img class="inline-equation" data-original-image="261" src="assets/0ea91c8201ad5558168e.svg" style="vertical-align:-0.5pt"/>，而是 <img class="inline-equation" data-original-image="263" src="assets/c53f72e545244412efd2.svg" style="vertical-align:-1.08pt"/>！</p>
+<p>这就需要<a href="https://en.wikipedia.org/wiki/Total_derivative">全导数</a>法则。它的基本含义是：计算 <img class="inline-equation" data-original-image="264" src="assets/f4d1c697551ade823c0e.svg" style="vertical-align:-4.8089995pt"/> 时，必须把 <span class="eqn">x</span> 的变化对 <span class="eqn">y</span> 变化的所有可能贡献相加。关于 <span class="eqn">x</span> 的全导数假定所有变量，例如此处的 <img class="inline-equation" data-original-image="265" src="assets/d1cd125d06b8975c2fe7.svg" style="vertical-align:-2.0475pt"/>，都是 <span class="eqn">x</span> 的函数，可能随 <span class="eqn">x</span> 改变。若 <img class="inline-equation" data-original-image="266" src="assets/f2b6420ca63bead79672.svg" style="vertical-align:-3.4125pt"/> 既直接依赖 <span class="eqn">x</span>，又通过中间变量 <img class="inline-equation" data-original-image="267" src="assets/87b7ea28b9908351c2e5.svg" style="vertical-align:-3.4125pt"/> 间接依赖它，则全导数为：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="268" src="assets/47f1013dbc5f93dc7573.svg" url="images/blkeqn-09EB861D79D7E60D9B37567CE097631B.svg"/></div></div>
+<p>使用这个公式，就能得到正确答案：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="269" src="assets/a1d15333b0f535b29434.svg" url="images/blkeqn-41D8094A5C03D77FBC951A301E88C193.svg"/></div></div>
+<p>这就是所谓<i>单变量全导数链式法则</i>的一次应用：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="270" src="assets/d9a502854671189a7589.svg" url="images/blkeqn-B70D8CE7C35F9EF4FD85750EA5577D27.svg"/></div></div>
+<p>全导数假定所有变量之间都可能相互依赖，而偏导数则假定除 <span class="eqn">x</span> 之外的变量都是常数。</p>
+<p>这里的符号有一个细微之处：所有导数都写成偏导数，因为 <span class="eqn">f</span> 和 <span class="eqn">u<sub>i</sub></span> 是多变量函数。这与 <a href="http://mathworld.wolfram.com/TotalDerivative.html">MathWorld 的记法</a>一致，但不同于 <a href="https://en.wikipedia.org/wiki/Total_derivative">Wikipedia</a>；后者使用 <img class="inline-equation" data-original-image="271" src="assets/85ad3e2848b3214631db.svg" style="vertical-align:-3.4125pt"/>，可能是为了强调方程中的全导数性质。我们将继续使用偏导记号，以便与下一节的向量链式法则保持一致。</p>
+<p>实际计算中，只需记住：对 <span class="eqn">x</span> 求全导数时，其他变量也可能是 <span class="eqn">x</span> 的函数，因此需要加入它们的贡献。等式左边看起来是普通偏导数，右边实际表达的却是全导数。不过，很多临时变量通常只有一个参数，此时单变量全导数链式法则就退化为单变量链式法则。</p>
+<p>考虑一个嵌套子表达式，例如 <img class="inline-equation" data-original-image="272" src="assets/0d2b1384cf819e062e70.svg" style="vertical-align:-3.4125pt"/>。我们引入三个中间变量：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="273" src="assets/fd316008670fe4f82c35.svg" url="images/blkeqn-932DB311437C0A9D267994C7446FD9C7.svg"/></div></div>
+<p>以及偏导数：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="274" src="assets/1fc9fb517459687a07a2.svg" url="images/blkeqn-D15380D7681A0462591F0EF255C180E8.svg"/></div></div>
+<p>其中，<img class="inline-equation" data-original-image="275" src="assets/cc4b156493f2a0349816.svg" style="vertical-align:-4.9035pt"/> 和 <img class="inline-equation" data-original-image="276" src="assets/3d75c4fa92c2d96215bc.svg" style="vertical-align:-4.9035pt"/> 都包含 <img class="inline-equation" data-original-image="277" src="assets/439620d0ac3099f83e7f.svg" style="vertical-align:-4.9035pt"/> 项，以计入全导数的贡献。</p>
+<p>还要注意，全导数公式总是对 <img class="inline-equation" data-original-image="278" src="assets/56105c49d2c04984a874.svg" style="vertical-align:-6.2159996pt"/> 这样的项<mark>求和</mark>，而不是相乘。你可能以为，之所以在导数中求和，是因为例如 <img class="inline-equation" data-original-image="279" src="assets/f2cd7e1ac50f223f3eb8.svg" style="vertical-align:-2.7825pt"/> 本身就是两项相加。但并非如此。全导数之所以相加，是因为它表示所有 <span class="eqn">x</span> 对 <span class="eqn">y</span> 变化贡献的加权和。例如，即使将 <img class="inline-equation" data-original-image="281" src="assets/f2cd7e1ac50f223f3eb8.svg" style="vertical-align:-2.7825pt"/> 换成 <img class="inline-equation" data-original-image="280" src="assets/005875086c5577768b78.svg" style="vertical-align:-2.7825pt"/>，全导数链式法则仍然对偏导数项求和。（<img class="inline-equation" data-original-image="282" src="assets/3ff8947b3ea6dc039935.svg" style="vertical-align:-1.08pt"/> 可化简为 <img class="inline-equation" data-original-image="283" src="assets/2f5f9bbad4a4dd6293d7.svg" style="vertical-align:-0.5pt"/>，但为了演示，这里先不合并这些项。）对应的中间变量与偏导数为：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="284" src="assets/4ebd57b7b8dbf3a67b5d.svg" url="images/blkeqn-1780CB7B7425E18FCA94A1B6E1F82616.svg"/></div></div>
+<p>不过，全导数的形式仍然相同：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="285" src="assets/5edd8bcf2559964794e2.svg" url="images/blkeqn-50D1EABA22B46536559D83F8C21F749D.svg"/></div></div>
+<p>中间变量的运算符改变时，改变的是偏导数（权重），而不是公式本身。</p>
+<p>微积分基础较好的读者可能会问：为什么连 <img class="inline-equation" data-original-image="287" src="assets/63a875fb5c8d4391d7e7.svg" style="vertical-align:-1.06pt"/> 中的 <img class="inline-equation" data-original-image="286" src="assets/5d149d2a06f3677a264a.svg" style="vertical-align:-0.5pt"/> 这种非嵌套子表达式，也要引入中间变量？这样做有三个原因：（i）简化后的子表达式通常很容易求导；（ii）可以简化链式法则；（iii）这个过程与神经网络库中自动微分的工作方式一致。</p>
+<p>进一步使用中间变量，可以把单变量全导数链式法则化简为最终形式。我们的目标是消去最前面单独出现的 <img class="inline-equation" data-original-image="288" src="assets/1b1dfdfb965d1a8e659f.svg" style="vertical-align:-4.9035pt"/>：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="289" src="assets/657a095f740aeda85ee9.svg" url="images/blkeqn-4D0ABC7598A50E6E3076BE5D170FE72F.svg"/></div></div>
+<p>只需引入一个新的临时变量，作为 <span class="eqn">x</span> 的别名：<img class="inline-equation" data-original-image="290" src="assets/60ab462a9c9cd1e27653.svg" style="vertical-align:-2.8244998pt"/>。这样，公式就化简为最终形式：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="291" src="assets/81496e737e6e2e9f7087.svg" url="images/blkeqn-58933C7525007AD650FC8DED275E38E3.svg"/></div></div>
+<p>当所有中间变量都是单变量函数时，这个全导数链式法则就退化为单变量链式法则。因此，只需记住这个更一般的公式，就可以涵盖两种情况。还可以注意到，这个求和的形式与向量点积 <img class="inline-equation" data-original-image="292" src="assets/b3d138117f7ef88a50e6.svg" style="vertical-align:-4.9035pt"/> 或向量乘法 <img class="inline-equation" data-original-image="293" src="assets/e0f0c0b175771591389a.svg" style="vertical-align:-4.9035pt"/> 相同，这也为后面的内容作了准备。</p>
+<p>继续之前，需要提醒一下网上的术语用法。本节基于全导数的链式法则，在微积分讨论中通常被称为“多变量链式法则”，这很容易误导读者！这里的多元函数仅出现在中间变量的计算中。整体函数，例如 <img class="inline-equation" data-original-image="294" src="assets/9ddb970cd017bcb288ba.svg" style="vertical-align:-3.4125pt"/>，仍然是只接收一个参数 <span class="eqn">x</span> 的标量函数。导数和参数都是标量，而不是“多变量链式法则”这个名称可能让人想到的向量。（在不涉及矩阵微积分的课程语境中，“多变量链式法则”通常不会产生歧义。）为了减少混淆，我们使用“单变量全导数链式法则”，明确区分它与简单的单变量链式法则 <img class="inline-equation" data-original-image="295" src="assets/4f6f409c6bea19f6bbd9.svg" style="vertical-align:-4.8089995pt"/>。</p>
+<h4 id="sec:1.4.5.3">向量链式法则</h4>
+<p>理解了全导数链式法则之后，就可以处理函数向量与向量变量的链式法则。令人意外的是，这个更一般的规则看起来与标量的单变量链式法则同样简洁。我们不直接给出结论，而是亲自推导，以便真正理解它。可以先以向量函数 <img class="inline-equation" data-original-image="296" src="assets/2c8f787d35376f50dc9d.svg" style="vertical-align:-3.4125pt"/> 为例，计算它关于标量的导数，看看能否归纳出一般公式。</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="297" src="assets/2100c5b440f9e72aac1c.svg" url="images/blkeqn-9E6B0B0C3DBC5DCB4D63830FEFDFA672.svg"/></div></div>
+<p>引入两个中间变量 <img class="inline-equation" data-original-image="298" src="assets/c975896eb9564e1732f1.svg" style="vertical-align:-2.7825pt"/> 和 <img class="inline-equation" data-original-image="299" src="assets/c2a20d47cadb3f87088f.svg" style="vertical-align:-2.7825pt"/>，每个 <span class="eqn">f<sub>i</sub></span> 对应一个，使 <span class="eqn">y</span> 的形式更接近 <img class="inline-equation" data-original-image="300" src="assets/7e811c5b7d8b32aa6541.svg" style="vertical-align:-3.4125pt"/>：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="301" src="assets/2e9e871557a49cbd34c5.svg" url="images/blkeqn-1FB5515EE5B06A5ECC31BCEF58951081.svg"/></div></div>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="302" src="assets/da420fa360f4f04a1939.svg" url="images/blkeqn-98CA28A528B6F33EE66FBB9C617FF7CA.svg"/></div></div>
+<p>向量 <span class="eqnvec">y</span> 关于标量 <span class="eqn">x</span> 的导数是一个竖直向量，每个元素都使用单变量全导数链式法则计算：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="303" src="assets/ea3bd722bc3b9850dcf9.svg" url="images/blkeqn-5F78C81E8292A153BADC01B7FACB5A37.svg"/></div></div>
+<p>现在，只用标量规则就已经得到了答案，只是把导数组合成了一个向量。接下来尝试从结果中归纳出向量形式。目标是将下面这个由标量运算组成的向量，改写为一次向量运算。</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="304" src="assets/b11c5f07f760b78309f9.svg" url="images/blkeqn-B7CD7A8372D1979EC0B1C8E72520EE6A.svg"/></div></div>
+<p>如果拆开 <img class="inline-equation" data-original-image="305" src="assets/da27da3ba972d4895ff2.svg" style="vertical-align:-7.5705pt"/> 这些项，将 <img class="inline-equation" data-original-image="306" src="assets/4595cb19d28930d7db5d.svg" style="vertical-align:-4.9035pt"/> 各项单独组成向量，就得到矩阵与向量相乘：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="307" src="assets/77d35216125cde7d6a06.svg" url="images/blkeqn-926CF538B47F3EC06CACC470ECAD14B3.svg"/></div></div>
+<p>这意味着，这个 Jacobian 是另外两个 Jacobian 的乘积。来检查一下结果：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="308" src="assets/37456d6906b3fa97954e.svg" url="images/blkeqn-5A74FF5BA8874F740E140E477E2B631F.svg"/></div></div>
+<p>结果与标量方法完全相同。这条针对函数向量和单个参数的向量链式法则看来是正确的，而且确实与单变量链式法则一致。比较下面的向量规则：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="309" src="assets/a73e2874c4eaa38a279b.svg" url="images/blkeqn-B0D7932C93DA81FD62418DA5DF3CBE14.svg"/></div></div>
+<p>与单变量链式法则：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="310" src="assets/63600e040103f83dfee0.svg" url="images/blkeqn-8617320E088DCA9EC6795865C614324A.svg"/></div></div>
+<p>要让这个公式适用于多个参数，即向量 <span class="eqnvec">x</span>，只需把公式中的 <span class="eqn">x</span> 换成向量 <span class="eqnvec">x</span>。这样，<img class="inline-equation" data-original-image="311" src="assets/2fe90d0c92431494bb13.svg" style="vertical-align:-4.9035pt"/> 和最终的 Jacobian <img class="inline-equation" data-original-image="312" src="assets/7181e631fb0805cff2c0.svg" style="vertical-align:-4.9035pt"/> 就从竖直向量变为矩阵。完整的<i>向量链式法则</i>为：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="313" src="assets/4264d5b309d1126b3267.svg" url="images/blkeqn-F0D28570D62F2B5A6FF8C795E2726E7F.svg"/></div></div>
+<p>与单变量链式法则相比，向量公式的优点在于：它自动计入全导数，同时保持记号简洁。Jacobian 包含 <span class="eqn">f<sub>i</sub></span> 关于 <span class="eqn">g<sub>j</sub></span>、以及 <span class="eqn">g<sub>i</sub></span> 关于 <span class="eqn">x<sub>j</sub></span> 的所有可能组合。为完整起见，下面给出这两个 Jacobian 的展开形式：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="314" src="assets/43f709e8157dfc9d9658.svg" url="images/blkeqn-DF061D799B57F368ABC9B1BA8235C31B.svg"/></div></div>
+<p>其中，<img class="inline-equation" data-original-image="315" src="assets/be8b6464abb38818504a.svg" style="vertical-align:-3.4125pt"/>、<img class="inline-equation" data-original-image="316" src="assets/f41a83b2a201dc6f944c.svg" style="vertical-align:-3.4125pt"/>，且 <img class="inline-equation" data-original-image="317" src="assets/b9a7f827a865e8a870fb.svg" style="vertical-align:-3.4125pt"/>。所得 Jacobian 的大小为 <img class="inline-equation" data-original-image="318" src="assets/6f935b45b59d3fa6a52d.svg" style="vertical-align:-1.08pt"/>（一个 <img class="inline-equation" data-original-image="319" src="assets/7fd93444445eb5991c6f.svg" style="vertical-align:-1.08pt"/> 矩阵与一个 <img class="inline-equation" data-original-image="320" src="assets/009606e226d159177fa0.svg" style="vertical-align:-1.08pt"/> 矩阵相乘）。</p>
+<p>即使对于这个 <img class="inline-equation" data-original-image="321" src="assets/3df43727fb90153ac1c6.svg" style="vertical-align:-6.5414996pt"/> 的公式，仍可继续简化，因为在许多应用中，Jacobian 是方阵（<img class="inline-equation" data-original-image="322" src="assets/b459588799888928a428.svg" style="vertical-align:-0.5pt"/>），而且非对角元素为零。神经网络相关的数学计算，本质上处理的是以向量为参数的函数，而不是由函数组成的向量。例如，神经元的仿射函数包含 <img class="inline-equation" data-original-image="323" src="assets/310e0aeee4c4f954901c.svg" style="vertical-align:-3.4125pt"/>，激活函数则是 <img class="inline-equation" data-original-image="324" src="assets/88121b3e67c5f88c44fe.svg" style="vertical-align:-3.4125pt"/>；下一节将讨论这些函数的导数。</p>
+<p>前面已经看到，对向量 <span class="eqnvec">w</span> 和 <span class="eqnvec">x</span> 执行逐元素运算，会得到元素为 <img class="inline-equation" data-original-image="325" src="assets/ffe0c3c8c47f77d94fb2.svg" style="vertical-align:-6.2159996pt"/> 的对角矩阵，因为 <span class="eqn">w<sub>i</sub></span> 只依赖 <span class="eqn">x<sub>i</sub></span>，而不依赖 <img class="inline-equation" data-original-image="326" src="assets/bcf9ebb69e8d1d99672a.svg" style="vertical-align:-2.856pt"/> 时的 <span class="eqn">x<sub>j</sub></span>。这里也一样：当 <span class="eqn">f<sub>i</sub></span> 只依赖 <span class="eqn">g<sub>i</sub></span>，并且 <span class="eqn">g<sub>i</sub></span> 只依赖 <span class="eqn">x<sub>i</sub></span> 时：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="327" src="assets/cebd067256a3318683e0.svg" url="images/blkeqn-4869BA6DCF2C9A404EECD993808A74B7.svg"/></div></div>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="328" src="assets/363bfc710c4de35654ef.svg" url="images/blkeqn-DDA2EF4AEBF897725FC240946CF0412E.svg"/></div></div>
+<p>在这种情况下，向量链式法则简化为：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="329" src="assets/d3546612a892782affd6.svg" url="images/blkeqn-2D82A2CFEA0A49E9B7D3C8F986DAF14A.svg"/></div></div>
+<p>因此，Jacobian 化简为一个对角矩阵，其元素就是按单变量链式法则计算出的值。</p>
+<p>经过前面的数学推导，最终得到的结论是：只需要掌握向量链式法则，因为单变量公式都是它的特殊情况。下表汇总了计算 Jacobian 时应当相乘的各个部分。</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="
+\begin{tabular}[t]{c|cccc}
+  &amp; 
+\multicolumn{2}{c}{
+  \begin{tabular}[t]{c}
+  scalar\\
+  \framebox(18,18){$x$}\\
+  \end{tabular}} &amp; &amp;\begin{tabular}{c}
+  vector\\
+  \framebox(18,40){$\mathbf{x}$}\\
+  \end{tabular} \\
+  
+  \begin{tabular}{c}$\frac{\partial}{\partial \mathbf{x}} \mathbf{f}(\mathbf{g}(\mathbf{x}))$
+	   = $\frac{\partial \mathbf{f}}{\partial \mathbf{g}}\frac{\partial\mathbf{g}}{\partial \mathbf{x}}$
+		\\
+		\end{tabular} &amp; \begin{tabular}[t]{c}
+  scalar\\
+  \framebox(18,18){$u$}\\
+  \end{tabular} &amp; \begin{tabular}{c}
+  vector\\
+  \framebox(18,40){$\mathbf{u}$}
+  \end{tabular}&amp; &amp; \begin{tabular}{c}
+  vector\\
+  \framebox(18,40){$\mathbf{u}$}\\
+  \end{tabular} \\
+\hline
+%\[dimexpr-\normalbaselineskip+5pt]
+
+\begin{tabular}[b]{c}
+  scalar\\
+  \framebox(18,18){$f$}\\
+  \end{tabular} &amp;\framebox(18,18){$\frac{\partial f}{\partial {u}}$} \framebox(18,18){$\frac{\partial u}{\partial {x}}$} ~~~&amp; \raisebox{22pt}{\framebox(40,18){$\frac{\partial f}{\partial {\mathbf{u}}}$}} \framebox(18,40){$\frac{\partial \mathbf{u}}{\partial x}$} &amp; ~~~&amp;
+\raisebox{22pt}{\framebox(40,18){$\frac{\partial f}{\partial {\mathbf{u}}}$}} \framebox(40,40){$\frac{\partial \mathbf{u}}{\partial \mathbf{x}}$}
+\\
+  
+\begin{tabular}[b]{c}
+  vector\\
+  \framebox(18,40){$\mathbf{f}$}\\
+  \end{tabular} &amp; \framebox(18,40){$\frac{\partial \mathbf{f}}{\partial {u}}$} \raisebox{22pt}{\framebox(18,18){$\frac{\partial u}{\partial {x}}$}} &amp; \framebox(40,40){$\frac{\partial \mathbf{f}}{\partial \mathbf{u}}$} \framebox(18,40){$\frac{\partial \mathbf{u}}{\partial x}$} &amp; &amp; \framebox(40,40){$\frac{\partial \mathbf{f}}{\partial \mathbf{u}}$} \framebox(40,40){$\frac{\partial \mathbf{u}}{\partial \mathbf{x}}$}\\
+  
+\end{tabular}
+" class="blkeqn" data-original-image="330" src="assets/5aed70003585794b293e.svg" url="images/latex-60482D46C45EEE61345A44D34A6BDEFA.svg"/></div></div>
+<h2 id="sec:1.5">神经元激活值的梯度</h2>
+<p>现在，我们已经具备全部所需知识，可以计算神经网络中单个计算单元的典型激活值，关于模型参数 <span class="eqnvec">w</span> 和 <span class="eqn">b</span> 的导数：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="331" src="assets/69294309703714af8c0e.svg" url="images/blkeqn-690A7F42FFBB4FCB6874091E1277A68C.svg"/></div></div>
+<p>（这里表示的是一个采用全连接权重和整流线性单元激活函数的神经元。其他仿射函数，例如卷积，以及其他激活函数，例如指数线性单元，也遵循类似的计算逻辑。）</p>
+<p>先不考虑 <span class="eqn">max</span>，集中计算 <img class="inline-equation" data-original-image="332" src="assets/ccf4f520e8d609549b68.svg" style="vertical-align:-4.9035pt"/> 和 <img class="inline-equation" data-original-image="333" src="assets/b84615ca8c6a1f6f83a5.svg" style="vertical-align:-4.9035pt"/>。（回顾一下，神经网络通过优化权重和偏置来学习。）我们还没有讨论点积的导数 <img class="inline-equation" data-original-image="334" src="assets/9c212936a0471ed8951f.svg" style="vertical-align:-3.4125pt"/>，但可以使用链式法则，而不必再记住一条规则。（注意，结果是标量而非向量，所以使用记号 <span class="eqn">y</span>，而不是 <span class="eqnvec">y</span>。）</p>
+<p>点积 <img class="inline-equation" data-original-image="335" src="assets/37975d47c3843ad71c47.svg" style="vertical-align:-0.5pt"/> 就是逐元素相乘后求和：<img class="inline-equation" data-original-image="336" src="assets/6604a840cb6d8478500a.svg" style="vertical-align:-3.4754999pt"/>。（记住线性代数记号 <img class="inline-equation" data-original-image="337" src="assets/175bb40558a39e38f839.svg" style="vertical-align:-0.5pt"/> 也可能有帮助。）我们已经知道如何计算 <img class="inline-equation" data-original-image="338" src="assets/649dea30836896f25bec.svg" style="vertical-align:-3.4125pt"/> 和 <img class="inline-equation" data-original-image="339" src="assets/dee3bbde8cdd8ccce106.svg" style="vertical-align:-1.08pt"/> 的偏导，但还没有讨论 <img class="inline-equation" data-original-image="340" src="assets/310e0aeee4c4f954901c.svg" style="vertical-align:-3.4125pt"/> 的偏导。这需要链式法则，因此可以像使用单变量链式法则时一样，引入一个中间向量变量 <span class="eqnvec">u</span>：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="341" src="assets/64f89748074c9f2514d7.svg" url="images/blkeqn-F96F2BC735B8DCA41045BDA7386930E7.svg"/></div></div>
+<p>重写 <span class="eqn">y</span> 后，可以识别出两个子表达式，而它们的偏导数我们都已经知道：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="342" src="assets/fccd0f0a3e545cf98c2f.svg" url="images/blkeqn-9227E0CBF856A76670F712C93DCDBA14.svg"/></div></div>
+<p>向量链式法则要求将这些偏导数相乘：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="343" src="assets/15393357f037ef41bb12.svg" url="images/blkeqn-F06895900143D4DF2E9DF6ACB61EAEB7.svg"/></div></div>
+<p>为检查结果，可以将点积完全展开成标量函数：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="344" src="assets/740693127c21e68069b6.svg" url="images/blkeqn-C47CAE5B600CE950FAFDB1B759820EE9.svg"/></div></div>
+<p>于是：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="345" src="assets/770014455d660845ca5a.svg" url="images/blkeqn-44FAB0E50B6FA0C7012FF79FB03EBD14.svg"/></div></div>
+<p>标量计算的结果与向量链式法则的结果相同。</p>
+<p>现在令 <img class="inline-equation" data-original-image="346" src="assets/ecf104a34a2b20332752.svg" style="vertical-align:-2.7825pt"/>，它就是 <span class="eqn">max</span> 激活函数内部的完整表达式。需要计算两个不同的偏导，但此处不需要链式法则：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="347" src="assets/eab9756b6b979543c4ce.svg" url="images/blkeqn-32D3EDC2E6F543CA718B3DAA02FE9518.svg"/></div></div>
+<p>接下来处理神经元激活值 <img class="inline-equation" data-original-image="348" src="assets/ccdc40a8d9f5673a050e.svg" style="vertical-align:-3.4125pt"/> 的偏导。对标量 <span class="eqn">z</span> 应用 <img class="inline-equation" data-original-image="349" src="assets/20e3a2f6e115abe57700.svg" style="vertical-align:-3.4125pt"/>，就是把所有负的 <span class="eqn">z</span> 值当作 0。max 函数的导数是一个分段函数。当 <img class="inline-equation" data-original-image="350" src="assets/a6a0fcfc4bb22adff565.svg" style="vertical-align:-1.806pt"/> 时，由于 <span class="eqn">z</span> 为常数，导数为 0。当 <img class="inline-equation" data-original-image="351" src="assets/12edc3358b621ca5a53b.svg" style="vertical-align:-1.05pt"/> 时，max 函数的导数就是 <span class="eqn">z</span> 的导数，即 <img class="inline-equation" data-original-image="352" src="assets/0ea91c8201ad5558168e.svg" style="vertical-align:-0.5pt"/>：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="353" src="assets/18488a6804146d4d3000.svg" url="images/blkeqn-6D2BF5B3220F17D8D1492E97A7BA112F.svg"/></div></div>
+<p><hr/>补充说明如何将函数广播到各个标量。当 <span class="eqn">max</span> 的一个或两个参数是向量，例如 <img class="inline-equation" data-original-image="354" src="assets/88121b3e67c5f88c44fe.svg" style="vertical-align:-3.4125pt"/>，我们就将单变量函数 <span class="eqn">max</span> 广播到各个元素。这是逐元素一元运算的一个例子。具体写出来就是：<p></p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="355" src="assets/1e19bb9f5d936c9f9a19.svg" url="images/blkeqn-45CC079AA33DA0D8886CC5E6CF8E03CD.svg"/></div></div>
+<p>因此，广播版本的导数是一个由零和一组成的向量，其中：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="356" src="assets/adf748dfb2d8a21a5e1a.svg" url="images/blkeqn-C2B5F84316BFF536F80F78FCF9DD9830.svg"/></div></div>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="357" src="assets/784431161f5229b56964.svg" url="images/blkeqn-4EA88847E78682CFDBCA0019C1623945.svg"/></div></div>
+<hr/>
+<p>为计算 <img class="inline-equation" data-original-image="358" src="assets/ca6165a8c492089ae378.svg" style="vertical-align:-3.4125pt"/> 函数的导数，需要链式法则，因为其中包含嵌套子表达式 <img class="inline-equation" data-original-image="359" src="assets/43e4168f5b9ab2ee26b0.svg" style="vertical-align:-1.06pt"/>。按照前面的过程，引入中间标量变量 <span class="eqn">z</span> 来表示仿射函数，得到：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="360" src="assets/4f138dedca44033d791c.svg" url="images/blkeqn-261BC49758F84DF99117345CD8D22CFE.svg"/></div></div>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="361" src="assets/3e878840d21aef7bdf2b.svg" url="images/blkeqn-9E429AF61D15BF6942A3132FABAC77A2.svg"/></div></div>
+<p>由向量链式法则可知：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="362" src="assets/4ecdcff88914b52dad8b.svg" url="images/blkeqn-B0C84C12426A7A698FBBCB890502411F.svg"/></div></div>
+<p>可以将其重写为：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="363" src="assets/3721d537b45aa211f4ab.svg" url="images/blkeqn-F94D315B3BCA31AEEDEA21880AC8E894.svg"/></div></div>
+<p>再把 <img class="inline-equation" data-original-image="364" src="assets/acdf840e6571e6dcdfd4.svg" style="vertical-align:-1.06pt"/> 代回：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="365" src="assets/a62057984d23e255d700.svg" url="images/blkeqn-D99784CE8232A77979A6ADFEBD882311.svg"/></div></div>
+<p>这个方程符合直觉。当激活函数将仿射输出 <span class="eqn">z</span> 截断为 0 时，关于任意权重 <span class="eqn">w<sub>i</sub></span> 的导数都为零。当 <img class="inline-equation" data-original-image="366" src="assets/12edc3358b621ca5a53b.svg" style="vertical-align:-1.05pt"/> 时，<span class="eqn">max</span> 函数相当于不再影响计算，结果就是 <span class="eqn">z</span> 关于权重的导数。</p>
+<p>再看神经元激活值关于 <span class="eqn">b</span> 的导数，得到：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="367" src="assets/8220c9c21c967c3a67fd.svg" url="images/blkeqn-9CE42F7BD715F354A87DF9043310E3BB.svg"/></div></div>
+<p>现在使用这些偏导数，处理完整的损失函数。</p>
+<h2 id="sec:1.6">神经网络损失函数的梯度</h2>
+<p>训练神经元时，需要对损失函数（也称代价函数）关于模型参数 <span class="eqnvec">w</span> 和 <span class="eqn">b</span> 求导。在这个例子中，我们采用均方误差作为损失函数。由于训练时使用多个向量输入（例如多张图像）和标量目标（例如每张图像对应一个类别），需要再引入一些记号。设：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="368" src="assets/3c33d78910553333d16a.svg" url="images/blkeqn-E0D9DAEE8A697C2E19FE66E14937D611.svg"/></div></div>
+<p>其中 <img class="inline-equation" data-original-image="369" src="assets/97633214ef3d53176c9d.svg" style="vertical-align:-3.4125pt"/>，再设：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="370" src="assets/eae10fb505660a7b7c29.svg" url="images/blkeqn-5A01562788A7EF73942A2BE62977EA30.svg"/></div></div>
+<p>其中 <span class="eqn">y<sub>i</sub></span> 是标量。于是，代价函数变为：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="371" src="assets/5e7535752bbfdc4c435a.svg" url="images/blkeqn-718C673BC0DE612BC185612904F24C22.svg"/></div></div>
+<p>按照链式法则的处理过程，引入以下中间变量：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="372" src="assets/6f1e991d407ec95a77a3.svg" url="images/blkeqn-E3B2339A8BE4A415649748CB1D886F6C.svg"/></div></div>
+<p>先计算关于 <span class="eqnvec">w</span> 的梯度。</p>
+<h3 id="sec:1.6.1">关于权重的梯度</h3>
+<p>根据前面的结果可知：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="373" src="assets/fcb2bc5e45bb087bd32a.svg" url="images/blkeqn-5E0A4E7EF154D7560B184EE3DCA596DF.svg"/></div></div>
+<p>以及</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="374" src="assets/eb5668848bd167b45fc4.svg" url="images/blkeqn-82119129B9536081C2075443A76B2E68.svg"/></div></div>
+<p>于是，整体梯度为：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="
+\begin{eqnarray*}
+ \frac{\partial C(v)}{\partial \mathbf{w}} &amp; = &amp; \frac{\partial }{\partial \mathbf{w}}\frac{1}{N} \sum_{i=1}^N v^2\\\\
+ &amp; = &amp; \frac{1}{N} \sum_{i=1}^N \frac{\partial}{\partial \mathbf{w}} v^2\\\\
+ &amp; = &amp; \frac{1}{N} \sum_{i=1}^N \frac{\partial v^2}{\partial v} \frac{\partial v}{\partial \mathbf{w}} \\\\
+ &amp; = &amp; \frac{1}{N} \sum_{i=1}^N 2v \frac{\partial v}{\partial \mathbf{w}} \\\\
+ &amp; = &amp; \frac{1}{N} \sum_{i=1}^N \begin{cases}
+	2v\overrightarrow{\mathbf 0}^T = \overrightarrow{\mathbf 0}^T &amp; \mathbf{w} \cdot \mathbf{x}_i + b \leq 0\\
+	-2v\mathbf{x}_i^T &amp; \mathbf{w} \cdot \mathbf{x}_i + b &gt; 0\\
+\end{cases}\\\\
+ &amp; = &amp; \frac{1}{N} \sum_{i=1}^N \begin{cases}
+	\overrightarrow{\mathbf 0}^T &amp; \mathbf{w} \cdot \mathbf{x}_i + b \leq 0\\
+	-2(y_i-u)\mathbf{x}_i^T &amp; \mathbf{w} \cdot \mathbf{x}_i + b &gt; 0\\
+\end{cases}\\\\
+ &amp; = &amp; \frac{1}{N} \sum_{i=1}^N \begin{cases}
+	\overrightarrow{\mathbf 0}^T &amp; \mathbf{w} \cdot \mathbf{x}_i + b \leq 0\\
+	-2(y_i-max(0, \mathbf{w}\cdot\mathbf{x}_i+b))\mathbf{x}_i^T &amp; \mathbf{w} \cdot \mathbf{x}_i + b &gt; 0\\
+\end{cases}\\
+\phantom{\frac{\partial C(v)}{\partial \mathbf{w}}} &amp; = &amp; \frac{1}{N} \sum_{i=1}^N \begin{cases}
+	\overrightarrow{\mathbf 0}^T &amp; \mathbf{w} \cdot \mathbf{x}_i + b \leq 0\\
+	-2(y_i-(\mathbf{w}\cdot\mathbf{x}_i+b))\mathbf{x}_i^T &amp; \mathbf{w} \cdot \mathbf{x}_i + b &gt; 0\\
+\end{cases}\\\\
+ &amp; = &amp; \begin{cases}
+	\overrightarrow{\mathbf 0}^T &amp; \mathbf{w} \cdot \mathbf{x}_i + b \leq 0\\
+	\frac{-2}{N} \sum_{i=1}^N (y_i-(\mathbf{w}\cdot\mathbf{x}_i+b))\mathbf{x}_i^T &amp; \mathbf{w} \cdot \mathbf{x}_i + b &gt; 0\\
+\end{cases}\\\\
+ &amp; = &amp; \begin{cases}
+	\overrightarrow{\mathbf 0}^T &amp; \mathbf{w} \cdot \mathbf{x}_i + b \leq 0\\
+	\frac{2}{N} \sum_{i=1}^N (\mathbf{w}\cdot\mathbf{x}_i+b-y_i)\mathbf{x}_i^T &amp; \mathbf{w} \cdot \mathbf{x}_i + b &gt; 0\\
+\end{cases}
+\end{eqnarray*}
+" class="blkeqn" data-original-image="375" src="assets/6ea87f01648115857935.svg" url="images/latex-02017BA22EFFB5A44DD12B3EA1142444.svg"/></div></div>
+<p>为了解释这个方程，可以代入误差项 <img class="inline-equation" data-original-image="376" src="assets/b3c9cb79de04199dae4d.svg" style="vertical-align:-2.7825pt"/>，得到：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="377" src="assets/48e1e7695dc1d393ec6a.svg" url="images/blkeqn-163C805C2F1B4149DC6D7EDC22457A99.svg"/></div></div>
+<p>可以看到，这个计算对 <span class="eqn">X</span> 中的所有 <span class="eqnvec">x</span><sub class="eqn">i</sub> 求加权平均。权重就是误差项，即每个输入 <span class="eqnvec">x</span><sub class="eqn">i</sub> 的目标输出与实际神经元输出之间的差。所得梯度整体上指向代价或损失增大的方向，因为较大的 <span class="eqn">e<sub>i</sub></span> 会强化对应 <span class="eqnvec">x</span><sub class="eqn">i</sub> 的贡献。假设只有一个输入向量 <img class="inline-equation" data-original-image="378" src="assets/5e3ae396f0684f0c9a71.svg" style="vertical-align:-3.4125pt"/>，那么梯度就是 <img class="inline-equation" data-original-image="379" src="assets/e263e09c816ebe909fbb.svg" style="vertical-align:-3.6225pt"/>。如果误差为 0，梯度就为零，此时已经达到最小损失。如果 <img class="inline-equation" data-original-image="380" src="assets/420fc2ccc67a1d6e9b85.svg" style="vertical-align:-2.0475pt"/> 是较小的正差值，梯度就是沿 <img class="inline-equation" data-original-image="381" src="assets/2563b1a0aace512d9cca.svg" style="vertical-align:-2.0475pt"/> 方向上较小的一步。如果 <img class="inline-equation" data-original-image="382" src="assets/420fc2ccc67a1d6e9b85.svg" style="vertical-align:-2.0475pt"/> 很大，梯度就是沿该方向较大的一步。如果 <img class="inline-equation" data-original-image="383" src="assets/420fc2ccc67a1d6e9b85.svg" style="vertical-align:-2.0475pt"/> 为负，梯度方向反转，意味着代价最高的方向是负方向。</p>
+<p>当然，我们希望减小而不是增大损失，因此<a href="https://en.wikipedia.org/wiki/Gradient_descent">梯度下降</a>的递推公式使用负梯度更新当前位置（标量学习率为 <img class="inline-equation" data-original-image="384" src="assets/3c0c1b808ad3b439ad80.svg" style="vertical-align:-2.7825pt"/>）：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="385" src="assets/2a0746977d17245b56b6.svg" url="images/blkeqn-A03E71D2EAF4B8BA3BDFACE6299DD07C.svg"/></div></div>
+<p>因为梯度指向代价增大的方向，所以我们要沿相反方向更新 <span class="eqnvec">w</span>。</p>
+<h3 id="sec:1.6.2">关于偏置的导数</h3>
+<p>为了优化偏置 <span class="eqn">b</span>，还需要关于 <span class="eqn">b</span> 的偏导数。再次列出中间变量：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="386" src="assets/6f1e991d407ec95a77a3.svg" url="images/blkeqn-05147011C8D1FD09E6EEB6A916C12787.svg"/></div></div>
+<p>前面已经计算过方程 <img class="inline-equation" data-original-image="387" src="assets/52687043b1835906ce61.svg" style="vertical-align:-3.4125pt"/> 关于偏置的偏导：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="388" src="assets/bca66ab8499d6169617d.svg" url="images/blkeqn-97F6B2C0D2E31579875BAE3E458BF333.svg"/></div></div>
+<p>对于 <span class="eqn">v</span>，偏导为：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="389" src="assets/b39de792f31f03b4f1dd.svg" url="images/blkeqn-8C418D6F20C9CD5F0C56184F94005AF3.svg"/></div></div>
+<p>代价函数本身的偏导为：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="
+\begin{eqnarray*}
+ \frac{\partial C(v)}{\partial b} &amp; = &amp; \frac{\partial }{\partial b}\frac{1}{N} \sum_{i=1}^N v^2\\\\
+ &amp; = &amp; \frac{1}{N} \sum_{i=1}^N \frac{\partial}{\partial b} v^2\\\\
+ &amp; = &amp; \frac{1}{N} \sum_{i=1}^N \frac{\partial v^2}{\partial v} \frac{\partial v}{\partial b} \\\\
+ &amp; = &amp; \frac{1}{N} \sum_{i=1}^N 2v \frac{\partial v}{\partial b} \\\\
+ &amp; = &amp; \frac{1}{N} \sum_{i=1}^N \begin{cases}
+ 	0 &amp; \mathbf{w} \cdot \mathbf{x}_i + b \leq 0\\
+ 	-2v &amp; \mathbf{w} \cdot \mathbf{x}_i + b &gt; 0\\
+ \end{cases}\\\\
+ &amp; = &amp; \frac{1}{N} \sum_{i=1}^N \begin{cases}
+ 	0 &amp; \mathbf{w} \cdot \mathbf{x}_i + b \leq 0\\
+ 	-2(y_i-max(0, \mathbf{w}\cdot\mathbf{x}_i+b)) &amp; \mathbf{w} \cdot \mathbf{x}_i + b &gt; 0\\
+ \end{cases}\\\\
+ &amp; = &amp; \frac{1}{N} \sum_{i=1}^N \begin{cases}
+ 	0 &amp; \mathbf{w} \cdot \mathbf{x}_i + b \leq 0\\
+ 	2(\mathbf{w}\cdot\mathbf{x}_i+b-y_i) &amp; \mathbf{w} \cdot \mathbf{x}_i + b &gt; 0\\
+ \end{cases}\\\\
+&amp; = &amp; \frac{2}{N} \sum_{i=1}^N \begin{cases}
+	0 &amp; \mathbf{w} \cdot \mathbf{x}_i + b \leq 0\\
+	\mathbf{w}\cdot\mathbf{x}_i+b-y_i &amp; \mathbf{w} \cdot \mathbf{x}_i + b &gt; 0\\
+ \end{cases}
+\end{eqnarray*}
+" class="blkeqn" data-original-image="390" src="assets/994f6533b30b08281709.svg" url="images/latex-4C786E1612F03A51376C7347F66D2DEF.svg"/></div></div>
+<p>与前面一样，可以代入一个误差项：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="391" src="assets/fbb348db028e650b26da.svg" url="images/blkeqn-010D7BD50356C45DC600E35E870120E4.svg"/></div></div>
+<p>于是，根据激活状态，偏导数就是误差的平均值或者零。为了更新神经元偏置，将其朝代价增大方向的反方向调整：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="392" src="assets/36450a5d6eb18699737a.svg" url="images/blkeqn-3F83D3A6790B0478D7E9C6C04138F84C.svg"/></div></div>
+<p>在实践中，将 <span class="eqnvec">w</span> 与 <span class="eqn">b</span> 合并成一个向量参数 <img class="inline-equation" data-original-image="393" src="assets/3036f850f94f61efcaa1.svg" style="vertical-align:-3.4125pt"/> 很方便，这样就不必分别处理两个偏导。为此也需要调整输入向量 <span class="eqnvec">x</span>，但激活函数会得到简化。在 <span class="eqnvec">x</span> 的末尾附加一个 1，即 <img class="inline-equation" data-original-image="394" src="assets/868c19ab40c13970f843.svg" style="vertical-align:-3.4125pt"/>，就能把 <img class="inline-equation" data-original-image="395" src="assets/43e4168f5b9ab2ee26b0.svg" style="vertical-align:-1.06pt"/> 变成 <img class="inline-equation" data-original-image="396" src="assets/4f9a667fbcaacc2ba057.svg" style="vertical-align:-0.5pt"/>。</p>
+<p>至此，神经网络损失函数的优化推导就完成了，因为我们已经得到了执行梯度下降所需的两个偏导数。</p>
+<h2 id="sec:1.7">总结</h2>
+<p>希望你已经顺利读到这里。你已经掌握了理解矩阵微积分的重要基础！下一节提供了速查内容，汇总本文全部规则。也请查看后面附有说明的参考资源链接。</p>
+<p>下一步可以学习关于矩阵而不只是向量的偏导数。例如，可以阅读 <a href="https://atmos.washington.edu/~dennis/MatrixCalculus.pdf">Matrix calculus</a> 中关于矩阵微分的部分。</p>
+<p><mark>致谢</mark>。感谢 <a href="https://www.usfca.edu/faculty/yannet-interian">Yannet Interian</a>（旧金山大学数据科学硕士项目教师）和 <a href="http://www.cs.usfca.edu/~duminsky/">David Uminsky</a>（数据科学硕士项目教师兼负责人）对本文符号表示提供的帮助。</p>
+<h2 id="reference">矩阵微积分速查</h2>
+<h3 id="sec:1.8.1">梯度与 Jacobian</h3>
+<p>二元函数的<i>梯度</i>是一个水平的二维向量：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="397" src="assets/f97a5ac3bf99cc79ca84.svg" url="images/blkeqn-B3086170DA6B4B465F867D85C66E8359.svg"/></div></div>
+<p>以向量为参数的向量值函数，其 <i>Jacobian</i> 是一个 <img class="inline-equation" data-original-image="398" src="assets/6f935b45b59d3fa6a52d.svg" style="vertical-align:-1.08pt"/> 的矩阵（<img class="inline-equation" data-original-image="399" src="assets/c756d21a5a264b3aa172.svg" style="vertical-align:-3.4125pt"/>，且 <img class="inline-equation" data-original-image="400" src="assets/83dd5061ef9fcdb74a3a.svg" style="vertical-align:-3.4125pt"/>），包含所有可能的标量偏导数：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="401" src="assets/9b527973b4763e16d3dd.svg" url="images/blkeqn-3466FB5BF19F3537FB55469EBB13FDDD.svg"/></div></div>
+<p>恒等函数 <img class="inline-equation" data-original-image="402" src="assets/6f555270e05ceb61dabe.svg" style="vertical-align:-3.4125pt"/> 的 Jacobian 为 <span class="eqn">I</span>。</p>
+<h3 id="sec:1.8.2">向量的逐元素运算</h3>
+<p>使用运算符 <img class="inline-equation" data-original-image="403" src="assets/0555b0f785c677517d56.svg" style="vertical-align:-2.646pt"/> 定义向量 <span class="eqnvec">w</span> 与 <span class="eqnvec">x</span> 上的一般<i>逐元素运算</i>，例如 <img class="inline-equation" data-original-image="404" src="assets/b83d8e4df80e7ca37ace.svg" style="vertical-align:-1.06pt"/>：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="405" src="assets/70f2f295251739fb631d.svg" url="images/blkeqn-7F26413653546ADCEB9BC3BCFA41D136.svg"/></div></div>
+<p>关于 <span class="eqnvec">w</span> 的 Jacobian 为（关于 <span class="eqnvec">x</span> 的情形类似）：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="406" src="assets/4a70c2c64827f381f89c.svg" url="images/blkeqn-54F95B3CFFD404740FAD218B308DEF70.svg"/></div></div>
+<p>当 <img class="inline-equation" data-original-image="407" src="assets/918628f864b56df8d0af.svg" style="vertical-align:-3.4125pt"/> 和 <img class="inline-equation" data-original-image="408" src="assets/bbb37223ceacad34c736.svg" style="vertical-align:-3.4125pt"/> 分别最多只访问 <span class="eqn">w<sub>i</sub></span> 和 <span class="eqn">x<sub>i</sub></span>，即满足<i>逐元素对角条件</i>时，Jacobian 化简为对角矩阵：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="409" src="assets/8ba05bf8a4537742a03f.svg" url="images/blkeqn-3D114C6873F46EE41AF91BF8B1BB37CD.svg"/></div></div>
+<p>以下是一些逐元素运算符的例子：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="410" src="assets/d292a7b50e0c5b151a31.svg" url="images/blkeqn-96AF91DA8E0473180EE048EC940EDFE3.svg"/></div></div>
+<h3 id="sec:1.8.3">标量扩展</h3>
+<p>将标量 <span class="eqn">z</span> 加到向量 <span class="eqnvec">x</span> 上，即 <img class="inline-equation" data-original-image="411" src="assets/e98b407c4a5e256aafab.svg" style="vertical-align:-2.4464998pt"/>，实际上是 <img class="inline-equation" data-original-image="412" src="assets/b7130345402f71a9ff16.svg" style="vertical-align:-3.4125pt"/>，其中 <img class="inline-equation" data-original-image="413" src="assets/6f555270e05ceb61dabe.svg" style="vertical-align:-3.4125pt"/>，且 <img class="inline-equation" data-original-image="414" src="assets/f9db16234f61f3e1ea98.svg" style="vertical-align:-3.4125pt"/>。</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="415" src="assets/f96b77fd987bdfea7d12.svg" url="images/blkeqn-44DC79699D852CF6804C4A58230A63DB.svg"/></div></div>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="416" src="assets/ee9d3252469c81f532a8.svg" url="images/blkeqn-8BBEE76022B230F99EFEF395B7939E65.svg"/></div></div>
+<p>标量乘法得到：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="417" src="assets/90471b8d4663809e55c5.svg" url="images/blkeqn-2A0AFB09BE7BE042E565C9C7FCC8B136.svg"/></div></div>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="418" src="assets/e178338f0d8fe7365ec6.svg" url="images/blkeqn-82B897A0A23D9C6BB66EDF17D1D3CB02.svg"/></div></div>
+<h3 id="sec:1.8.4">向量归约</h3>
+<p>向量和关于其中一个向量的偏导数为：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="419" src="assets/c5f3f5397fa7fdaa0283.svg" url="images/blkeqn-AD4B42FFE2F358BDABDC69EF1295F5CD.svg"/></div></div>
+<p>对于 <img class="inline-equation" data-original-image="420" src="assets/72f3911dde77f7e5852f.svg" style="vertical-align:-3.4125pt"/>：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="421" src="assets/f6991221bcdbdc86e26c.svg" url="images/blkeqn-786ECEFEABD0F3AFC11204B5E470897E.svg"/></div></div>
+<p>对于 <img class="inline-equation" data-original-image="422" src="assets/a77e928b730988db7c35.svg" style="vertical-align:-3.4125pt"/> 和 <img class="inline-equation" data-original-image="423" src="assets/f41a83b2a201dc6f944c.svg" style="vertical-align:-3.4125pt"/>，有：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="424" src="assets/d1895f768e935dfcd3e2.svg" url="images/blkeqn-C49A553A6A2A5CFFDF4A4EE2C82A7C06.svg"/></div></div>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="425" src="assets/507db64978b5389956ed.svg" url="images/blkeqn-703E826114B29A81E6936BB369947E4C.svg"/></div></div>
+<p>向量点积 <img class="inline-equation" data-original-image="426" src="assets/cc1f629b68a9b606f9ef.svg" style="vertical-align:-3.4754999pt"/>。代入 <img class="inline-equation" data-original-image="427" src="assets/0c56ee57896ac54ee50e.svg" style="vertical-align:-1.08pt"/>，再使用向量链式法则，得到：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="428" src="assets/9cfe222e1430cd807bd4.svg" url="images/blkeqn-350D7E3E3FB00B2CBD1A750ADFE8E4FF.svg"/></div></div>
+<p>类似地，<img class="inline-equation" data-original-image="429" src="assets/fa81047db9da243b7838.svg" style="vertical-align:-4.8089995pt"/>。</p>
+<h3 id="sec:1.8.5">链式法则</h3>
+<p><i>向量链式法则</i>是一般形式，因为它可以退化为其他形式。当 <span class="eqn">f</span> 是单变量 <span class="eqn">x</span> 的函数，且所有中间变量 <span class="eqn">u</span> 都是单变量函数时，适用单变量链式法则。当部分或全部中间变量是多变量函数时，适用单变量全导数链式法则。在其他所有情况下，适用向量链式法则。</p>
+<center>
+<div aria-label="原文表格，可横向滚动" class="table-scroll" role="group" tabindex="0"><table>
+<thead>
+<tr>
+<th align="center" valign="top">单变量规则<th align="center" valign="top">单变量全导数规则<th align="center" valign="top">向量规则</th>
+</th></th></tr>
+</thead>
+<tbody>
+<tr>
+<td align="center" valign="top"><img class="inline-equation" data-original-image="430" src="assets/799232650a498f61e425.svg" style="vertical-align:-4.8089995pt"/><td align="center" valign="top"><img class="inline-equation" data-original-image="431" src="assets/692c950cd62e9c33897c.svg" style="vertical-align:-4.9035pt"/><td align="center" valign="top"><img class="inline-equation" data-original-image="432" src="assets/60df19379e46bd45a651.svg" style="vertical-align:-6.5414996pt"/></td>
+</td></td></tr>
+</tbody>
+</table></div>
+</center>
+<h2 id="notation">符号说明</h2>
+<p><span class="eqnvec">x</span> 这样的粗体小写字母表示向量，<span class="eqn">x</span> 这样的斜体字母表示标量。<span class="eqn">x<sub>i</sub></span> 是向量 <span class="eqnvec">x</span> 的第 <img class="inline-equation" data-original-image="433" src="assets/9defcbbcaa6cc8219f3b.svg" style="vertical-align:-0.5pt"/> 个元素，使用斜体是因为单个向量元素是标量。<img class="inline-equation" data-original-image="434" src="assets/81fcf463f4c423ee5e37.svg" style="vertical-align:-3.4125pt"/> 表示“向量 <span class="eqnvec">x</span> 的长度”。</p>
+<p><img class="inline-equation" data-original-image="435" src="assets/804b32a53cb1979740d9.svg" style="vertical-align:-0.5pt"/> 的上标 <span class="eqn">T</span> 表示该向量的转置。</p>
+<p><img class="inline-equation" data-original-image="436" src="assets/7caf196e5806af3ebce0.svg" style="vertical-align:-3.4754999pt"/> 就是一个 for 循环，让 <span class="eqn">i</span> 从 <span class="eqn">a</span> 迭代到 <span class="eqn">b</span>，并把所有 <span class="eqn">x<sub>i</sub></span> 相加。</p>
+<p>记号 <img class="inline-equation" data-original-image="437" src="assets/7afa9647efe688105a87.svg" style="vertical-align:-3.4125pt"/> 表示一个名为 <span class="eqn">f</span>、参数为 <span class="eqn">x</span> 的函数。</p>
+<p><span class="eqn">I</span> 表示适当维度的方形“单位矩阵”：对角线上的元素全为 1，其他位置均为零。</p>
+<p><img class="inline-equation" data-original-image="438" src="assets/c873b03e4a5158b7e980.svg" style="vertical-align:-3.4125pt"/> 构造一个矩阵，其对角元素取自向量 <span class="eqnvec">x</span>。</p>
+<p>点积 <img class="inline-equation" data-original-image="439" src="assets/37975d47c3843ad71c47.svg" style="vertical-align:-0.5pt"/> 就是将对应元素逐个相乘后求和：<img class="inline-equation" data-original-image="440" src="assets/6604a840cb6d8478500a.svg" style="vertical-align:-3.4754999pt"/>。也可以将其看成 <img class="inline-equation" data-original-image="441" src="assets/7b37c16e80336188f3fd.svg" style="vertical-align:-0.5pt"/>。</p>
+<p>求导 <img class="inline-equation" data-original-image="442" src="assets/1d5f63319abe364508d3.svg" style="vertical-align:-4.8089995pt"/> 是一个运算符，将一个单参数函数映射为另一个函数。也就是说，<img class="inline-equation" data-original-image="443" src="assets/7c97ee168fc5a13a9cde.svg" style="vertical-align:-4.8089995pt"/> 将 <img class="inline-equation" data-original-image="444" src="assets/7afa9647efe688105a87.svg" style="vertical-align:-3.4125pt"/> 映射为它关于 <span class="eqn">x</span> 的导数，这与 <img class="inline-equation" data-original-image="445" src="assets/f22792621087b0f9b642.svg" style="vertical-align:-4.8089995pt"/> 相同。此外，如果 <img class="inline-equation" data-original-image="446" src="assets/4aef1b621ae8f2db7374.svg" style="vertical-align:-3.4125pt"/>，那么 <img class="inline-equation" data-original-image="447" src="assets/fa0758e50cb20846cf03.svg" style="vertical-align:-4.8089995pt"/>。</p>
+<p>函数关于 <span class="eqn">x</span> 的偏导数 <img class="inline-equation" data-original-image="448" src="assets/3349b60fca69819ce674.svg" style="vertical-align:-4.9035pt"/>，就是保持其他所有变量为常数，进行通常的标量求导。</p>
+<p><span class="eqn">f</span> 关于向量 <span class="eqnvec">x</span> 的梯度 <img class="inline-equation" data-original-image="449" src="assets/28369550d66cc49cc887.svg" style="vertical-align:-3.4125pt"/>，将一个标量函数的全部偏导数组织起来。</p>
+<p>Jacobian 将多个函数的梯度逐行排列，组织成一个矩阵：</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="450" src="assets/2a124692db54145d756c.svg" url="images/blkeqn-1D28D95963AACA877CF0CB69216D9849.svg"/></div></div>
+<p>以下记号表示：当 <img class="inline-equation" data-original-image="451" src="assets/298a102d87075f5b6c0f.svg" style="vertical-align:-2.0475pt"/> 时，<span class="eqn">y</span> 取值 <span class="eqn">a</span>；当 <img class="inline-equation" data-original-image="452" src="assets/df3f7ce21d3d2f21aabd.svg" style="vertical-align:-2.0475pt"/> 时，取值 <span class="eqn">b</span>。</p>
+<div><div aria-label="原文公式，可横向滚动" class="equation-scroll" role="group" tabindex="0"><img alt="" class="blkeqn" data-original-image="453" src="assets/14e4ea2e3fbd12b59e15.svg" url="images/blkeqn-13365350430405832B147455540E8596.svg"/></div></div>
+<h2 id="sec:1.10">参考资源</h2>
+<p><a href="http://www.wolframalpha.com/input/?i=D%5B%7Bx%5E2,+x%5E3%7D.%7B%7B1,2%7D,%7B3,4%7D%7D.%7Bx%5E2,+x%5E3%7D,+x%5D">Wolfram Alpha</a> 可以进行符号矩阵代数运算。此外，还有一个专门的<a href="http://www.matrixcalculus.org/">矩阵微积分求导工具</a>。</p>
+<p>在网上查找资料时，请搜索“matrix calculus”，而不是“vector calculus”。下面是对 <a href="https://www.google.com/search?q=matrix+calculus&amp;oq=matrix+calculus">Google 搜索</a>中一些靠前结果的说明：</p>
+<ul>
+<li><a href="https://en.wikipedia.org/wiki/Matrix_calculus">https://en.wikipedia.org/wiki/Matrix_calculus</a>
+<p>Wikipedia 的这篇条目相当不错，对不同布局约定的解释也很清楚。回顾一下，我们采用 numerator layout：Jacobian 中，变量沿水平方向排列，函数沿竖直方向排列。Wikipedia 对<a href="https://en.wikipedia.org/wiki/Total_derivative">全导数</a>也有很好的说明，但要注意，它使用的记号与本文略有不同。我们始终使用 <img class="inline-equation" data-original-image="454" src="assets/e22d1b14f7e5b24e411d.svg" style="vertical-align:-0.5pt"/>，而不是 <span class="eqn">dx</span>。</p>
+</li>
+<li><a href="http://www.ee.ic.ac.uk/hp/staff/dmb/matrix/calculus.html">http://www.ee.ic.ac.uk/hp/staff/dmb/matrix/calculus.html</a>
+<p>这个页面有一节讨论矩阵微分，给出了一些有用的恒等式；作者采用 numerator layout。读完本文之后，如果想继续学习矩阵而不只是向量的微分，这可能是一个合适的起点。</p>
+</li>
+<li><a href="https://www.colorado.edu/engineering/CAS/courses.d/IFEM.d/IFEM.AppC.d/IFEM.AppC.pdf">https://www.colorado.edu/engineering/CAS/courses.d/IFEM.d/IFEM.AppC.d/IFEM.AppC.pdf</a>
+<p>这应该是 <a href="https://www.colorado.edu/engineering/CAS/courses.d/IFEM.d">Carlos A. Felippa</a> 所写的“有限元方法导论”课程讲义的一部分。他使用 denominator layout，因此他的 Jacobian 相当于本文记号的转置。</p>
+</li>
+<li><a href="http://www.ee.ic.ac.uk/hp/staff/dmb/matrix/calculus.html">http://www.ee.ic.ac.uk/hp/staff/dmb/matrix/calculus.html</a>
+<p>这个页面列出了大量针对不同向量和矩阵算出的导数，是一份很好的速查表。它几乎没有讨论，主要是规则的集合。</p>
+</li>
+<li><a href="https://www.math.uwaterloo.ca/~hwolkowi/matrixcookbook.pdf">https://www.math.uwaterloo.ca/~hwolkowi/matrixcookbook.pdf</a>
+<p>另一份速查表，主要讨论一般矩阵运算，比上一项有更多解释。</p>
+</li>
+<li><a href="https://www.comp.nus.edu.sg/~cs5240/lecture/matrix-differentiation.pdf">https://www.comp.nus.edu.sg/~cs5240/lecture/matrix-differentiation.pdf</a>
+<p>一组有用的幻灯片。</p>
+</li>
+</ul>
+<p>如果想进一步了解神经网络，以及优化和反向传播背后的数学，我们强烈推荐 <a href="http://neuralnetworksanddeeplearning.com/chap1.html">Michael Nielsen 的书</a>。</p>
+<p>如果你特别关注卷积神经网络，可以阅读 <a href="https://arxiv.org/pdf/1603.07285.pdf">A guide to convolution arithmetic for deep learning</a>。</p>
+<p>本文引用了<a href="https://en.wikipedia.org/wiki/Total_derivative">全导数</a>法则。这是一个重要概念，其含义就是：对 <span class="eqn">x</span> 求导时，必须计入所有作为 <span class="eqn">x</span> 的函数的变量关于 <span class="eqn">x</span> 的导数。</p>
+</p></p></p></p></article></div><script>(()=>{const links=[...document.querySelectorAll('.toc a')];const observer=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting)links.forEach(a=>a.classList.toggle('on',a.hash==='#'+e.target.id))})},{rootMargin:'0px 0px -70% 0px'});document.querySelectorAll('article h2,article h3').forEach(heading=>observer.observe(heading));})();</script></body></html>
