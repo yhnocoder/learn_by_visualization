@@ -75,6 +75,7 @@ h2{font-family:var(--serif);font-size:calc(18px*var(--k));margin:0;line-height:1
 <script>
 (() => {
   const categories = [
+    { id: 'math', name: '数学', color: '#985b57', desc: '理解深度学习中的数学概念与推导。' },
     { id: 'numerics', name: '数值与精度', color: '#2a78d6', desc: '如何做一个 1' },
     { id: 'tokenize', name: '分词', color: '#eb6834', desc: 'f(文本) = list[token]' },
     { id: 'repr',     name: '表示学习',   color: '#7c5cd6', desc: 'f(token) = vector' },
@@ -83,6 +84,8 @@ h2{font-family:var(--serif);font-size:calc(18px*var(--k));margin:0;line-height:1
   ];
   // 新增主题：加一条记录，并在 previews 里补一个同 id 的预览函数。
   const topics = [
+    { id: 'matrix-calculus', cat: 'math', title: '深度学习所需的矩阵微积分', href: 'topics/matrix-calculus/',
+      summary: '从偏导数与 Jacobian 到向量链式法则，逐步推导 ReLU 神经元和均方误差的参数梯度。', tags: ['Jacobian', '链式法则', '梯度'] },
     { id: 'floating_points', cat: 'numerics', title: '浮点数格式', href: 'topics/floating_points/',
       summary: 'fp4 到 fp32 的位布局、可表示范围与舍入。输入一个数，逐位查看它的编码。', tags: ['fp4', 'fp8', 'bf16', 'fp32'] },
     { id: 'bpe', cat: 'tokenize', title: 'BPE 分词', href: 'topics/bpe/',
@@ -101,6 +104,48 @@ h2{font-family:var(--serif);font-size:calc(18px*var(--k));margin:0;line-height:1
 
   // 每个主题一个实时预览：返回 { html, init(el), start(el), stop(el) }。
   const previews = {
+    'matrix-calculus'() {
+      let elapsed = 0, raf;
+      const expressions = ['2x', '0', 'y', 'x'];
+      const html = `<svg viewBox="0 0 320 180" aria-hidden="true">
+        <text x="160" y="24" text-anchor="middle" font-size="13" fill="var(--ink-2)">f(x, y) = [x², xy]</text>
+        <text x="48" y="96" font-size="20" fill="var(--ink-2)" font-style="italic">J =</text>
+        <path d="M103 38H95V142H103 M263 38H271V142H263" fill="none" stroke="var(--ink-3)" stroke-width="1.5"/>
+        ${expressions.map((expression, i) => {
+          const x = 110 + (i % 2) * 78, y = 41 + Math.floor(i / 2) * 52;
+          return `<rect x="${x}" y="${y}" width="66" height="46" rx="6" fill="${i === 0 || i === 3 ? '#985b57' : '#c4b17b'}" fill-opacity=".18"/>
+            <text class="expression" x="${x + 33}" y="${y + 15}" text-anchor="middle" font-size="12" fill="var(--ink-2)">${expression}</text>
+            <text class="entry" x="${x + 33}" y="${y + 36}" text-anchor="middle" font-size="18" fill="var(--ink)"></text>`;
+        }).join('')}
+        <line x1="110" y1="149" x2="254" y2="149" stroke="var(--rule)" stroke-width="2"/>
+        <circle class="x-point" cy="149" r="3.5" fill="#985b57"/>
+        <text x="99" y="153" text-anchor="end" font-size="10" fill="var(--ink-3)">x</text>
+        <line x1="285" y1="45" x2="285" y2="135" stroke="var(--rule)" stroke-width="2"/>
+        <circle class="y-point" cx="285" r="3.5" fill="#b49a58"/>
+        <text x="285" y="35" text-anchor="middle" font-size="10" fill="var(--ink-3)">y</text>
+        <text class="input-values" x="160" y="164" text-anchor="middle" font-size="11" fill="var(--ink-2)"></text>
+        <text class="phase-label" x="160" y="177" text-anchor="middle" font-size="10" fill="var(--ink-3)"></text>
+        </svg>`;
+      const render = el => {
+        // Each four-second stage returns to 1 before the other variable starts moving.
+        const stage = Math.floor(elapsed / 4000) % 2;
+        const moving = Math.cos((elapsed % 4000) / 4000 * 2 * Math.PI);
+        const x = stage === 0 ? moving : 1, y = stage === 1 ? moving : 1;
+        const values = [2 * x, 0, y, x];
+        const format = value => (Math.abs(value) < .005 ? 0 : value).toFixed(2);
+        el.querySelectorAll('.entry').forEach((node, i) => { node.textContent = format(values[i]); });
+        el.querySelector('.x-point').setAttribute('cx', 182 + 72 * x);
+        el.querySelector('.y-point').setAttribute('cy', 90 - 45 * y);
+        el.querySelector('.input-values').textContent = `x = ${format(x)}    y = ${format(y)}`;
+        el.querySelector('.phase-label').textContent = stage === 0 ? 'x 变化 · y 保持不变' : 'y 变化 · x 保持不变';
+      };
+      return { html, init: render, start(el) {
+        cancelAnimationFrame(raf);
+        let last;
+        const step = now => { if (last !== undefined) elapsed += Math.min(now - last, 50); last = now; render(el); raf = requestAnimationFrame(step); };
+        raf = requestAnimationFrame(step);
+      }, stop() { cancelAnimationFrame(raf); } };
+    },
     // fp8 E4M3：1 位符号、4 位指数、3 位尾数。悬停时随机翻转一位并重新算值。
     floating_points() {
       let bits = [0, 1,0,0,0, 0,1,0], timer;
