@@ -144,8 +144,8 @@ mjx-container[display="true"]{margin:8px 0 1.3em!important;overflow-x:auto;overf
 <li><a href="#sec:1.4">矩阵微积分</a>
 <ul>
 <li><a href="#sec:1.4.1">Jacobian 的一般形式</a></li>
-<li><a href="#sec:1.4.2">向量element-wise二元运算的导数</a></li>
-<li><a href="#sec:1.4.3">涉及标量扩展的导数</a></li>
+<li><a href="#sec:1.4.2">向量逐元素运算的导数</a></li>
+<li><a href="#sec:1.4.3">标量与向量运算的导数</a></li>
 <li><a href="#sec:1.4.4">向量求和归约</a></li>
 <li><a href="#sec:1.4.5">链式法则</a></li>
 </ul>
@@ -377,7 +377,7 @@ $$</div>
 $$</div>
 <p>继续阅读之前，请确认自己能推导出上面的每一步。如果遇到困难，就分别考虑矩阵中的每个元素，并应用通常的标量求导规则。这是一种普遍有用的方法：将向量表达式展开成一组标量表达式，求出所有偏导数，最后再按正确的方式组合成向量和矩阵。</p>
 <p>还要注意矩阵的方向：是竖直的 $\mathbf{x}$，还是水平的 $\mathbf{x}^T$；其中 $\mathbf{x}^T$ 表示 $\mathbf{x}$ 的转置。同时也要分清一个表达式是标量值函数 $y = ...\,$，还是函数组成的向量（或向量值函数）$\mathbf{y} = ...\,$。</p>
-<h3 id="sec:1.4.2">向量element-wise二元运算的导数</h3>
+<h3 id="sec:1.4.2">向量逐元素运算的导数</h3>
 <p>向量的element-wise二元运算，例如向量加法 $\mathbf{w} + \mathbf{x}$，非常重要，因为许多常见向量运算，例如向量乘以标量，都可以表示成element-wise二元运算。“element-wise二元运算”就是对两个向量的第一个元素应用某个运算符，得到输出的第一个元素；再对两个输入的第二个元素执行该运算，得到输出的第二个元素，依此类推。例如，numpy 或 tensorflow 默认就以这种方式应用各种基本数学运算符。深度学习中经常出现的例子包括 $max(\mathbf{w},\mathbf{x})$ 和 $\mathbf{w} &gt; \mathbf{x}$（返回由 1 和 0 组成的向量）。</p>
 <p>可以用记号 $\mathbf{y} = \mathbf{f(w)} \bigcirc \mathbf{g(x)}$ 概括element-wise二元运算，其中 $m=n=|y|=|w|=|x|$。（提醒一下：$|x|$ 是 $x$ 中的元素个数。）符号 $\bigcirc$ 表示任意element-wise运算符，例如 $+$，而不是函数复合运算符 $\circ$。将方程 $\mathbf{y} = \mathbf{f(w)} \bigcirc \mathbf{g(x)}$ 展开为标量方程后，形式如下：</p>
 <div>$$
@@ -465,7 +465,7 @@ $$</div>
 \end{array}
 $$</div>
 <p>运算符 $\otimes$ 和 $\oslash$ 分别表示element-wise乘法和除法；$\otimes$ 有时称为 <i>Hadamard product</i>。element-wise乘除没有统一的标准记号，因此这里采用与一般二元运算记号一致的写法。</p>
-<h3 id="sec:1.4.3">涉及标量扩展的导数</h3>
+<h3 id="sec:1.4.3">标量与向量运算的导数</h3>
 <p>将标量与向量相乘或相加时，我们实际上隐式地把标量扩展为一个向量，然后执行element-wise二元运算。例如，把标量 $z$ 加到向量 $\mathbf{x}$ 上，即 $\mathbf{y} = \mathbf{x} + z$，实际上是 $\mathbf{y} = \mathbf{f(x)} + \mathbf{g}(z)$，其中 $\mathbf{f(x)} = \mathbf{x}$，且 $\mathbf{g}(z) = \overrightarrow{\mathbf 1} z$。（记号 $\overrightarrow{\mathbf 1}$ 表示适当长度的全 1 向量。）$z$ 可以是任何不依赖 $\mathbf{x}$ 的标量，这很有用，因为对任意 $x_{i}$ 都有 $\frac{\partial z}{\partial x_i} = 0$，能够简化偏导数计算。（在这里的讨论中，可以把变量 $z$ 看成常数。）类似地，标量乘法 $\mathbf{y} = \mathbf{x} z$ 实际上是 $\mathbf{y} = \mathbf{f(x)} \otimes \mathbf{g}(z) = \mathbf{x} \otimes \overrightarrow{\mathbf 1}z$，其中 $\otimes$ 表示两个向量的element-wise乘积，即 Hadamard product。</p>
 <p>对于向量与标量的加法和乘法，关于向量 $\mathbf{x}$ 的偏导数可以使用element-wise规则：</p>
 <div>$$
@@ -661,7 +661,7 @@ $$</div>
 \begin{array}{lllllllll}
 	\frac{\partial u_1(x)}{\partial x} &amp;=&amp; 2x &amp;&amp;&amp;(\text{same as }\frac{du_1(x)}{dx})\\
 	\frac{\partial u_2(x,u_1)}{\partial u_1} &amp;=&amp; \frac{\partial }{\partial u_1}(x + u_1) = 0 + 1 = 1\\
-	\frac{\partial u_2(x,u_1)}{\partial x} &amp;\includegraphics[scale=.012]{../images/not-equal-icon.png} &amp; \frac{\partial }{\partial x}(x + u_1) = 1 + 0 = 1 &amp; &amp; &amp;(\text{something&#x27;s not quite right here!})\\
+	\frac{\partial u_2(x,u_1)}{\partial x} &amp;\neq &amp; \frac{\partial }{\partial x}(x + u_1) = 1 + 0 = 1 &amp; &amp; &amp;(\text{something&#x27;s not quite right here!})\\
 \end{array}
 $$</div>
 <p>这里的偏导数 $\frac{\partial u_2(x,u_1)}{\partial x}$ 是错误的，因为它违反了偏导数的一个关键假设。对 $x$ 求偏导时，其他变量不能随着 $x$ 改变，否则就无法把它们当作常数。然而，$u_1(x)=x^2$ 显然是 $x$ 的函数，因此会随 $x$ 改变。由于 $\frac{\partial u_1(x)}{\partial x} \neq 0$，所以 $\frac{\partial u_2(x,u_1)}{\partial x} \neq 1 + 0$。观察 $y=u_2(x,u_1)$ 的数据流图，可以发现从 $x$ 到 $y$ 有多条路径。这说明我们必须同时考虑对 $x$ 的直接依赖，以及通过 $u_1(x)$ 的间接依赖：</p>
