@@ -757,7 +757,8 @@ $$\frac{\partial L}{\partial \mathbf{s}_t} = \frac{1}{T}\big(\mathbf{p}_t - \mat
 <p>这个函数是阶梯函数：在几乎所有点导数为零，在跳变点不可导。按定义求导会使梯度在这里变为零，权重无法更新。所以框架不按定义求导，而是登记一条约定：</p>
 $$\frac{\partial L}{\partial W_{\text{fp32}}} := \frac{\partial L}{\partial W_{\text{bf16}}}\ \text{转回 FP32}$$
 <p>也就是把舍入当作恒等运算，导数原样通过。前向用不可导的舍入，反向用恒等函数替代它的导数，这种做法称为 straight-through estimator，Bengio 等人在 2013 年的论文中对它做了系统的讨论<a href="#references">[4]</a>。这样得到的梯度是在舍入后的 BF16 权重处算出的，却被当作 FP32 权重处的梯度使用，两者的差别与舍入误差同量级，训练中不对这部分误差做修正。</p>
-<p>算出梯度之后，更新也不能直接加在 BF16 权重上。单步更新 $\eta\,\partial L/\partial w$ 相对权重自身的幅度，往往小于 BF16 相邻可表示数的相对间隔（BF16 存储 7 位尾数，相对间隔约 $2^{-7}$），加上去之后会被舍入丢掉。这个问题来自 BF16 的精度，与 straight-through estimator 无关。Micikevicius 等人在 2018 年的混合精度训练论文里针对 FP16 说明了这个问题<a href="#references">[3]</a>，解决办法是保留一份 FP32 主权重：更新累加在 FP32 上，每一步前向再舍入成 BF16。activation 一侧同理，矩阵乘法在 BF16 中进行，反向传回的 $G$ 是 BF16，$X^T G$ 得到的权重导数累加到 FP32。</p>
+<p>算出梯度之后，更新也不能直接加在 BF16 权重上。单步更新 $\eta\,\partial L/\partial w$ 相对权重自身的幅度，往往小于 BF16 相邻可表示数的相对间隔（BF16 存储 7 位尾数，相对间隔约 $2^{-7}$），加上去之后会被舍入丢掉。这个问题来自 BF16 的精度，与 straight-through estimator 无关。Micikevicius 等人在 2018 年的混合精度训练论文里针对 FP16 说明了这个问题<a href="#references">[3]</a>，解决办法是保留一份 FP32 主权重：更新累加在 FP32 上，每一步前向再舍入成 BF16。</p>
+<p>权重导数本身也由 BF16 的矩阵乘法算出：前向保存的 $X$ 和反向传回的 $G$ 都是 BF16。$X^T G$ 的每个元素是对序列长度 $T$ 求和的内积。同一篇论文指出，这类内积要把逐项乘积累加到 FP32，写回内存时再转换成低精度；不这样做，一些模型达不到 FP32 训练的精度<a href="#references">[3]</a>。写回的 $\dfrac{\partial L}{\partial W_{\text{bf16}}}$ 再按上面的约定转回 FP32，用于更新主权重。</p>
 
 </section>
 
