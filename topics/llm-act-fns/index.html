@@ -63,14 +63,14 @@ a{color:var(--accent); text-decoration:none; border-bottom:1px solid color-mix(i
 a:hover{border-bottom-color:var(--accent)}
 mark{color:var(--lede-highlight); font-weight:500; background:linear-gradient(transparent 72%,var(--lede-highlight-soft) 72%); padding:0 .06em; -webkit-box-decoration-break:clone; box-decoration-break:clone}
 a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
-.frame{max-width:1180px; margin:0 auto; display:grid; grid-template-columns:220px minmax(0,720px); gap:64px; justify-content:center}
+.frame{max-width:1180px; margin:0 auto; display:grid; grid-template-columns:220px minmax(0,720px); gap:0 64px; justify-content:center}
 @media (max-width:1000px){ .frame{grid-template-columns:minmax(0,720px)} }
 
 /* masthead */
 .mast{grid-column:1/-1; padding-block:56px 40px; border-bottom:1px solid var(--rule-2); margin-bottom:40px}
 .mast .eyebrow{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); margin:0 0 14px}
 .mast h1{font-family:"Noto Serif SC","Songti SC","SimSun",serif; font-weight:700; font-size:clamp(34px,5vw,52px); line-height:1.2; margin:0 0 18px; text-wrap:balance; letter-spacing:-.01em}
-.mast p.lede{font-size:18px; color:var(--ink-2); max-width:44em; margin:0 0 26px; line-height:1.8}
+.mast p.lede{font-size:18px; color:var(--ink-2); max-width:44em; margin:0; line-height:1.8}
 .mast .meta{display:flex; flex-wrap:wrap; gap:8px 28px; font-size:13.5px; color:var(--ink-3); font-family:"JetBrains Mono",ui-monospace,monospace}
 
 /* toc */
@@ -326,11 +326,11 @@ td .tag{display:inline-block; font-size:11.5px; font-family:"JetBrains Mono",ui-
     \sigma(x)&=\frac{1}{1+e^{-x}},&\qquad \frac{d\sigma(x)}{dx}&=\sigma(x)\bigl(1-\sigma(x)\bigr)\le\tfrac14;\\[8pt]
     \tanh(x)&=2\sigma(2x)-1,&\qquad \frac{d\tanh(x)}{dx}&=1-\tanh^2(x)\le 1.
   \end{aligned}$$</div>
-  <figure id="fig-sig"><figcaption><p>左图是两条曲线的输出 $f(x)$，右图是对应的导数 $\frac{df(x)}{dx}$。</p></figcaption></figure>
-  <p><strong>当输入趋向负无穷：</strong>Sigmoid 的输出趋近 0，用作门控时会使被乘的信号趋近零；Tanh 的输出趋近 −1，保留饱和的负信号。两者的导数都为正，并随输入趋向负无穷而趋近零：输出逐渐不再变化，局部梯度也越来越弱。</p>
-  <p><strong>原点：</strong>Sigmoid 输出 0.5，导数为 0.25。若它的输出被送入带 bias 的线性层，这个常数分量可以由后续 bias 抵消；若它直接乘在信号上做 gate，0.5 表示信号减半，不能靠后续 bias 抵消；不过 gate 的作用本来就是按比例缩放信号，零输入对应减半是这个设计的一部分，不需要抵消。Tanh 输出 0，导数为 1，因此在零附近近似原样传递输入。</p>
-  <p><strong>过渡区：</strong>两者都光滑、单调，导数连续。统一用「完成输出变化的 10% 到 90%」衡量：Sigmoid 约为 −2.20 到 2.20（宽 4.39），Tanh 约为 −1.10 到 1.10（宽 2.20，对应输出 −0.8 到 0.8）。相同输入尺度下，Tanh 的过渡区更窄、更陡，Sigmoid 的更宽、更缓。图中淡色带和加粗的曲线段对应这两个范围，空心圆标出区间边界；水平虚线标出饱和时趋近的值，线长不表示饱和区范围，饱和没有固定起点。悬停或用 Tab 聚焦标记可读说明。</p>
-  <p><strong>当输入趋向正无穷：</strong>两者的输出都趋近 1，导数都趋近零。强正信号被压到有限范围内；输入继续增大，输出也几乎不再增加。这适合使门控系数接近 1，或限制输出幅度，但会削弱大输入之间的差异。</p>
+  <figure id="fig-sig"></figure>
+  <p><mark>当输入趋向负无穷：</mark>Sigmoid 的输出趋近 0，用作门控时会使被乘的信号趋近零；Tanh 的输出趋近 −1，保留饱和的负信号。两者的导数都为正，并随输入趋向负无穷而趋近零：输出逐渐不再变化，局部梯度也越来越弱。</p>
+  <p><mark>原点：</mark>Sigmoid 输出 0.5，导数为 0.25。若它的输出被送入带 bias 的线性层，这个常数分量可以由后续 bias 抵消；若它直接乘在信号上做 gate，0.5 表示信号减半，不能靠后续 bias 抵消；不过 gate 的作用本来就是按比例缩放信号，零输入对应减半是这个设计的一部分，不需要抵消。Tanh 输出 0，导数为 1，因此在零附近近似原样传递输入。</p>
+  <p><mark>过渡区：</mark>两者都光滑、单调，导数连续。相同输入尺度下，Tanh 的过渡区更窄、更陡，Sigmoid 的更宽、更缓。统一用「完成输出变化的 10% 到 90%」衡量：Sigmoid 约为 −2.20 到 2.20（宽 4.39），Tanh 约为 −1.10 到 1.10（宽 2.20，对应输出 −0.8 到 0.8）。</p>
+  <p><mark>当输入趋向正无穷：</mark>两者的输出都趋近 1，导数都趋近零。强正信号被压到有限范围内；输入继续增大，输出也几乎不再增加。这适合使门控系数接近 1，或限制输出幅度，但会削弱大输入之间的差异。</p>
   <p>在现代模型中，sigmoid 常用于门控：SiLU 本身就是 $x\,\sigma(x)$，DeepSeek-V3 的 MoE 路由用 sigmoid 给专家打分，Qwen3-Next 的 gated attention 在注意力输出后乘一个 sigmoid gate，Mamba 和 Gated DeltaNet 的遗忘 gate 也都是 sigmoid。它有界、单调、输出天然落在 $(0,1)$，这些性质便于将它用作乘法系数。但接近 0 或 1 时，梯度仍会因饱和而减小。</p>
   <p>tanh 也用于 soft-capping。任何一个无界量 $z$ 都可以写成 $c\cdot\tanh(z/c)$，这样在 $|z|\ll c$ 时几乎是恒等映射，导数接近 1；在 $|z|\gg c$ 时被平滑地压到 $\pm c$ 以内。Gemma 2 用它处理 logits，Gemma 3 一度去掉，Gemma 4 又把最终 logits 的 soft-capping 加了回来（<code>final_logit_softcapping: 30.0</code>）；Kimi K3 用它处理 GLU 的两个分支，这个思路我们在第 08 节还会展开。和直接截断到固定值的做法相比，它的导数处处连续，饱和区域的梯度不是直接归零，而是按 $1-\tanh^2$ 平滑衰减。</p>
 </section>
@@ -339,11 +339,11 @@ td .tag{display:inline-block; font-size:11.5px; font-family:"JetBrains Mono",ui-
   <h2><span class="n">04</span>ReLU：计算开销与激活稀疏性</h2>
   <p class="sub">它计算开销小，能让 FFN 的中间层出现大量精确为零的输出。这两点在 2024 年之后重新变得重要。</p>
   <div class="math-block">$$\mathrm{ReLU}(x)=\max(0,x),\qquad \frac{d\,\mathrm{ReLU}(x)}{dx}=\mathbb{1}[x>0].$$</div>
-  <figure id="fig-relu"><figcaption><p>左图是 ReLU 的输出 $f(x)$，右图是导数 $\frac{df(x)}{dx}$。</p></figcaption></figure>
-  <p><strong>负半轴：</strong>输出和导数严格为零。淡色区域表示整个输出为零的区域，不是过渡区。</p>
-  <p><strong>原点：</strong>输出为 0；左侧斜率 0、右侧斜率 1，函数连续但不可导。导数图的空心圆表示左右极限，不代表原点的导数值。实现通常约定原点的反向值为 0。</p>
-  <p><strong>过渡区：</strong>没有有限宽度的过渡，切换集中在 x=0 的竖虚线上。两个导数分支分开绘制，不用斜线连接。</p>
-  <p><strong>正半轴：</strong>输出等于输入，导数恒为 1。信号线性增长，没有上界。</p>
+  <figure id="fig-relu"></figure>
+  <p><mark>负半轴：</mark>输出和导数严格为零。淡色区域表示整个输出为零的区域，不是过渡区。</p>
+  <p><mark>原点：</mark>输出为 0；左侧斜率 0、右侧斜率 1，函数连续但不可导。导数图的空心圆表示左右极限，不代表原点的导数值。实现通常约定原点的反向值为 0。</p>
+  <p><mark>过渡区：</mark>没有有限宽度的过渡，切换集中在 x=0 的竖虚线上。两个导数分支分开绘制，不用斜线连接。</p>
+  <p><mark>正半轴：</mark>输出等于输入，导数恒为 1。信号线性增长，没有上界。</p>
   <p>原始 Transformer 用的就是 ReLU，被 GELU 取代的直接原因是在同等设置下 loss 略高一些，间接原因是它在原点不光滑、负半轴梯度恒为零，训练早期一旦某个通道的预激活值整体偏负，它就再也不会被更新（具体参考：<a href="https://app.heptabase.com/p/card/78579053-4d9a-4387-b8ab-e53d245c2078">dead ReLU</a>）。对于 2018 年在几亿参数规模上做预训练的人来说，换成 GELU 收益虽小但稳定，BERT、GPT 之后的模型陆续沿用了这个选择，ReLU 由此退出了主流 LLM。</p>
   <p>稀疏推理研究重新关注了 ReLU。SiLU 和 GELU 的输出通常非零；ReLU 在整个负半轴上输出严格为零，输出为零的通道可以在推理时跳过，有利于端侧或带宽受限时减少内存搬运。Apple 在「ReLU Strikes Back」这篇工作里指出，如果 FFN 用 ReLU，那么中间层的输出在大多数 token 上有九成以上是精确的零，而每个零对应着 $W_2$ 中一整行不需要读取、不需要参与乘法的权重。对于内存带宽受限的推理场景（尤其是端侧和 CPU offloading），这意味着 FFN 需要读取的权重和实际参与的乘法都可以降到原来的三分之一左右，而且用 ReLU 重新微调一个 GELU 或 SiLU 模型（论文称之为 <a href="https://arxiv.org/abs/2310.04564">ReLUfication</a>，即将激活函数替换为 ReLU 后继续训练） 损失的精度并不多。后续的 TurboSparse 将这一方法扩展到门控结构，提出 <a href="https://arxiv.org/html/2406.05955v1#S3.SS2">dReLU</a>：对 gate projection 和 up projection 的输出分别应用 ReLU，再逐元素相乘，</p>
   <div class="math-block">$$\mathrm{dReLU}(x)=\mathrm{ReLU}(xW_g)\odot\mathrm{ReLU}(xW_u),$$</div>
@@ -364,11 +364,11 @@ td .tag{display:inline-block; font-size:11.5px; font-family:"JetBrains Mono",ui-
     <div class="math-block">$$\mathbb E[xB\mid x]=\underbrace{x\cdot\Phi(x)}_{\text{保留时的输出}\times\text{概率}}+\underbrace{0\cdot\bigl[1-\Phi(x)\bigr]}_{\text{置零时的输出}\times\text{概率}}=x\,\Phi(x).$$</div>
     <p>例如，若某个输入的保留概率为 $0.8$，那么平均输出就是 $0.8x$。ReLU 对应 $P(B=1\mid x)=\mathbb{1}[x>0]$，dropout 对应 $P(B=1\mid x)=p$ 且与 $x$ 无关；GELU 把这个概率改成随 $x$ 单调增加的 $\Phi(x)$，再取期望，就得到确定性的 $x\Phi(x)$。</p>
   </details>
-  <figure id="fig-gelu"><figcaption><p>左图是 GELU 的输出 $f(x)$，右图是导数 $\frac{df(x)}{dx}$；实线是精确 GELU，虚线是两种近似。三条曲线在默认视野下几乎重合，拖动「横轴范围」缩小范围、拖动「横轴中心」移动位置后可以看出差异，纵轴会随可见曲线自动调整。</p></figcaption></figure>
-  <p><strong>当输入趋向负无穷：</strong>输出从负值一侧趋近零，导数也从负值一侧趋近零，幅度按高斯尾部快速衰减，所以强负输入几乎不输出信号，也几乎不传递梯度。与 ReLU 的区别是这里没有整段严格为零的区域，输出和导数只是接近零，不等于零。</p>
-  <p><strong>原点：</strong>输出为 0，导数为 0.5。零输入不产生输出，但原点附近的小扰动仍能通过，局部响应约为输入变化的一半。</p>
-  <p><strong>过渡区：</strong>主要变化集中在约 −2 到 2（这是观察范围，不是严格的区间边界），曲线和导数都连续光滑。输出先在约 −0.75 处降到最低点 −0.17，再回升并穿过原点。注意函数最低点与导数最低点不同：导数在 −√2 处最低，约 −0.129；在 √2 处最高，约 1.129，随后回落。导数为负的那一段会翻转反向传播梯度的符号，导数大于 1 的那一段会放大梯度。图中淡色带和加粗段表示这一观察范围，实心点标出原点和极值，箭头表示曲线向两侧延伸；负半轴的水平虚线表示输出趋近零，正半轴的斜虚线表示近似线性增长，导数图的水平虚线分别表示趋近 0 和 1。悬停或用 Tab 聚焦标记可读说明。标记针对精确 GELU，近似曲线用于对照。</p>
-  <p><strong>当输入趋向正无穷：</strong>输出越来越接近输入本身，导数趋近 1。强正信号以近似线性的方式通过，没有上界，但其增长速度不会随输入持续增加。</p>
+  <figure id="fig-gelu"><figcaption><p>左图是 GELU 的输出 $f(x)$，右图是导数 $\frac{df(x)}{dx}$；实线是精确 GELU，虚线是两种近似。三条曲线在默认视野下几乎重合，拖动「横轴范围」、「横轴中心」查看差异。</p></figcaption></figure>
+  <p><mark>当输入趋向负无穷：</mark>输出从负值一侧趋近零，导数也从负值一侧趋近零，幅度按高斯尾部快速衰减，所以强负输入几乎不输出信号，也几乎不传递梯度。与 ReLU 的区别是这里没有整段严格为零的区域，输出和导数只是接近零，不等于零。</p>
+  <p><mark>原点：</mark>输出为 0，导数为 0.5。零输入不产生输出，但原点附近的小扰动仍能通过，局部响应约为输入变化的一半。</p>
+  <p><mark>过渡区：</mark>曲线和导数都连续光滑。输出先在约 −0.75 处降到最低点 −0.17，再回升并穿过原点。注意函数最低点与导数最低点不同：导数在 −√2 处最低，约 −0.129；在 √2 处最高，约 1.129，随后回落。</p>
+  <p><mark>当输入趋向正无穷：</mark>输出越来越接近输入本身，导数趋近 1。强正信号以近似线性的方式通过，没有上界，但其增长速度不会随输入持续增加。</p>
   <h3 id="gelu-approximations">两种近似</h3>
   <p>$\Phi(x)$ 可以通过误差函数 $\mathrm{erf}$ 计算。相比 ReLU，它的数值求值更复杂，因此也常使用近似形式；实际性能收益取决于硬件和实现。</p>
   <details class="math-note">
@@ -415,8 +415,8 @@ td .tag{display:inline-block; font-size:11.5px; font-family:"JetBrains Mono",ui-
   \mathrm{GLU}_\phi(x)=\bigl(\phi(g)\odot u\bigr)W_d,&\qquad W_g,W_u\in\mathbb{R}^{d\times d_{ff}},\; W_d\in\mathbb{R}^{d_{ff}\times d}.
   \end{aligned}$$</div>
   <p>输入 $x$ 先经过两个不同的线性投影，得到门控分支 $g$ 和线性分支 $u$，两者都是 $d_{ff}$ 维向量。对 $g$ 应用激活函数，再与 $u$ 逐元素相乘，得到中间表示 $h=\phi(g)\odot u$；最后通过 $W_d$ 将中间表示投影为输出。名字里的前缀就是门控分支所用的函数：SwiGLU 用 SiLU，GeGLU 用 GELU，ReGLU 用 ReLU。</p>
-  <p>下图对照普通 FFN 与 GLU 的一次前向计算。图中 $T$ 是序列长度，每个张量旁标注它的形状与元素个数（activation 大小），每个矩阵旁标注它的形状与参数量，偏置项省略。</p>
-  <figure id="fig-ffn-glu"><figcaption><p>左图普通 FFN 有两个矩阵，激活函数作用在 $Z$ 上；右图 GLU 有三个矩阵，$W_g$ 与 $W_u$ 并行作用于同一个输入，激活函数只作用在门控分支 $G$ 上，再与 $U$ 逐元素相乘。</p><p>取常见宽度（左图 $d_{ff}=4d$，右图 $d_{ff}=\tfrac{8}{3}d$）时，两者的参数量都是 $8d^2$，中间张量的元素总数也都是 $8Td$。差别在于反向传播需要保存的内容：普通 FFN 只需保存 $Z$，GLU 需要保存 $G$ 和 $U$。</p></figcaption></figure>
+  <p>下图对照普通 FFN 与 GLU 的一次前向计算。图中 $T$ 是序列长度。</p>
+  <figure id="fig-ffn-glu"></figure>
   <h3 id="swiglu-channel">先看 SwiGLU 的一个中间通道</h3>
   <p>暂时不看最后的输出投影 $W_d$，只观察逐元素相乘这一步。取出第 $i$ 个通道（维度）后，$g_i$ 和 $u_i$ 都是一个数，这个通道的输出（默认使用 SiLU）就是：</p>
   <div class="math-block">$$h_i=\mathrm{SiLU}(g_i)\,u_i=g_i\,\sigma(g_i)\,u_i.$$</div>
@@ -870,57 +870,73 @@ figure('fig-softplus',{ label:'Softplus', x:[-5,5], yf:[-0.5,5], yd:[-0.1,1.1], 
 /* ---------- FFN 与 GLU 的前向对照图 ---------- */
 (function(){
   const fig=document.getElementById('fig-ffn-glu'); if(!fig) return; const cap=fig.querySelector('figcaption');
-  const panels=document.createElement('div'); panels.className='panels'; fig.insertBefore(panels,cap);
-  const W=440,H=320;
+  const panels=document.createElement('div'); panels.className='panels'; panels.style.gridTemplateColumns='1fr'; fig.insertBefore(panels,cap);
+  /* 参数矩阵的宽和高、activation 的宽度按真实比例绘制：维度 d 对应 U 像素，activation 的宽度等于右侧参数矩阵的高度。
+     序列长度 T 通常远小于 d（T 为 4 到 128，d 为 4096 量级），无法按比例绘制，activation 的高度固定为 BH 像素 */
+  const W=720, H=216, CY=92, U=42, BH=27, OP=30;
+  const STYLE={
+    act:{fill:'var(--s4)','fill-opacity':.2,stroke:'var(--ink-2)'},
+    param:{fill:'var(--s1)','fill-opacity':.28,stroke:'var(--ink-2)'},
+  };
   function panel(title,aria){
-    const p=document.createElement('div'); p.className='panel'; const h=document.createElement('h4'); h.innerHTML=richHTML(title); h.style.fontFamily='inherit'; p.appendChild(h);
+    const p=document.createElement('div'); p.className='panel'; const h4=document.createElement('h4'); h4.innerHTML=richHTML(title); h4.style.fontFamily='inherit'; p.appendChild(h4);
     const wrap=document.createElement('div'); wrap.className='plotwrap'; const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':aria}); wrap.appendChild(svg); p.appendChild(wrap); panels.appendChild(p);
     const defs=el('defs'); const mk=el('marker',{id:'arrow-'+(uid++),viewBox:'0 0 8 8',refX:'7',refY:'4',markerWidth:'7',markerHeight:'7',orient:'auto'});
     mk.appendChild(el('path',{d:'M0,0 L8,4 L0,8 z',fill:'var(--ink-2)'})); defs.appendChild(mk); svg.appendChild(defs);
     svg.dataset.marker=mk.id; return svg;
   }
-  /* 张量：圆角矩形，第一行为名称与形状，第二行为元素个数 */
-  function tensor(svg,cx,cy,name,shape,count,accent){
-    const w=168,h=42;
-    svg.appendChild(el('rect',{x:cx-w/2,y:cy-h/2,width:w,height:h,rx:6,fill:accent?'var(--accent-soft)':'var(--surface-2)',stroke:accent?'var(--accent)':'var(--rule-2)','stroke-width':1.2}));
-    svg.appendChild(svgLabel(name+' $\\in\\mathbb{R}^{'+shape+'}$',{x:cx,y:cy-3,anchor:'middle',size:11,halo:false}));
-    svg.appendChild(svgLabel('activation $'+count+'$ 个元素',{x:cx,y:cy+14,anchor:'middle',size:9.5,fill:'var(--ink-2)',halo:false}));
+  const text=(svg,t,x,y,o={})=>svg.appendChild(svgLabel(t,{x,y,anchor:'middle',size:10,fill:'var(--ink-2)',halo:false,...o}));
+  /* 矩阵：左边缘 x，竖直中心 cy。名字写在矩形内，形状写在下方 */
+  function mat(svg,x,cy,w,h,kind,name,shape){
+    svg.appendChild(el('rect',{x,y:cy-h/2,width:w,height:h,rx:5,...STYLE[kind],'stroke-width':1.4}));
+    text(svg,name,x+w/2,cy+4,{size:12,fill:'var(--ink)'});
+    text(svg,'$'+shape+'$',x+w/2,cy+h/2+15);
+    return x+w;
   }
-  /* 箭头：从 (x1,y1) 到 (x2,y2)，标签放在箭头中点的右侧或左侧 */
-  function arrow(svg,x1,y1,x2,y2,lines,side=1){
-    svg.appendChild(el('line',{x1,y1,x2,y2,stroke:'var(--ink-2)','stroke-width':1.4,'marker-end':`url(#${svg.dataset.marker})`}));
-    const mx=(x1+x2)/2,my=(y1+y2)/2;
-    lines.forEach((t,i)=>svg.appendChild(svgLabel(t,{x:mx+side*8,y:my+2+i*14-(lines.length-1)*6,anchor:side>0?'start':'end',size:10.5,fill:i?'var(--ink-2)':'var(--ink)',halo:false})));
+  const op=(svg,x,t,y=CY)=>(text(svg,t,x+OP/2,y+4,{size:13}),x+OP);
+  const path=(svg,d)=>svg.appendChild(el('path',{d,fill:'none',stroke:'var(--ink-2)','stroke-width':1.4,'marker-end':`url(#${svg.dataset.marker})`}));
+  const act=(svg,x,w,name,shape)=>mat(svg,x,CY,w,BH,'act',name,shape);
+  /* 逐元素函数：圆角框，左边缘 x，竖直中心 y */
+  function fn(svg,x,y,w,t){
+    svg.appendChild(el('rect',{x,y:y-12,width:w,height:24,rx:12,fill:'var(--surface)',stroke:'var(--ink-2)','stroke-width':1.4}));
+    text(svg,t,x+w/2,y+4,{size:10.5,fill:'var(--ink)'}); return x+w;
   }
-  const gap=21; /* 张量框半高 */
-  /* 左：普通 FFN */
+  /* 上：普通 FFN，d_ff = 4d */
   {
-    const svg=panel('普通 FFN：$Y=\\phi(XW_1)\\,W_2$','普通 FFN 的前向计算流程');
-    const cx=170, ys=[30,112,194,278];
-    tensor(svg,cx,ys[0],'$X$','T\\times d','T\\,d',true);
-    arrow(svg,cx,ys[0]+gap,cx,ys[1]-gap,['$W_1\\in\\mathbb{R}^{d\\times d_{ff}}$','参数 $d\\,d_{ff}$']);
-    tensor(svg,cx,ys[1],'$Z=XW_1$','T\\times d_{ff}','T\\,d_{ff}');
-    arrow(svg,cx,ys[1]+gap,cx,ys[2]-gap,['$\\phi$ 逐元素','无参数']);
-    tensor(svg,cx,ys[2],'$H=\\phi(Z)$','T\\times d_{ff}','T\\,d_{ff}');
-    arrow(svg,cx,ys[2]+gap,cx,ys[3]-gap,['$W_2\\in\\mathbb{R}^{d_{ff}\\times d}$','参数 $d_{ff}\\,d$']);
-    tensor(svg,cx,ys[3],'$Y=HW_2$','T\\times d','T\\,d',true);
-    svg.appendChild(svgLabel('参数合计 $2\\,d\\,d_{ff}$；$d_{ff}=4d$ 时为 $8d^2$',{x:cx,y:H-6,anchor:'middle',size:10,fill:'var(--ink-2)',halo:false}));
+    const svg=panel('普通 FFN：$Y=\\phi(XW_1)\\,W_2$','普通 FFN 的前向计算：X 乘 W1 得 Z，Z 经过激活函数得 H，H 乘 W2 得 Y。W1 与 W2 按真实比例绘制');
+    const F=4*U, SW=40; let x=(W-(2*U+F+3*OP+F+U+34+SW+34))/2;
+    x=act(svg,x,U,'$X$','T\\times d'); x=op(svg,x,'$@$');
+    x=mat(svg,x,CY,F,U,'param','$W_1$','d\\times d_{ff}');
+    path(svg,`M${x+2},${CY}H${x+32}`); text(svg,'$Z$',x+17,CY-6,{fill:'var(--ink)'}); x+=34;
+    x=fn(svg,x,CY,SW,'$\\phi$');
+    path(svg,`M${x+2},${CY}H${x+32}`); x+=34;
+    x=act(svg,x,F,'$H$','T\\times d_{ff}'); x=op(svg,x,'$@$');
+    x=mat(svg,x,CY,U,F,'param','$W_2$','d_{ff}\\times d'); x=op(svg,x,'$=$');
+    act(svg,x,U,'$Y$','T\\times d');
+    text(svg,'参数合计 $2\\,d\\,d_{ff}$；$d_{ff}=4d$ 时为 $8d^2$',W/2,H-8,{size:10.5});
   }
-  /* 右：GLU */
+  /* 下：GLU，d_ff = 8d/3。W_g 与 W_u 上下排列，都与 X 相乘 */
   {
-    const svg=panel('GLU：$Y=(\\phi(XW_g)\\odot XW_u)\\,W_d$','GLU 的前向计算流程');
-    const cx=220, lx=110, rx=330, ys=[30,120,200,278];
-    tensor(svg,cx,ys[0],'$X$','T\\times d','T\\,d',true);
-    arrow(svg,cx-30,ys[0]+gap,lx+20,ys[1]-gap,['$W_g\\in\\mathbb{R}^{d\\times d_{ff}}$','参数 $d\\,d_{ff}$'],-1);
-    arrow(svg,cx+30,ys[0]+gap,rx-20,ys[1]-gap,['$W_u\\in\\mathbb{R}^{d\\times d_{ff}}$','参数 $d\\,d_{ff}$'],1);
-    tensor(svg,lx,ys[1],'$G=XW_g$','T\\times d_{ff}','T\\,d_{ff}');
-    tensor(svg,rx,ys[1],'$U=XW_u$','T\\times d_{ff}','T\\,d_{ff}');
-    arrow(svg,lx+20,ys[1]+gap,cx-30,ys[2]-gap,['$\\phi$ 逐元素，再 $\\odot$'],-1);
-    arrow(svg,rx-20,ys[1]+gap,cx+30,ys[2]-gap,['$\\odot$ 逐元素相乘'],1);
-    tensor(svg,cx,ys[2],'$H=\\phi(G)\\odot U$','T\\times d_{ff}','T\\,d_{ff}');
-    arrow(svg,cx,ys[2]+gap,cx,ys[3]-gap,['$W_d\\in\\mathbb{R}^{d_{ff}\\times d}$','参数 $d_{ff}\\,d$']);
-    tensor(svg,cx,ys[3],'$Y=HW_d$','T\\times d','T\\,d',true);
-    svg.appendChild(svgLabel('参数合计 $3\\,d\\,d_{ff}$；$d_{ff}=\\tfrac{8}{3}d$ 时为 $8d^2$',{x:cx,y:H-6,anchor:'middle',size:10,fill:'var(--ink-2)',halo:false}));
+    const svg=panel('GLU：$Y=(\\phi(XW_g)\\odot XW_u)\\,W_d$','GLU 的前向计算：X 分别乘 Wg 与 Wu 得 G 与 U，G 经过激活函数后与 U 逐元素相乘得 H，H 乘 Wd 得 Y。三个参数矩阵按真实比例绘制');
+    const F=8/3*U, DY=34, yg=CY-DY, yu=CY+DY, SW=40, R=11, RC=8; /* RC：连接线拐角的圆弧半径 */
+    let x=(W-(2*U+F+3*OP+F+34+SW+34+2*R+44+U))/2;
+    x=act(svg,x,U,'$X$','T\\times d'); op(svg,x,'$@$',yg); x=op(svg,x,'$@$',yu);
+    mat(svg,x,yg,F,U,'param','$W_g$','d\\times d_{ff}');
+    x=mat(svg,x,yu,F,U,'param','$W_u$','d\\times d_{ff}');
+    /* 门控分支：G 经过激活函数 */
+    const xs=x+34, xc=xs+SW+34+R;
+    path(svg,`M${x+2},${yg}H${xs-2}`); text(svg,'$G$',(x+xs)/2,yg-6,{fill:'var(--ink)'});
+    fn(svg,xs,yg,SW,'$\\phi$');
+    /* 两条分支用圆角正交连接线汇入逐元素相乘 */
+    path(svg,`M${xs+SW},${yg}H${xc-RC}A${RC},${RC} 0 0 1 ${xc},${yg+RC}V${CY-R-2}`);
+    path(svg,`M${x+2},${yu}H${xc-RC}A${RC},${RC} 0 0 0 ${xc},${yu-RC}V${CY+R+2}`); text(svg,'$U$',(x+xs)/2,yu-6,{fill:'var(--ink)'});
+    svg.appendChild(el('circle',{cx:xc,cy:CY,r:R,fill:'var(--surface)',stroke:'var(--ink-2)','stroke-width':1.4}));
+    text(svg,'$\\odot$',xc,CY+4,{size:12,fill:'var(--ink)'});
+    x=xc+R; path(svg,`M${x+2},${CY}H${x+40}`); x+=44;
+    x=act(svg,x,F,'$H$','T\\times d_{ff}'); x=op(svg,x,'$@$');
+    x=mat(svg,x,CY,U,F,'param','$W_d$','d_{ff}\\times d'); x=op(svg,x,'$=$');
+    act(svg,x,U,'$Y$','T\\times d');
+    text(svg,'参数合计 $3\\,d\\,d_{ff}$；$d_{ff}=\\tfrac{8}{3}d$ 时为 $8d^2$',W/2,H-8,{size:10.5});
   }
 })();
 
