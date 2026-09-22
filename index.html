@@ -50,6 +50,11 @@ h2{font-family:var(--serif);font-size:calc(18px*var(--k));margin:0;line-height:1
 .s{font-size:calc(13.5px*var(--k));color:var(--ink-2);margin:0;flex:1}
 .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
 .tag{font-family:var(--mono);font-size:calc(11px*var(--k));color:var(--ink-3);background:var(--surface-2);padding:1px 7px;border-radius:4px}
+/* 状态标记：tags 里的 v1 表示已完成的版本，draft 表示早期版本 */
+.st{position:absolute;left:10px;top:8px;z-index:1;font-family:var(--mono);font-size:calc(11px*var(--k));padding:1px 8px;border-radius:999px;border:1px solid}
+.st.v{color:#1b7a52;background:#e3f4eb;border-color:#9fd6b8}
+.st.draft{color:#9a5a00;background:#fbefd4;border-color:#e8c37a}
+@media(prefers-color-scheme:dark){.st.v{color:#7fd8a8;background:#17352a;border-color:#2c5f45}.st.draft{color:#f0c068;background:#3a2c12;border-color:#6b5020}}
 /* 预览：浮点位串 */
 .bits{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:4px}
 .bit{width:calc(26px*var(--k));height:calc(38px*var(--k));border-radius:5px;display:grid;place-items:center;font-size:calc(16px*var(--k));font-weight:500;color:#fff;transition:opacity .2s}
@@ -85,17 +90,17 @@ h2{font-family:var(--serif);font-size:calc(18px*var(--k));margin:0;line-height:1
   // 新增主题：加一条记录，并在 previews 里补一个同 id 的预览函数。
   const topics = [
     { id: 'matrix-calculus', cat: 'math', title: '深度学习所需的矩阵微积分', href: 'topics/matrix-calculus/',
-      summary: '从偏导数与 Jacobian 到向量链式法则，逐步推导 ReLU 神经元和均方误差的参数梯度。', tags: ['Jacobian', '链式法则', '梯度'] },
+      summary: '从偏导数与 Jacobian 到向量链式法则，逐步推导 ReLU 神经元和均方误差的参数梯度。', tags: ['Jacobian', '链式法则', '梯度', 'draft'] },
     { id: 'floating_points', cat: 'numerics', title: '浮点数格式', href: 'topics/floating_points/',
-      summary: 'fp4 到 fp32 的位布局、可表示范围与舍入。输入一个数，逐位查看它的编码。', tags: ['fp4', 'fp8', 'bf16', 'fp32'] },
+      summary: 'fp4 到 fp32 的位布局、可表示范围与舍入。输入一个数，逐位查看它的编码。', tags: ['fp4', 'fp8', 'bf16', 'fp32', 'v1'] },
     { id: 'bpe', cat: 'tokenize', title: 'BPE 分词', href: 'topics/bpe/',
-      summary: '按 Sennrich et al. (2016) 的算法逐步合并最高频符号对，再用学到的合并顺序切分新词。', tags: ['sennrich', 'bpe'] },
+      summary: '按 Sennrich et al. (2016) 的算法逐步合并最高频符号对，再用学到的合并顺序切分新词。', tags: ['sennrich', 'bpe', 'v1'] },
     { id: 'word2vec', cat: 'repr', title: 'word2vec：Skip-gram 是怎么来的', href: 'topics/word2vec/',
-      summary: '从分布假设出发，解释 Skip-gram 为什么是一个预测任务、如何与大模型进行对比，并在浏览器里训练二维词向量。', tags: ['skip-gram', 'mikolov 2013'] },
+      summary: '从分布假设出发，解释 Skip-gram 为什么是一个预测任务、如何与大模型进行对比，并在浏览器里训练二维词向量。', tags: ['skip-gram', 'mikolov 2013', 'v1'] },
     { id: 'llm-act-fns', cat: 'arch', title: '大模型里的激活函数', href: 'topics/llm-act-fns/',
-      summary: '从 ReLU 到 SwiGLU：比较各函数的输出、导数和极限行为，参数可调。', tags: ['GELU', 'SiLU', 'GLU'] },
+      summary: '从 ReLU 到 SwiGLU：比较各函数的输出、导数和极限行为，参数可调。', tags: ['GELU', 'SiLU', 'GLU', 'v1'] },
     { id: 'mixed-precision-training', cat: 'train', title: '混合精度训练', href: 'topics/mixed-precision-training/',
-      summary: 'fp32 主权重、fp16/bf16 计算与 loss scaling 三个机制，以及一次迭代的完整流程。', tags: ['loss scaling', 'bf16', 'fp32 master'] },
+      summary: 'fp32 主权重、fp16/bf16 计算与 loss scaling 三个机制，以及一次迭代的完整流程。', tags: ['loss scaling', 'bf16', 'fp32 master', 'draft'] },
   ];
   const catOf = Object.fromEntries(categories.map(c => [c.id, c]));
   const grid = document.getElementById('grid'), chips = document.getElementById('chips');
@@ -210,10 +215,12 @@ h2{font-family:var(--serif);font-size:calc(18px*var(--k));margin:0;line-height:1
   const live = new Map();
   const card = x => {
     const p = previews[x.id](); live.set(x.id, p);
+    const isStatus = g => /^(v\d+|draft)$/.test(g), status = x.tags.find(isStatus);
+    const badge = !status ? '' : status === 'draft' ? '<span class="st draft" title="早期版本，内容尚未完成">draft</span>' : `<span class="st v" title="已完成，版本 ${status}">${status}</span>`;
     return `<a class="card" href="${x.href}" data-id="${x.id}" style="--c:${catOf[x.cat].color}">
-      <div class="pv">${p.html}</div>
+      <div class="pv">${badge}${p.html}</div>
       <div class="body"><h2>${esc(x.title)}</h2><p class="s">${esc(x.summary)}</p>
-      <div class="tags">${x.tags.map(g => `<span class="tag">${esc(g)}</span>`).join('')}</div></div></a>`;
+      <div class="tags">${x.tags.filter(g => !isStatus(g)).map(g => `<span class="tag">${esc(g)}</span>`).join('')}</div></div></a>`;
   };
   const groups = categories.map(c => ({ c, items: topics.filter(x => x.cat === c.id) })).filter(g => g.items.length);
   grid.innerHTML = groups.map(({ c, items }) => `<section id="cat-${c.id}" style="--c:${c.color}">
