@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <!-- sign / exponent / mantissa bit markers with an underline, like the bit pattern on the page; transparent background -->
-  <rect x="1"  y="3" width="6"  height="18" rx="2" fill="#e83e5d"/>
-  <rect x="9"  y="3" width="10" height="18" rx="2" fill="#41ba63"/>
-  <rect x="21" y="3" width="10" height="18" rx="2" fill="#577ec7"/>
-  <rect x="1"  y="26" width="30" height="3" rx="1.5" fill="#999"/>
-</svg>
