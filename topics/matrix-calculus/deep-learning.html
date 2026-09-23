@@ -268,12 +268,13 @@ mark{color:var(--accent);font-weight:500;background:linear-gradient(transparent 
 .jac .controls input[type=range]{accent-color:var(--accent);width:150px}
 @media(max-width:720px){.jac .side{grid-template-columns:1fr}.jac .mat .c{min-width:54px;padding:5px 6px;font-size:13px}}
 .paths>svg{width:100%;max-width:520px;height:auto;display:block;margin:0 auto}
-#pathsSvg text{font:13px "Noto Sans SC","PingFang SC",system-ui,sans-serif;fill:var(--ink)}
-#pathsSvg rect{fill:var(--surface-2);stroke:var(--rule-2);rx:6}
-#pathsSvg circle{fill:var(--surface);stroke:var(--s1);stroke-width:1.3}
-#pathsSvg path{fill:none;stroke:var(--ink-2);stroke-width:1.3}
-#pathsSvg path.b{stroke:var(--s1)}
-#pathsSvg svg.tex{overflow:visible;color:var(--ink)}
+.paths>svg>text{font:13px "Noto Sans SC","PingFang SC",system-ui,sans-serif;fill:var(--ink);white-space:pre}
+.paths>svg>rect{fill:var(--surface-2);stroke:var(--rule-2);rx:6}
+.paths>svg>path{fill:none;stroke:var(--ink-2);stroke-width:1.3}
+.paths>svg>path.b{stroke:var(--s1)}
+.paths>svg>path.f{opacity:.35}
+.paths>svg>rect.bg{fill:var(--surface);stroke:none}
+.paths svg.tex{overflow:visible;color:var(--ink)}
 .gqa{overflow-x:auto}.gqa>svg{min-width:560px;width:100%;height:auto;display:block}
 #gqaSvg text{font:13px "Noto Sans SC","PingFang SC",system-ui,sans-serif;fill:var(--ink-2)}
 #gqaSvg rect{fill:var(--surface-2);stroke:var(--rule-2);rx:6}
@@ -322,12 +323,12 @@ mark{color:var(--accent);font-weight:500;background:linear-gradient(transparent 
 <ol>
 <li><a href="#partial">偏导数</a></li>
 <li><a href="#gradient">梯度</a></li>
-<li><a href="#loss-grad">损失对 logits 的梯度</a></li>
+<li><a href="#loss-grad">Loss 对 logits 的梯度</a></li>
 </ol></li>
 <li><a href="#chain">链式法则</a>
 <ol>
 <li><a href="#chain-scalar">单变量链式法则</a></li>
-<li><a href="#chain-paths">多条路径</a></li>
+<li><a href="#chain-paths">全导数链式法则</a></li>
 </ol></li>
 <li><a href="#matrix">矩阵微积分</a>
 <ol>
@@ -362,23 +363,23 @@ mark{color:var(--accent);font-weight:500;background:linear-gradient(transparent 
 <section id="intro">
 <h2>引言</h2>
 
-<p>训练一个模型，就是反复调整参数使损失变小。优化器每更新一次参数，都需要先知道损失对每个参数的导数：<mark>这个参数增大时，损失增大还是减小，变化多快</mark>。</p>
+<p>训练一个模型，就是反复调整参数使 Loss 变小。优化器每更新一次参数，都需要先知道 Loss 对每个参数的导数：<mark>这个参数增大时，Loss 增大还是减小，变化多快</mark>。</p>
 
-<p>单变量微积分里，导数描述的是一个数的变化引起另一个数变化多少。损失对一个参数的导数也是这个意思：参数是一个标量（一个数），损失是一个标量。但模型里的参数以矩阵的形式存放，每一层的输出是向量或矩阵，我们要一次算出损失对整个矩阵的导数，中间还要经过向量对向量的导数。<mark>把导数的定义从标量对标量扩展到标量对矩阵、向量对向量</mark>，这部分内容称为矩阵微积分。</p>
+<p>单变量微积分里，导数描述的是一个数的变化引起另一个数变化多少。Loss 对一个参数的导数也是这个意思：参数是一个标量（一个数），Loss 是一个标量。但模型里的参数以矩阵的形式存放，每一层的输出是向量或矩阵，我们要一次算出 Loss 对整个矩阵的导数，中间还要经过向量对向量的导数。<mark>把导数的定义从标量对标量扩展到标量对矩阵、向量对向量</mark>，这部分内容称为矩阵微积分。</p>
 
-<p>PyTorch 这样的框架用 <code>loss.backward()</code> 完成全部求导，不需要手写推导。它使用的方法是反向模式自动微分。这个方法有一个基本结论：算出损失对全部参数的导数，开销不超过一次前向计算的几倍，与参数的个数无关，Griewank 和 Walther 称之为 cheap gradient principle<a href="#references">[2]</a>。由于这个结论，反向传播可以用于有几十亿个参数的模型。本文说明这个结论是怎么来的：沿一个 decoder-only Transformer 的计算图，给出 backward 在每一步用到的求导规则，以及这些规则合起来为什么不需要构造比数据更大的中间量。</p>
+<p>PyTorch 这样的框架用 <code>loss.backward()</code> 完成全部求导，不需要手写推导。它使用的方法是反向模式自动微分。这个方法有一个基本结论：算出 Loss 对全部参数的导数，开销不超过一次前向计算的几倍，与参数的个数无关，Griewank 和 Walther 称之为 cheap gradient principle<a href="#references">[2]</a>。由于这个结论，反向传播可以用于有几十亿个参数的模型。本文说明这个结论是怎么来的：沿一个 decoder-only Transformer 的计算图，给出 backward 在每一步用到的求导规则，以及这些规则合起来为什么不需要构造比数据更大的中间量。</p>
 
 <p>本文假定读者了解 Transformer 的各个模块，用 PyTorch 训练过模型，微积分已经生疏。</p>
 
 <h3 id="model">本文使用的模型</h3>
 
-<p>下图是一个 decoder-only Transformer 做语言模型训练时，从输入 token 到损失的完整计算过程。$T$ 是序列长度，$d$ 是模型宽度，$V$ 是词表大小，$N$ 是 Decoder 的层数。图中省略了 batch 维度。</p>
+<p>下图是一个 decoder-only Transformer 做语言模型训练时，从输入 token 到 Loss 的完整计算过程。$T$ 是序列长度，$d$ 是模型宽度，$V$ 是词表大小，$N$ 是 Decoder 的层数。图中省略了 batch 维度。</p>
 
 <figure class="model-fig">
 <div class="model-wrap"><svg id="modelSvg3" viewBox="0 0 760 800" role="img" aria-label="主线把 N 层合并为一个 Decoder 方框，右侧展开一层内部"></svg></div>
 </figure>
 
-<p>图的输入是 $T$ 个整数组成的 <code>token_ids</code>，输出是标量损失 $L$，训练要求的是 $L$ 对图中每个权重的导数。求导沿箭头的反方向进行，每经过一个方框，用这个方框对应的求导规则算一次。</p>
+<p>图的输入是 $T$ 个整数组成的 <code>token_ids</code>，输出是标量 Loss $L$，训练要求的是 $L$ 对图中每个权重的导数。求导沿箭头的反方向进行，每经过一个方框，用这个方框对应的求导规则算一次。</p>
 
 <p>下面四个折叠块给出 RMSNorm、SwiGLU FFN、GQA attention 和 RoPE 的定义，并画出后三者的计算过程，仅供参考。</p>
 
@@ -511,9 +512,9 @@ $$(\mathbf{q}_t R_t)(\mathbf{k}_s R_s)^{T} = \mathbf{q}_t\,R_{t-s}\,\mathbf{k}_s
 </tr>
 </tbody></table></div>
 
-<p>训练最终需要的结果全在第一行。损失是标量，所以损失对任何变量的导数都与该变量同形状：$x \in \mathbb{R}$ 时 $\frac{\partial L}{\partial x} \in \mathbb{R}$，$\mathbf{x} \in \mathbb{R}^{n}$ 时 $\frac{\partial L}{\partial \mathbf{x}} \in \mathbb{R}^{n}$，$W \in \mathbb{R}^{p \times q}$ 时 $\frac{\partial L}{\partial W} \in \mathbb{R}^{p \times q}$。这就是为什么 PyTorch 里 <code>w.grad</code> 的形状总是与 <code>w</code> 相同。</p>
+<p>训练最终需要的结果全在第一行。Loss 是标量，所以 Loss 对任何变量的导数都与该变量同形状：$x \in \mathbb{R}$ 时 $\frac{\partial L}{\partial x} \in \mathbb{R}$，$\mathbf{x} \in \mathbb{R}^{n}$ 时 $\frac{\partial L}{\partial \mathbf{x}} \in \mathbb{R}^{n}$，$W \in \mathbb{R}^{p \times q}$ 时 $\frac{\partial L}{\partial W} \in \mathbb{R}^{p \times q}$。这就是为什么 PyTorch 里 <code>w.grad</code> 的形状总是与 <code>w</code> 相同。</p>
 
-<p>表中三维和四维数组的三个灰格（向量-矩阵、矩阵-向量、矩阵-矩阵）只出现在中间步骤。损失对 $W_{down}$ 的导数，按链式法则要经过损失对 $\mathbf{h}$ 的导数和 $\mathbf{h}$ 对 $W_{down}$ 的导数两步，后一步就是第二行最后一格的三维数组。反向传播不构造这个数组，而是直接算出两步合并后的结果，<a href="#vjp">vector-Jacobian product</a> 一节说明怎么做。</p>
+<p>表中三维和四维数组的三个灰格（向量-矩阵、矩阵-向量、矩阵-矩阵）只出现在中间步骤。Loss 对 $W_{down}$ 的导数，按链式法则要经过 Loss 对 $\mathbf{h}$ 的导数和 $\mathbf{h}$ 对 $W_{down}$ 的导数两步，后一步就是第二行最后一格的三维数组。反向传播不构造这个数组，而是直接算出两步合并后的结果，<a href="#vjp">vector-Jacobian product</a> 一节说明怎么做。</p>
 
 <p>本文写向量对向量的导数时，行对应输出，列对应输入，上表 Jacobian 一格就是这样排的，这种排法称为 numerator layout。有些资料采用转置的排法，称为 denominator layout。别处的公式形状与本文不一致时，先检查这一点。</p>
 
@@ -522,15 +523,15 @@ $$(\mathbf{q}_t R_t)(\mathbf{k}_s R_s)^{T} = \mathbf{q}_t\,R_{t-s}\,\mathbf{k}_s
 <section id="review">
 <h2>标量的导数</h2>
 
-<p>对向量和矩阵求导，最后一步都会归结到是对单个数求导，我们先复习标量的导数：导数的定义，以及常见的求导规则。</p>
+<p>对向量和矩阵求导，最后一步都会归结到是对单个数求导，我们先复习如何求标量的导数：导数的定义，以及常见的求导规则。</p>
 
 <h3 id="derivative">什么是导数</h3>
 
-<p>先看最简单的情形：一个输入 $x$，一个输出 $y = f(x)$，两者都是标量。</p>
+<p>先看最简单的情形：输入 $x \in \mathbb{R}$，输出 $y = f(x) \in \mathbb{R}$，两者都是标量。</p>
 
 <p>$x$ 变到 $x + \Delta x$ 时，$y$ 的变化量与 $x$ 的变化量之比是 $\dfrac{\Delta y}{\Delta x} = \dfrac{f(x+\Delta x) - f(x)}{\Delta x}$。$\Delta x$ 趋于零时这个比值的极限，就是 $y$ 对 $x$ 的导数，记作 $\dfrac{dy}{dx}$：</p>
 $$\frac{dy}{dx} = \lim_{\Delta x \to 0} \frac{f(x+\Delta x) - f(x)}{\Delta x}$$
-<p>$\dfrac{dy}{dx}$ 是一个整体记号，分子是被求导的量，分母是自变量。同一个导数也写成 $\dfrac{df}{dx}$ 或 $\dfrac{d}{dx}f(x)$。几何上，$\dfrac{dy}{dx}$ 是 $f$ 的图像在 $x$ 处的切线的斜率。</p>
+<p>$\dfrac{dy}{dx}$ 是一个整体记号，分子是被求导的量，分母是自变量。同一个导数也可以写成 $\dfrac{df(x)}{dx}$ 或 $\dfrac{d}{dx}f(x)$。从几何上来看，$\dfrac{dy}{dx}$ 是 $f$ 的图像在 $x$ 处的切线的斜率。</p>
 
 <details class="fold">
 <summary>割线、切线与导数的图像</summary>
@@ -561,13 +562,9 @@ $$\frac{dy}{dx} = \lim_{\Delta x \to 0} \frac{f(x+\Delta x) - f(x)}{\Delta x}$$
 </div>
 </details>
 
-<p>导数可以用来估计输出的变化量。$\Delta x$ 很小时，比值 $\dfrac{\Delta y}{\Delta x}$ 接近它的极限 $\dfrac{dy}{dx}$，两边乘 $\Delta x$ 得到</p>
-$$\Delta y \approx \frac{dy}{dx}\,\Delta x$$
-<p>也就是说，输入变化 $\Delta x$ 时，输出的变化量约为 $\dfrac{dy}{dx}$ 与 $\Delta x$ 的乘积，$\Delta x$ 越小，近似越准确。后文讲多个输入同时变化和函数嵌套时，都从这个式子出发。</p>
-
 <h3 id="rules">求导规则</h3>
 
-<p>下表列出本文用到的标量求导规则。这些规则读者在微积分课上都见过，这里只列结果。</p>
+<p>下表列出本文用到的标量求导规则。这些规则读者在微积分课上都见过，如果不理解需要重新上高中。</p>
 
 <div class="rules"><table>
 <thead><tr><th>规则</th><th>$f(x)$</th><th>$\dfrac{d}{dx}f(x)$</th><th>例子</th></tr></thead>
@@ -600,13 +597,15 @@ $$\Delta y \approx \frac{dy}{dx}\,\Delta x$$
 </tbody></table></div>
 
 
-<p>$\dfrac{d}{dx}$ 是一个运算符，输入一个函数，输出另一个函数。它对加法可以拆开，常数因子可以提到它前面，所以对复杂表达式求导可以先拆分、分别求导、再组合：</p>
+<p>$\dfrac{d}{dx}$ 也可以看成一个运算符，输入一个函数，输出另一个函数。可以这么思考：</p>
+<p>加法可以拆开：$\dfrac{d}{dx}(f(x) + g(x)) = \dfrac{d}{dx}f(x) + \dfrac{d}{dx}g(x)$</p>
+<p>常数因子可以提到它前面：$\dfrac{d}{dx}(\alpha f(x)) = \alpha \dfrac{d}{x}f(x)$</p>
+<p>所以对复杂表达式求导可以先拆分、分别求导、再组合：</p>
 $$\frac{d}{dx}\,9(x + x^2) = 9\,\frac{d}{dx}(x + x^2) = 9\Big(\frac{d}{dx}x + \frac{d}{dx}x^2\Big) = 9(1 + 2x) = 9 + 18x$$
-<p>后面对向量和矩阵求导用的也是这个做法：把表达式拆成已有规则覆盖的部分，分别求导，再按形状组合。</p>
 
 <h3 id="swish">举例：Sigmoid 与 Swish 的导数</h3>
 
-<p>sigmoid 可以写成复合函数：$\sigma(x) = u^{-1}$，其中 $u = 1 + e^{-x}$。外层按幂函数求导；内层按加法求导，其中 $e^{-x}$ 按指数函数和链式法则求导：</p>
+<p>sigmoid 公式为：$\sigma(x) = \dfrac{1}{1+e^{-x}}$，可以写成复合函数：$\sigma(x) = u^{-1}$，其中 $u = 1 + e^{-x}$：</p>
 $$\frac{d\sigma}{du} = -u^{-2},\qquad \frac{du}{dx} = -e^{-x}$$
 <p>按链式法则把两者相乘：</p>
 $$
@@ -619,24 +618,23 @@ $$
 
 <p>Swish 是两个函数的乘积：$\mathrm{Swish}(x) = x \cdot \sigma(x)$。按乘积法则，再代入上面的 $\dfrac{d\sigma}{dx}$：</p>
 $$\frac{d\,\mathrm{Swish}(x)}{dx} = 1 \cdot \sigma(x) + x\,\frac{d\sigma}{dx} = \sigma(x) + x\,\sigma(x)\,\big(1-\sigma(x)\big) = \sigma(x)\,\big(1 + x\,(1-\sigma(x))\big)$$
-<p>在<a href="#derivative">「什么是导数」</a>一节折叠块的图里选 $\mathrm{Swish}(x)$，可以对照切线斜率和这个式子的取值。</p>
 
-<p>后文会把 Swish 逐元素作用在向量和矩阵上，反向传播要在每个元素处计算上面这个导数。为了书写方便，把它记作一个函数：</p>
+<p>后文会把 Swish 逐元素作用在向量和矩阵上，反向传播要在每个元素处计算上面这个导数。为了书写方便，把它记作：</p>
 $$\mathrm{Swish}'(x) = \frac{d\,\mathrm{Swish}(x)}{dx} = \sigma(x)\,\big(1 + x\,(1-\sigma(x))\big)$$
-<p>$\mathrm{Swish}'$ 和 $\mathrm{Swish}$ 一样，是只有一个输入的标量函数，撇号表示对这个唯一的输入求导。它作用在向量或矩阵上时，对每个元素分别计算，结果与输入同形状，例如 $\mathrm{Swish}'(\mathbf{a}) = [\,\mathrm{Swish}'(a_1)\ \ \mathrm{Swish}'(a_2)\ \ \cdots\,]$。本文对其他逐元素函数 $f$ 的导数也这样记作 $f'$。</p>
+<p>本文对其他逐元素函数 $f$ 的导数也这样记作 $f'$。</p>
 
 </section>
 
 <section id="partials">
 <h2>向量微积分与偏导数入门</h2>
 
-<p>上一章的函数只有一个输入，而模型里的函数都有多个输入。例如 LM head 的第 $j$ 个 logit</p>
+<p>现在我们考虑多个输入合成一个输出的情况，例如 <code>lm_head</code> 的第 $j$ 个 logits 的 forward 计算为：</p>
 $$z_j = \sum_{k=1}^{d} x_k W_{kj} = \mathbf{x}\,W_{:,j}$$
 <p>其中 $\mathbf{x} = [\,x_1\ \ x_2\ \ \cdots\ \ x_d\,]$ 是输入的行向量，$W_{:,j} = [\,W_{1j}\ \ W_{2j}\ \ \cdots\ \ W_{dj}\,]^{T}$ 是 $W$ 的第 $j$ 列，即 PyTorch 里的 <code>W[:, j]</code>。$z_j$ 依赖 $d$ 个输入 $x_k$ 和 $d$ 个权重 $W_{kj}$。我们需要梳理清楚：对其中一个求导时，其他输入怎么处理。</p>
 
 <h3 id="partial">偏导数</h3>
 
-<p>$f(x, y) = 3x^2 y$ 有两个输入，变化可以沿 $x$，也可以沿 $y$。我们先只让一个输入变化。</p>
+<p>$f(x, y) = 3x^2 y$ 有两个输入，可以沿 $x$ 方向改变，也可以沿 $y$。我们先只让一个输入变化。</p>
 
 <p><mark>固定 $y$，只让 $x$ 变化</mark>，$f$ 就是 $x$ 的单变量函数，上一章的方法可以直接用：它的图像在 $x$ 处的切线斜率，就是 $x$ 变化时 $f$ 的变化率。这个斜率称为 $f$ 对 $x$ 的偏导数，记作 $\dfrac{\partial f}{\partial x}$。计算时把 $y$ 当作常数：</p>
 $$\frac{\partial}{\partial x}\,3x^2y = 3y \cdot \frac{d}{dx}x^2 = 3y \cdot 2x = 6xy$$
@@ -672,27 +670,31 @@ $$\frac{\partial}{\partial y}\,3x^2y = 3x^2 \cdot \frac{d}{dy}y = 3x^2$$
 <p>训练时我们希望一次性更新全部参数（同时变化），所以我们还要知道 $x$ 变化 $\Delta x$、$y$ 同时变化 $\Delta y$ 时，$f$ 变化多少。</p>
 <p>$\Delta x$、$\Delta y$ 都很小时，可以把同时变化拆成两步。先只让 $x$ 变化，按上一章的近似，$f$ 变化约 $\dfrac{\partial f}{\partial x}\,\Delta x$；再只让 $y$ 变化，$f$ 再变化约 $\dfrac{\partial f}{\partial y}\,\Delta y$。第二步是在 $x$ 已经变化之后的位置求偏导，但 $\Delta x$ 很小时，那里的偏导数与原位置几乎相同。所以 $f$ 的变化约等于两个偏导数各自的贡献之和：</p>
 $$\Delta f \approx \frac{\partial f}{\partial x}\,\Delta x + \frac{\partial f}{\partial y}\,\Delta y$$
-<p>$\Delta x$、$\Delta y$ 越小，近似越准确。</p>
+<p>$\Delta x$、$\Delta y$ 越小，近似越准确。极限情况则为：</p>
 
-<p>把两个输入写成一个向量 $\mathbf{x} = [\,x\ \ y\,]$，它的变化量是 $\Delta\mathbf{x} = [\,\Delta x\ \ \Delta y\,]$。</p>
+$$
+df = \dfrac{\partial f}{\partial x}dx + \dfrac{\partial f}{\partial y}dy
+$$
+
+<p>把两个输入写成一个向量 $\mathbf{x} = [\,x\ \ y\,]$，它的变化量是 $d\mathbf{x} = [\,d x\ \ d y\,]$。</p>
 <p>两个偏导数也排成一个向量：</p>
 $$\nabla f = \frac{\partial f}{\partial \mathbf{x}} = \Big[\,\frac{\partial f}{\partial x}\ \ \frac{\partial f}{\partial y}\,\Big] = [\,6xy\ \ 3x^2\,]$$
 <p>这个向量称为 $f$ 的梯度，记作 $\nabla f$ 或 $\dfrac{\partial f}{\partial \mathbf{x}}$，$\nabla$ 读作 nabla。上面的近似于是可以写成点积：</p>
 $$\Delta f \approx \nabla f \cdot \Delta\mathbf{x}$$
 <p>上图的紫色箭头就是 $\nabla f$，它由绿色和粉色两个箭头合成。紫色箭头总是垂直于经过黑点的等值线：沿等值线走一小步 $\Delta\mathbf{x}$，$f$ 不变，所以 $\nabla f \cdot \Delta\mathbf{x} \approx 0$。这个近似的误差随步长缩小得比步长本身更快，所以步长趋于零时，$\nabla f$ 与这一步之间的夹角趋于 $90^\circ$，也就是等值线在黑点处的方向与 $\nabla f$ 垂直。点积等于两个向量的长度之积乘夹角的余弦，所以在长度相同的所有 $\Delta\mathbf{x}$ 中，与 $\nabla f$ 同方向的那个使 $\nabla f \cdot \Delta\mathbf{x}$ 最大，即梯度指向 $f$ 增大最快的方向。</p>
-<p>与单变量的 $\Delta y \approx \dfrac{dy}{dx}\,\Delta x$ 对照，导数的位置换成了梯度，乘法换成了点积。输入有 $n$ 个分量时，梯度就是 $n$ 个偏导数排成一行，对应形状表里标量对向量一格。损失 $L$ 的梯度 $\nabla L$ 由损失对每个参数的偏导数组成，优化器沿 $-\nabla L$ 的方向更新参数，每个参数用到的只是自己那一个偏导数 $\dfrac{\partial L}{\partial w}$。</p>
+<p>与单变量的 $\Delta y \approx \dfrac{dy}{dx}\,\Delta x$ 对照，导数的位置换成了梯度，乘法换成了点积。输入有 $n$ 个分量时，梯度就是 $n$ 个偏导数排成一行，对应形状表里标量对向量一格。Loss $L$ 的梯度 $\nabla L$ 由 Loss 对每个参数的偏导数组成，优化器沿 $-\nabla L$ 的方向更新参数，每个参数用到的只是自己那一个偏导数 $\dfrac{\partial L}{\partial w}$。</p>
 
-<h3 id="loss-grad">损失对 logits 的梯度</h3>
+<h3 id="loss-grad">Loss 对 logits 的梯度</h3>
 
-<figure class="model-fig local"><div class="model-wrap"><svg id="tailSvgLoss" viewBox="0 0 330 380" role="img" aria-label="从 LM head 的输入到损失的计算过程，高亮 logits、softmax、cross-entropy 和损失"></svg></div></figure>
-<p>先看模型的最后一段。本节的配图取自开头的模型图，只画序列中的一个位置，高亮的是本节要计算的部分。</p>
-<p>LM head 在这个位置输出 $V$ 个 logit $\mathbf{z} = [\,z_1\ \ z_2\ \ \cdots\ \ z_V\,]$，softmax 把它们变成 $V$ 个概率：</p>
+<figure class="model-fig local"><div class="model-wrap"><svg id="tailSvgLoss" viewBox="0 0 330 380" role="img" aria-label="从 LM head 的输入到 Loss 的计算过程，高亮 logits、softmax、cross-entropy 和 Loss"></svg></div></figure>
+<p>先看模型的最后一段：计算 Loss。只画序列中的一个位置</p>
+<p>LM head 在这个位置输出 $\mathbf{z} = [\,z_1\ \ z_2\ \ \cdots\ \ z_V\,]$，softmax 把它们变成一个概率分布：</p>
 $$p_j = \frac{e^{z_j}}{\sum_{k=1}^{V} e^{z_k}}$$
-<p>每个 $p_j$ 都在 0 和 1 之间，$V$ 个加起来等于 1，$p_j$ 是模型给词表中第 $j$ 个 token 的概率。设这个位置的目标 token 是第 $y$ 个，cross-entropy 损失是目标 token 的概率取负对数：</p>
+<p>每个 $p_j$ 都在 0 和 1 之间，$V$ 个加起来等于 1，$p_j$ 是模型给词表中第 $j$ 个 token 的概率。设这个位置的目标 token 是第 $y$ 个，cross-entropy Loss 是目标 token 的概率取负对数：</p>
 $$\ell = -\ln p_y$$
-<p>$p_y$ 越接近 1，$\ell$ 越接近 0。训练用的损失 $L$ 是 $T$ 个位置各自的 $\ell$ 取平均，这里只看一个位置。</p>
+<p>$p_y$ 越接近 1，$\ell$ 越接近 0。</p>
 
-<p>$\ell$ 是一个标量，依赖全部 $V$ 个 logit，所以它对 $\mathbf{z}$ 的导数是一个梯度，有 $V$ 个分量。先用 $\ln\dfrac{a}{b} = \ln a - \ln b$ 和 $\ln e^{z} = z$ 把 $\ell$ 展开：</p>
+<p>$\ell$ 是一个标量，依赖全部 $p_i, i \in V$，所以它对 $\mathbf{z}$ 的导数是一个梯度：$\dfrac{\partial{\ell}}{\partial{\mathbf{z}}} \in \mathbb{R}^{V}$。先用 $\ln\dfrac{a}{b} = \ln a - \ln b$ 和 $\ln e^{z} = z$ 把 $\ell$ 展开：</p>
 $$\ell = -\ln \frac{e^{z_y}}{\sum_k e^{z_k}} = -z_y + \ln \sum_{k=1}^{V} e^{z_k}$$
 <p>对 $z_j$ 求偏导时，其余的 logit 都当作常数，两项分别计算。</p>
 <p>第一项 $-z_y$：$j = y$ 时，它对 $z_j$ 的导数是 $-1$；$j \neq y$ 时，$-z_y$ 不含 $z_j$，导数是 $0$。</p>
@@ -703,11 +705,11 @@ $$\frac{\partial \ell}{\partial z_j} = \begin{cases} p_j - 1 & j = y \\ p_j & j 
 <p>把目标 token 写成一个 one-hot 向量 $\mathbf{y}$：第 $y$ 个分量是 1，其余分量是 0。$V$ 个偏导数排成一行，就是 $\ell$ 对 $\mathbf{z}$ 的梯度：</p>
 $$\frac{\partial \ell}{\partial \mathbf{z}} = \mathbf{p} - \mathbf{y},\qquad \mathbf{p} = [\,p_1\ \ p_2\ \ \cdots\ \ p_V\,]$$
 <p>例如 $V = 3$，$\mathbf{z} = [\,2\ \ 1\ \ 0\,]$，目标是第 1 个 token。这时 $\mathbf{p} \approx [\,0.665\ \ 0.245\ \ 0.090\,]$，梯度是 $[\,-0.335\ \ 0.245\ \ 0.090\,]$。</p>
-<p>梯度的每个分量给出对应的 logit 增大时损失的变化率。</p>
+<p>梯度的每个分量给出对应的 logit 增大时 Loss 的变化率。</p>
 <ul>
-  <li>目标 token 的分量是 $p_y - 1 < 0$，它的 logit 增大时损失减小；</li>
-  <li>其余分量是 $p_j > 0$，这些 logit 增大时损失增大，变化率等于该 token 的概率；</li>
-  <li>$p_y$ 接近 1 时，所有分量都接近 0，损失几乎不再随 logits 变化。</li>
+  <li>目标 token 的分量是 $p_y - 1 < 0$，它的 logit 增大时 Loss 减小；</li>
+  <li>其余分量是 $p_j > 0$，这些 logit 增大时 Loss 增大，变化率等于该 token 的概率；</li>
+  <li>$p_y$ 接近 1 时，所有分量都接近 0，Loss 几乎不再随 logits 变化。</li>
 </ul>
 
 </section>
@@ -715,51 +717,86 @@ $$\frac{\partial \ell}{\partial \mathbf{z}} = \mathbf{p} - \mathbf{y},\qquad \ma
 <section id="chain">
 <h2>链式法则</h2>
 
-<p>规则表的最后一行是链式法则，前面已经用过两次：<a href="#swish">sigmoid 的导数</a>把 $\sigma(x)$ 写成 $u^{-1}$，其中 $u = 1 + e^{-x}$；<a href="#loss-grad">损失对 logits 的梯度</a>一节把 $\sum_k e^{z_k}$ 记作 $u$，再对 $\ln u$ 求导。这两处都是输入只经过一个中间变量影响输出。反向传播的下一步是 LM head，那里的情形不同：LM head 的输入 $\mathbf{x}$ 的每个分量都出现在全部 $V$ 个 logit 里，经过 $V$ 个中间变量影响损失。所以我们还需要知道，输入经过多个中间变量影响输出时怎样求导。这要从单变量链式法则为什么成立说起。</p>
+<p>很显然，当前已经介绍过的标量导数的链式法则，还不足以支持我们完成对大模型全流程的梯度计算。考虑大模型的最后一层的输出结果为 $h \in \mathbb{R}^{V}$，这个 $V$ 维的输入每一个通道都会对 Loss 贡献梯度，这就引出了这个基础问题：输入（标量）受多个中间变量影响输出时怎样求导。下面先写出单变量链式法则，再推广到多条路径。</p>
 
 <h3 id="chain-scalar">单变量链式法则</h3>
 
-<p>取 FFN gate 分支的一个分量：$a = x\,w$，$h = \mathrm{Swish}(a)$。$h$ 由 $a$ 算出，$a$ 由 $x$ 算出，所以 $h$ 通过中间变量 $a$ 依赖 $x$。我们已经知道 $a$ 对 $x$ 的导数是 $w$，也知道 $h$ 对 $a$ 的导数是 $\mathrm{Swish}'(a)$。规则表里的链式法则说，$h$ 对 $x$ 的导数是这两个导数的乘积。这个结论可以由<a href="#derivative">「什么是导数」</a>一节的近似式 $\Delta y \approx \dfrac{dy}{dx}\,\Delta x$ 得到。</p>
+<p>$y$ 通过中间变量 $u$ 依赖 $x$：$y = f(u)$，$u = g(x)$。$y$ 对 $x$ 的导数等于 $y$ 对 $u$ 的导数乘 $u$ 对 $x$ 的导数：</p>
+$$\frac{dy}{dx} = \frac{dy}{du}\,\frac{du}{dx}$$
+<figure class="paths">
+<svg id="chainSvg" viewBox="0 0 520 104" role="img" aria-label="反向传播的方向：从 y 经过 u 传回 x，只有一条路径"></svg>
+</figure>
+<p>这是单变量链式法则：外层函数的导数乘内层函数的导数。计算时由 $x$ 算出 $u$，再由 $u$ 算出 $y$；求导的顺序相反，图中的箭头从 $y$ 出发，每经过一段就乘上这一段的导数。嵌套更多层时，从最外层的 $y$ 开始逐层往回乘。$y$ 依赖 $u$，$u$ 依赖 $v$，$v$ 依赖 $x$，则</p>
+$$\frac{dy}{dx} = \frac{dy}{du}\,\frac{du}{dv}\,\frac{dv}{dx}$$
 
-<p>$x$ 变化 $\Delta x$ 时，$a$ 变化 $\Delta a = w\,\Delta x$；$a$ 变化 $\Delta a$ 时，$h$ 变化约 $\Delta h \approx \mathrm{Swish}'(a)\,\Delta a$。把 $\Delta a = w\,\Delta x$ 代入 $\Delta h \approx \mathrm{Swish}'(a)\,\Delta a$：</p>
-$$\Delta h \approx \mathrm{Swish}'(a)\cdot w\,\Delta x$$
-<p>$\Delta x$ 越小，近似越准确，所以 $\Delta h$ 与 $\Delta x$ 之比的极限，也就是 $h$ 对 $x$ 的导数，是两个导数的乘积：</p>
-$$\frac{dh}{dx} = \mathrm{Swish}'(a)\cdot w = \frac{dh}{da}\,\frac{da}{dx}$$
-<p>这是单变量链式法则：外层函数的导数乘内层函数的导数，中间变量 $a$ 在两个分式里各出现一次。写出中间变量，可以看清每个导数是对哪个变量求的。</p>
+<h3 id="chain-paths">全导数链式法则</h3>
 
-<p>嵌套更多层时形式相同。$y$ 依赖 $u$，$u$ 依赖 $v$，$v$ 依赖 $x$，则 $\dfrac{dy}{dx} = \dfrac{dy}{du}\dfrac{du}{dv}\dfrac{dv}{dx}$，即从最外层的 $y$ 开始逐层向内相乘。</p>
-
-<h3 id="chain-paths">多条路径</h3>
-
-<p>上面的情形里 $x$ 只通过 $a$ 影响 $h$，只有一条路径。残差连接 $y = x + g(x)$ 有两条：一条直接到 $y$，一条经过 $g$。</p>
+<p>上面的情形里 $x$ 只通过 $u$ 影响 $y$，只有一条路径。$x$ 也可以同时通过多个中间变量 $u_1, u_2, \ldots, u_n$ 影响 $y$：每个 $u_k$ 是 $x$ 的函数，$y$ 是这 $n$ 个 $u_k$ 的函数。这时 $x$ 和 $y$ 之间有 $n$ 条路径，每条经过一个 $u_k$。这里 $x$ 和 $y$ 都是标量，求的是<mark>标量对标量的导数</mark>。</p>
 
 <figure class="paths">
-<svg id="pathsSvg" viewBox="0 0 520 150" role="img" aria-label="x 通过两条路径影响 y"></svg>
+<svg id="pathsSvg" viewBox="0 0 520 200" role="img" aria-label="反向传播的方向：从 y 经过 u_1 到 u_n 共 n 条路径传回 x"></svg>
 </figure>
 
-<p>$x$ 变化 $\Delta x$ 时，两条路径各产生一份变化，$y$ 的变化量是两份之和，所以导数等于各条路径的贡献之和。直接一条的贡献是 $1 \cdot \Delta x$，经过 $g$ 的一条约是 $\dfrac{dg}{dx}\,\Delta x$：</p>
-$$\frac{dy}{dx} = 1 + \frac{dg}{dx}$$
-<p>一般情形下，$x$ 通过中间变量 $u_1, u_2, \ldots, u_n$ 影响 $y$。$x$ 变化 $\Delta x$ 时，每个 $u_k$ 变化约 $\dfrac{du_k}{dx}\,\Delta x$。$y$ 是 $n$ 个 $u_k$ 的函数，按<a href="#gradient">「梯度」一节</a>的近似，$n$ 个 $u_k$ 同时变化时，$y$ 的变化约等于各自贡献之和：</p>
-$$\Delta y \approx \sum_{k=1}^{n} \frac{\partial y}{\partial u_k}\,\Delta u_k \approx \sum_{k=1}^{n} \frac{\partial y}{\partial u_k}\,\frac{du_k}{dx}\,\Delta x$$
-<p>所以</p>
+<p>按<a href="#gradient">「梯度」一节</a>的微分式，$y$ 的微分是各个 $u_k$ 的贡献之和：</p>
+$$dy = \sum_{k=1}^{n} \frac{\partial y}{\partial u_k}\,du_k$$
+<p><mark>每个 $u_k$ 是 $x$ 的函数</mark>，$du_k = \dfrac{du_k}{dx}\,dx$。代入后两边除以 $dx$：</p>
 $$\frac{dy}{dx} = \sum_{k=1}^{n} \frac{\partial y}{\partial u_k}\,\frac{du_k}{dx}$$
-<p>每条路径内部用一次单变量链式法则，外层乘内层，路径之间求和。残差连接是 $n = 2$ 的情形：$u_1 = x$，$u_2 = g(x)$，$y = u_1 + u_2$。$x$ 是多个输入之一时，其余输入保持不变，上式中的 $\dfrac{du_k}{dx}$ 换成偏导数 $\dfrac{\partial u_k}{\partial x}$，形式不变。</p>
+<p>这里的 $\dfrac{dy}{dx}$ 称为 $y$ 对 $x$ 的全导数（total derivative），它计入 $x$ 经过所有路径对 $y$ 的影响。求和的第 $k$ 项是经过 $u_k$ 的那条路径的贡献：从 $y$ 出发，先乘 $\dfrac{\partial y}{\partial u_k}$，再乘 $\dfrac{du_k}{dx}$，图中高亮的是 $k = 1$ 的一条。$n$ 条路径的贡献相加，就是全导数。</p>
 
-<p>模型里的多条路径有两种情形。第一种在一个运算内部：一个输入分量出现在多个输出分量里。例如 LM head 的 $x_i$ 经过全部 $V$ 个 logit 影响损失，<a href="#in-model">下一章</a>用这条规则算出损失对 $\mathbf{x}$ 的导数。第二种是同一个量在计算图里被使用多次。<strong>残差连接</strong>：每一层的输入既直接进入输出，又经过子层。<strong>GQA 共用的 K、V 权重</strong>：一组 $W_K$ 被 $n_h / n_{kv}$ 个 query head 使用，损失对它的导数是各 head 传回的梯度之和。<strong>Embedding</strong>：同一个 token 在序列里出现多次时，$E$ 的对应行被使用多次，导数是各次之和。<strong>序列里的 $T$ 个位置</strong>：每个位置都使用同一组权重，损失对权重的导数是 $T$ 个位置的贡献之和。</p>
+<details class="fold">
+<summary>例子：只算一条路径为什么会出错</summary>
+<div class="body">
+<p>取 $y = x + x^2$，直接求导得 $\dfrac{dy}{dx} = 1 + 2x$。引入中间变量 $u = x^2$，把它写成 $y = x + u$。这时 $x$ 有两条路径影响 $y$：一条直接进入加法，一条经过 $u$。</p>
+<p>只沿经过 $u$ 的路径套用单变量链式法则，得到 $\dfrac{\partial y}{\partial u}\,\dfrac{du}{dx} = 1 \cdot 2x = 2x$，漏掉了直接路径的贡献 $1$。</p>
+<p>只对 $x$ 求偏导，得到 $\dfrac{\partial y}{\partial x} = 1$。偏导数假定 $u$ 保持不变，但 $u = x^2$ 会随 $x$ 变化，所以这个结果漏掉了经过 $u$ 的路径。</p>
+<p>把 $x$ 自身也看作一个中间变量（$u_1 = x$，$\dfrac{du_1}{dx} = 1$），按全导数的公式把两条路径的贡献相加：</p>
+$$\frac{dy}{dx} = \frac{\partial y}{\partial x}\cdot 1 + \frac{\partial y}{\partial u}\,\frac{du}{dx} = 1 + 2x$$
+<p>路径之间相加，不是因为 $y$ 本身是两项之和。把 $y$ 换成 $x \cdot x^2$，同样令 $u = x^2$，$y = x\,u$。直接路径的贡献是 $\dfrac{\partial y}{\partial x} = u = x^2$，经过 $u$ 的路径的贡献是 $\dfrac{\partial y}{\partial u}\,\dfrac{du}{dx} = x \cdot 2x = 2x^2$，两者相加得 $3x^2$，与直接对 $x^3$ 求导的结果相同。</p>
+</div>
+</details>
+
+<p>模型里要求的是<mark>标量对向量的梯度</mark>：输入是一个向量 $\mathbf{x} = [\,x_1\ \ x_2\ \ \cdots\ \ x_m\,]$，由它算出中间变量 $\mathbf{u} = [\,u_1\ \ u_2\ \ \cdots\ \ u_n\,]$，再由 $\mathbf{u}$ 算出标量 $y$（例如 Loss）：</p>
+$$\begin{aligned}
+u_k &= g_k(x_1, x_2, \ldots, x_m),\qquad k = 1, \ldots, n \\
+y &= f(u_1, u_2, \ldots, u_n)
+\end{aligned}$$
+<figure class="paths">
+<svg id="vecPathsSvg" viewBox="0 0 520 200" role="img" aria-label="反向传播的方向：y 连到 u_1 到 u_n，每个 u_k 再连到 x_1 到 x_m 的每一个；高亮从 y 经过 n 条路径传回 x_1"></svg>
+</figure>
+<p>每个 $u_k$ 都可能依赖全部 $m$ 个分量，所以 $y$ 和每个 $x_i$ 之间都有 $n$ 条路径。反向传播时，$y$ 对 $x_i$ 的偏导数沿这 $n$ 条路径传回 $x_i$，图中高亮的是 $x_1$ 的 $n$ 条。LM head 就是这种情形：$\mathbf{x}$ 是它的输入，$\mathbf{u}$ 是 $V$ 个 logit，$f$ 是 $\mathrm{CE}(\mathrm{softmax}(\cdot))$，$y$ 是 Loss。要求的梯度 $\dfrac{\partial y}{\partial \mathbf{x}}$ 由 $y$ 对每个分量 $x_i$ 的偏导数组成。</p>
+<p>做法是一次只看一个分量。固定 $x_i$ 以外的全部分量，$y$ 就只随 $x_i$ 一个标量变化，问题回到上面标量对标量的全导数链式法则。$m$ 个分量各算一次，排成一行，就是梯度：</p>
+$$\begin{aligned}
+\frac{\partial y}{\partial \mathbf{x}} &= \Big[\,\frac{\partial y}{\partial x_1}\ \ \frac{\partial y}{\partial x_2}\ \ \cdots\ \ \frac{\partial y}{\partial x_m}\,\Big] \\
+\frac{\partial y}{\partial x_i} &= \sum_{k=1}^{n} \frac{\partial y}{\partial u_k}\,\frac{\partial u_k}{\partial x_i},\qquad i = 1, \ldots, m
+\end{aligned}$$
+<p>左边的 $\dfrac{\partial y}{\partial x_i}$ 是把 $y$ 看成 $x_1, \ldots, x_m$ 的函数时对 $x_i$ 的偏导数：其余分量固定，但 $u_1, \ldots, u_n$ 都随 $x_i$ 变化，所以它计入了经过全部 $n$ 个 $u_k$ 的路径。右边的 $\dfrac{\partial u_k}{\partial x_i}$ 也是在其余分量固定时求的，所以同样写成偏导数。</p>
+
+<p>模型里的多条路径有两种情形。</p>
+<ul>
+  <li><strong>在一个运算内部</strong>：一个输入分量出现在多个输出分量里。例如 LM head 的 $x_i$ 经过全部 $V$ 个 logit 影响 Loss，<a href="#in-model">下一章</a>用这条规则算出 Loss 对 $\mathbf{x}$ 的导数。</li>
+  <li><strong>同一个量在计算图里被使用多次</strong>：
+    <ul>
+      <li>残差连接：每一层的输入既直接进入输出，又经过子层。</li>
+      <li>GQA 共用的 K、V 权重：一组 $W_K$ 被 $n_h / n_{kv}$ 个 query head 使用，Loss 对它的导数是各 head 传回的梯度之和。</li>
+      <li>Embedding：同一个 token 在序列里出现多次时，$E$ 的对应行被使用多次，导数是各次之和。</li>
+      <li>序列里的 $T$ 个位置：每个位置都使用同一组权重，Loss 对权重的导数是 $T$ 个位置的贡献之和。</li>
+    </ul>
+  </li>
+</ul>
 
 </section>
 
 <section id="matrix">
 <h2>矩阵微积分</h2>
 
-<p><a href="#loss-grad">「损失对 logits 的梯度」</a>一节算出了一个位置上的 $\dfrac{\partial \ell}{\partial \mathbf{z}} = \mathbf{p} - \mathbf{y}$。反向传播的下一步经过 LM head：它的输入 $\mathbf{x}$ 是向量，权重是矩阵，输出 $\mathbf{z}$ 也是向量。我们要由 $\dfrac{\partial \ell}{\partial \mathbf{z}}$ 算出损失对权重的导数和损失对 $\mathbf{x}$ 的导数。前者用于更新权重。后者用于继续反向传播：$\mathbf{x}$ 由前面各层算出，按链式法则，前面各层参数的导数都要经过损失对 $\mathbf{x}$ 的导数。</p>
+<p><a href="#loss-grad">「Loss 对 logits 的梯度」</a>一节算出了一个位置上的 $\dfrac{\partial \ell}{\partial \mathbf{z}} = \mathbf{p} - \mathbf{y}$。反向传播的下一步经过 LM head：它的输入 $\mathbf{x}$ 是向量，权重是矩阵，输出 $\mathbf{z}$ 也是向量。我们要由 $\dfrac{\partial \ell}{\partial \mathbf{z}}$ 算出 Loss 对权重的导数和 Loss 对 $\mathbf{x}$ 的导数。前者用于更新权重。后者用于继续反向传播：$\mathbf{x}$ 由前面各层算出，按链式法则，前面各层参数的导数都要经过 Loss 对 $\mathbf{x}$ 的导数。</p>
 
 <h3 id="in-model">LM head 的偏导数</h3>
 
-<figure class="model-fig local"><div class="model-wrap"><svg id="tailSvgHead" viewBox="0 0 330 380" role="img" aria-label="从 LM head 的输入到损失的计算过程，高亮 LM head 的输入、LM head 和 logits"></svg></div></figure>
+<figure class="model-fig local"><div class="model-wrap"><svg id="tailSvgHead" viewBox="0 0 330 380" role="img" aria-label="从 LM head 的输入到 Loss 的计算过程，高亮 LM head 的输入、LM head 和 logits"></svg></div></figure>
 <p>本节配图高亮的是 LM head 和它的输入、输出，左侧标出了已经算出的 $\dfrac{\partial \ell}{\partial \mathbf{z}}$。输入 $\mathbf{x} \in \mathbb{R}^{d}$ 是模型图里 $\hat{X}_N$ 的一行，也就是最后一个 RMSNorm 在这个位置的输出。LM head 计算 $\mathbf{z} = \mathbf{x} W_{out}$，下面把 $W_{out}$ 简写为 $W$，它是 $d \times V$ 的矩阵。第 $j$ 个 logit 是 $\mathbf{x}$ 与 $W$ 第 $j$ 列的点积：</p>
 $$z_j = \sum_{k=1}^{d} x_k\,W_{kj} = x_1W_{1j} + x_2W_{2j} + \cdots + x_dW_{dj}$$
-<p><strong>两类偏导数。</strong>损失对 $W$ 的导数和对 $\mathbf{x}$ 的导数都要经过 logits，所以先求每个 logit 对 $x_i$ 和对 $W_{ij}$ 的偏导数。求 $z_j$ 对 $x_i$ 的偏导数时，$\mathbf{x}$ 的其余分量和全部 $W$ 都当作常数。和式的 $d$ 项里只有 $x_iW_{ij}$ 含 $x_i$，其余各项的导数为 0。对权重 $W_{ij}$ 求偏导的道理相同：</p>
+<p><strong>两类偏导数。</strong>Loss 对 $W$ 的导数和对 $\mathbf{x}$ 的导数都要经过 logits，所以先求每个 logit 对 $x_i$ 和对 $W_{ij}$ 的偏导数。求 $z_j$ 对 $x_i$ 的偏导数时，$\mathbf{x}$ 的其余分量和全部 $W$ 都当作常数。和式的 $d$ 项里只有 $x_iW_{ij}$ 含 $x_i$，其余各项的导数为 0。对权重 $W_{ij}$ 求偏导的道理相同：</p>
 $$\frac{\partial z_j}{\partial x_i} = W_{ij},\qquad \frac{\partial z_j}{\partial W_{ij}} = x_i$$
 <p>$W$ 其他列的元素 $W_{im}$（$m \neq j$）不出现在 $z_j$ 的和式里，所以 $\dfrac{\partial z_j}{\partial W_{im}} = 0$。也就是说，$W$ 的第 $j$ 列只影响 $z_j$ 这一个 logit。$x_i$ 则出现在全部 $V$ 个 logit 的和式里，每个 logit 对它的偏导数都可能不为零。</p>
 <p>下图取 $d = 2$、$V = 3$，列出两类偏导数的值：</p>
@@ -788,12 +825,15 @@ $$\frac{\partial z_j}{\partial x_i} = W_{ij},\qquad \frac{\partial z_j}{\partial
 <div class="say" id="jsay">移动滑块改变 $\mathbf{x}$，指针停在任意一格上显示该格的含义。</div>
 </figure>
 
-<p><strong>损失对权重的偏导数。</strong>$W_{ij}$ 只通过 $z_j$ 影响损失 $\ell$：$W_{ij}$ 变化时，其余 $V - 1$ 个 logit 不变。固定其余参数，$z_j$ 是 $W_{ij}$ 的单变量函数，$\ell$ 是 $z_j$ 的单变量函数，只有一条路径。按<a href="#chain-scalar">单变量链式法则</a>，把 $\dfrac{\partial \ell}{\partial z_j} = p_j - y_j$ 与 $\dfrac{\partial z_j}{\partial W_{ij}}$ 相乘：</p>
+<p><strong>Loss 对权重的偏导数。</strong>$W_{ij}$ 只通过 $z_j$ 影响 Loss $\ell$：$W_{ij}$ 变化时，其余 $V - 1$ 个 logit 不变。固定其余参数，$z_j$ 是 $W_{ij}$ 的单变量函数，$\ell$ 是 $z_j$ 的单变量函数，只有一条路径。按<a href="#chain-scalar">单变量链式法则</a>，把 $\dfrac{\partial \ell}{\partial z_j} = p_j - y_j$ 与 $\dfrac{\partial z_j}{\partial W_{ij}}$ 相乘：</p>
 $$\frac{\partial \ell}{\partial W_{ij}} = \frac{\partial \ell}{\partial z_j}\,\frac{\partial z_j}{\partial W_{ij}} = (p_j - y_j)\,x_i$$
-<p>$y_j$ 是 one-hot 向量 $\mathbf{y}$ 的第 $j$ 个分量。这是本文第一次得到损失对模型参数的导数。</p>
-<p><strong>损失对输入的偏导数。</strong>$x_i$ 的情形不同，它经过全部 $V$ 个 logit 影响 $\ell$，有 $V$ 条路径。按<a href="#chain-paths">多条路径</a>的链式法则，每条路径上把 $\dfrac{\partial \ell}{\partial z_j}$ 与 $\dfrac{\partial z_j}{\partial x_i}$ 相乘，再对 $V$ 条路径求和：</p>
+<p>$y_j$ 是 one-hot 向量 $\mathbf{y}$ 的第 $j$ 个分量。这是本文第一次得到 Loss 对模型参数的导数。</p>
+<p><strong>Loss 对输入的偏导数。</strong>$x_i$ 的情形不同，它经过全部 $V$ 个 logit 影响 $\ell$，有 $V$ 条路径。按<a href="#chain-paths">全导数链式法则</a>，每条路径上把 $\dfrac{\partial \ell}{\partial z_j}$ 与 $\dfrac{\partial z_j}{\partial x_i}$ 相乘，再对 $V$ 条路径求和：</p>
 $$\frac{\partial \ell}{\partial x_i} = \sum_{j=1}^{V} \frac{\partial \ell}{\partial z_j}\,\frac{\partial z_j}{\partial x_i} = \sum_{j=1}^{V} (p_j - y_j)\,W_{ij}$$
-<p>也就是 $\mathbf{p} - \mathbf{y}$ 与 $W$ 第 $i$ 行的点积。对 $\mathbf{x}$ 的 $d$ 个分量各算一次，就得到损失对 $\mathbf{x}$ 的导数。</p>
+<figure class="paths">
+<svg id="headPathsSvg" viewBox="0 0 520 200" role="img" aria-label="反向传播的方向：Loss 连到 z_1 到 z_V，每个 z_j 再连到 x_1 到 x_d 的每一个；高亮从 Loss 经过 V 条路径传回 x_i，每条路径上 Loss 到 z_j 一段的偏导数是 p_j - y_j，z_j 到 x_i 一段是 W_ij"></svg>
+</figure>
+<p>也就是 $\mathbf{p} - \mathbf{y}$ 与 $W$ 第 $i$ 行的点积。对 $\mathbf{x}$ 的 $d$ 个分量各算一次，就得到 Loss 对 $\mathbf{x}$ 的导数。</p>
 
 <h3 id="jacobian">Jacobian</h3>
 
@@ -821,14 +861,14 @@ $$\frac{\partial \mathbf{h}}{\partial \mathbf{a}} = \begin{bmatrix} \mathrm{Swis
 $$\frac{\partial (\mathbf{h} \otimes \mathbf{b})}{\partial \mathbf{h}} = \mathrm{diag}(\mathbf{b}),\qquad \frac{\partial (\mathbf{h} \otimes \mathbf{b})}{\partial \mathbf{b}} = \mathrm{diag}(\mathbf{h})$$
 <p>残差连接把子层的输入与子层的输出相加，结果的第 $j$ 个分量是两个输入的第 $j$ 个分量之和，所以它对两个输入的 Jacobian 都是单位矩阵 $I$。attention 分数除以 $\sqrt{d_h}$ 等于每个分量乘同一个常数，Jacobian 是 $\dfrac{1}{\sqrt{d_h}} I$。</p>
 
-<p>softmax 不属于逐元素运算。LM head 之后的 softmax $p_j = e^{z_j} / \sum_k e^{z_k}$ 的分母含全部 $z_k$，每个 $p_j$ 依赖全部 $V$ 个 logit，所以 Jacobian 不是对角矩阵。「损失对 logits 的梯度」一节把 softmax 和 cross-entropy 合在一起，直接求 $\ell$ 对 $\mathbf{z}$ 的偏导数，没有用到这个 Jacobian。attention 里的 softmax 之后不接 cross-entropy，需要单独计算它的 Jacobian，见后文 <a href="#op-softmax">softmax</a> 一节。</p>
+<p>softmax 不属于逐元素运算。LM head 之后的 softmax $p_j = e^{z_j} / \sum_k e^{z_k}$ 的分母含全部 $z_k$，每个 $p_j$ 依赖全部 $V$ 个 logit，所以 Jacobian 不是对角矩阵。「Loss 对 logits 的梯度」一节把 softmax 和 cross-entropy 合在一起，直接求 $\ell$ 对 $\mathbf{z}$ 的偏导数，没有用到这个 Jacobian。attention 里的 softmax 之后不接 cross-entropy，需要单独计算它的 Jacobian，见后文 <a href="#op-softmax">softmax</a> 一节。</p>
 
 <h3 id="matrix-vars">权重矩阵与整个序列</h3>
 
 <p>「LM head 的偏导数」一节对 $W$ 逐个元素求了偏导数，输入也只取了一个位置。模型里有两种矩阵：权重矩阵，例如 LM head 的 $W$；以及 $T$ 个位置的向量按行堆成的矩阵，例如 $T \times d$ 的 $X$。导数的输入或输出是矩阵时，结果位于<a href="#shapes">引言形状表</a>的最后一列或最后一行。其中标量对矩阵一格是训练最终需要的结果，三个灰格（向量对矩阵、矩阵对向量、矩阵对矩阵）是三维或四维数组。下面仍以 LM head 为例，说明这些数组里是什么，以及训练用到其中的哪些部分。</p>
 
 <p><strong>权重矩阵。</strong>$\mathbf{z}$ 对 $W$ 的导数属于向量对矩阵：$V$ 个 logit 对 $d \times V$ 个权重，一共 $V \times d \times V$ 个偏导数 $\dfrac{\partial z_j}{\partial W_{im}}$。它们的值在「LM head 的偏导数」一节已经算出：$m = j$ 时是 $x_i$，$m \neq j$ 时是 0。所以这个三维数组里可能不为零的只有 $d \times V$ 个数，取值是 $\mathbf{x}$ 的 $d$ 个分量，每个分量重复 $V$ 次。</p>
-<p>训练需要的是损失对每个权重的导数，前面已经逐个算出 $\dfrac{\partial \ell}{\partial W_{ij}} = (p_j - y_j)\,x_i$。每个权重只通过一个 logit 影响损失，所以计算时只用到 $x_i$ 和 $p_j - y_j$，不需要写出这个三维数组。把 $d \times V$ 个结果按 $W$ 的位置排列，第 $i$ 行第 $j$ 列放 $\dfrac{\partial \ell}{\partial W_{ij}}$，得到与 $W$ 同形状的矩阵：</p>
+<p>训练需要的是 Loss 对每个权重的导数，前面已经逐个算出 $\dfrac{\partial \ell}{\partial W_{ij}} = (p_j - y_j)\,x_i$。每个权重只通过一个 logit 影响 Loss，所以计算时只用到 $x_i$ 和 $p_j - y_j$，不需要写出这个三维数组。把 $d \times V$ 个结果按 $W$ 的位置排列，第 $i$ 行第 $j$ 列放 $\dfrac{\partial \ell}{\partial W_{ij}}$，得到与 $W$ 同形状的矩阵：</p>
 $$\frac{\partial \ell}{\partial W} = \begin{bmatrix} x_1(p_1 - y_1) & \cdots & x_1(p_V - y_V) \\ \vdots & & \vdots \\ x_d(p_1 - y_1) & \cdots & x_d(p_V - y_V) \end{bmatrix} = \mathbf{x}^{T}(\mathbf{p} - \mathbf{y})$$
 <p>$\mathbf{x}^T$ 是 $d \times 1$ 的列向量，$\mathbf{p} - \mathbf{y}$ 是 $1 \times V$ 的行向量，两者相乘得到 $d \times V$ 的矩阵，第 $i$ 行第 $j$ 列是 $x_i(p_j - y_j)$。这是形状表里标量对矩阵一格的一个例子。</p>
 
@@ -836,9 +876,9 @@ $$\frac{\partial \ell}{\partial W} = \begin{bmatrix} x_1(p_1 - y_1) & \cdots & x
 
 <p>上面几个数组的内容都能直接写出来：大部分元素是零，不为零的部分由 $\mathbf{x}$ 或 $J$ 组成。</p>
 
-<p><strong>损失的平均。</strong>前面的 $\ell$ 是一个位置的损失。训练用的损失 $L$ 是 $T$ 个位置各自的损失 $\ell_t$ 的平均：$L = \dfrac{1}{T}\sum_{t=1}^{T} \ell_t$，$L$ 对每个 $\ell_t$ 的偏导数都是 $\dfrac{1}{T}$（直接求和、不取平均时是 $1$）。位置 $t$ 的 logits $\mathbf{z}_t$ 只通过 $\ell_t$ 影响 $L$，按单变量链式法则，</p>
+<p><strong>Loss 的平均。</strong>前面的 $\ell$ 是一个位置的 Loss。训练用的 Loss $L$ 是 $T$ 个位置各自的 Loss $\ell_t$ 的平均：$L = \dfrac{1}{T}\sum_{t=1}^{T} \ell_t$，$L$ 对每个 $\ell_t$ 的偏导数都是 $\dfrac{1}{T}$（直接求和、不取平均时是 $1$）。位置 $t$ 的 logits $\mathbf{z}_t$ 只通过 $\ell_t$ 影响 $L$，按单变量链式法则，</p>
 $$\frac{\partial L}{\partial \mathbf{z}_t} = \frac{1}{T}\,(\mathbf{p}_t - \mathbf{y}_t)$$
-<p>把 $T$ 个位置的这一行堆成 $T \times V$ 的矩阵 $G = \dfrac{1}{T}(P - Y)$，其中 $P$ 和 $Y$ 分别由 $\mathbf{p}_t$ 和 $\mathbf{y}_t$ 按行堆成。损失对 $X$ 的导数逐行计算，第 $t$ 行是 $G$ 的第 $t$ 行乘 $J$，合起来是 $\dfrac{\partial L}{\partial X} = GW^{T}$。权重 $W$ 则被 $T$ 个位置共用，每个 $W_{ij}$ 经过 $T$ 个位置的 logit 影响 $L$。按<a href="#chain-paths">多条路径</a>的链式法则，$L$ 对它的导数是 $T$ 个位置的贡献之和：</p>
+<p>把 $T$ 个位置的这一行堆成 $T \times V$ 的矩阵 $G = \dfrac{1}{T}(P - Y)$，其中 $P$ 和 $Y$ 分别由 $\mathbf{p}_t$ 和 $\mathbf{y}_t$ 按行堆成。Loss 对 $X$ 的导数逐行计算，第 $t$ 行是 $G$ 的第 $t$ 行乘 $J$，合起来是 $\dfrac{\partial L}{\partial X} = GW^{T}$。权重 $W$ 则被 $T$ 个位置共用，每个 $W_{ij}$ 经过 $T$ 个位置的 logit 影响 $L$。按<a href="#chain-paths">全导数链式法则</a>，$L$ 对它的导数是 $T$ 个位置的贡献之和：</p>
 $$\frac{\partial L}{\partial W} = \sum_{t=1}^{T} \mathbf{x}_t^{T}\,\frac{1}{T}(\mathbf{p}_t - \mathbf{y}_t) = X^{T}G$$
 <p>$X^T$ 是 $d \times T$，$G$ 是 $T \times V$，矩阵乘法中对 $T$ 的求和就是对 $T$ 个位置的求和。反向传播经过 LM head 时用到的只有 $G$、$W$ 和前向计算时保存的 $X$。</p>
 
@@ -856,13 +896,13 @@ $$\frac{\partial \mathbf{h}}{\partial \mathbf{x}} = \frac{\partial \mathbf{h}}{\
 
 <h3 id="vjp">vector-Jacobian product</h3>
 
-<p>反向传播需要的是标量损失对各个量的导数。<a href="#jacobian">Jacobian</a> 一节对 LM head 算出了 $\dfrac{\partial \ell}{\partial \mathbf{x}} = \mathbf{g}J$：损失对输出的导数 $\mathbf{g}$ 是一个行向量，乘输出对输入的 Jacobian，得到损失对输入的导数。其他运算也是这样。设一个运算的输入是 $\mathbf{a}$，输出是 $\mathbf{h}$，Jacobian 是 $J = \dfrac{\partial \mathbf{h}}{\partial \mathbf{a}}$，已知 $\mathbf{g} = \dfrac{\partial L}{\partial \mathbf{h}}$。$a_k$ 经由 $h_1, h_2, \ldots$ 影响 $L$，按多条路径求和，推导与 LM head 相同：</p>
+<p>反向传播需要的是标量 Loss 对各个量的导数。<a href="#jacobian">Jacobian</a> 一节对 LM head 算出了 $\dfrac{\partial \ell}{\partial \mathbf{x}} = \mathbf{g}J$：Loss 对输出的导数 $\mathbf{g}$ 是一个行向量，乘输出对输入的 Jacobian，得到 Loss 对输入的导数。其他运算也是这样。设一个运算的输入是 $\mathbf{a}$，输出是 $\mathbf{h}$，Jacobian 是 $J = \dfrac{\partial \mathbf{h}}{\partial \mathbf{a}}$，已知 $\mathbf{g} = \dfrac{\partial L}{\partial \mathbf{h}}$。$a_k$ 经由 $h_1, h_2, \ldots$ 影响 $L$，按多条路径求和，推导与 LM head 相同：</p>
 $$\frac{\partial L}{\partial \mathbf{a}} = \mathbf{g}\,J$$
-<p>结果仍是行向量，与 $\mathbf{a}$ 同形状。这个运算称为 vector-Jacobian product。反向传播每经过一个运算做的就是它：取损失对该运算<strong>输出</strong>的导数 $\mathbf{g}$，算出损失对<strong>输入</strong>的导数 $\mathbf{g}J$，向前一层传递。</p>
+<p>结果仍是行向量，与 $\mathbf{a}$ 同形状。这个运算称为 vector-Jacobian product。反向传播每经过一个运算做的就是它：取 Loss 对该运算<strong>输出</strong>的导数 $\mathbf{g}$，算出 Loss 对<strong>输入</strong>的导数 $\mathbf{g}J$，向前一层传递。</p>
 
 <p>连续经过多个运算时，也可以先按向量链式法则把各个 Jacobian 乘起来。以 FFN 的 gate 分支为例，设 $\mathbf{g} = \dfrac{\partial L}{\partial \mathbf{h}}$：</p>
 $$\frac{\partial L}{\partial \mathbf{x}} = \mathbf{g}\,\Big(\mathrm{diag}\big(\mathrm{Swish}'(\mathbf{a})\big)\,W_{gate}^{T}\Big) = \Big(\mathbf{g}\,\mathrm{diag}\big(\mathrm{Swish}'(\mathbf{a})\big)\Big)\,W_{gate}^{T}$$
-<p>矩阵乘法满足结合律，两种顺序结果相同。右边的顺序从 $\mathbf{g}$ 开始，每一步都是行向量乘一个 Jacobian，结果仍是行向量，不需要算出两个 Jacobian 的乘积。对一般的 Jacobian，矩阵乘矩阵的计算量远大于行向量乘矩阵。反向传播采用右边的顺序：从损失开始，逐个运算向前做 vector-Jacobian product。</p>
+<p>矩阵乘法满足结合律，两种顺序结果相同。右边的顺序从 $\mathbf{g}$ 开始，每一步都是行向量乘一个 Jacobian，结果仍是行向量，不需要算出两个 Jacobian 的乘积。对一般的 Jacobian，矩阵乘矩阵的计算量远大于行向量乘矩阵。反向传播采用右边的顺序：从 Loss 开始，逐个运算向前做 vector-Jacobian product。</p>
 
 <p>计算 $\mathbf{g}J$ 也不需要构造 $J$，下面是最常见的两种 Jacobian：</p>
 <p><strong>对角 Jacobian</strong>。$J = \mathrm{diag}(\mathbf{v})$ 时，$\mathbf{g}J$ 的第 $k$ 个分量是 $g_k v_k$，也就是逐元素相乘：</p>
@@ -870,7 +910,7 @@ $$\mathbf{g}\,\mathrm{diag}(\mathbf{v}) = \mathbf{g} \otimes \mathbf{v}$$
 <p>Swish 的反向是 $\mathbf{g} \otimes \mathrm{Swish}'(\mathbf{a})$，一次 $d_{ff}$ 个元素的逐元素乘，而不是一次 $d_{ff} \times d_{ff}$ 的矩阵乘。</p>
 <p><strong>矩阵乘法的 Jacobian</strong>。$\mathbf{a} = \mathbf{x}W$ 时 $J = W^T$，$\dfrac{\partial L}{\partial \mathbf{x}} = \mathbf{g}\,W^{T}$，与 LM head 的 $(\mathbf{p} - \mathbf{y})\,W^{T}$ 形式相同，是一次普通的矩阵乘法。</p>
 
-<p>损失对权重的导数最能说明不构造 Jacobian 的好处。按向量链式法则，损失对 $W_{gate}$ 的导数要经过 $\dfrac{\partial \mathbf{a}}{\partial W_{gate}}$，这是形状表中向量对矩阵的三维数组，共 $d_{ff} \times d \times d_{ff}$ 个数。取 Llama 2 7B 的 $d_{ff} = 11008$、$d = 4096$，这个数组约有 $5 \times 10^{11}$ 个元素，约为该模型全部参数量的七十倍，放不进显存。<a href="#matrix-vars">「权重矩阵与整个序列」</a>一节对 LM head 算出的 $\dfrac{\partial \ell}{\partial W} = \mathbf{x}^{T}(\mathbf{p} - \mathbf{y})$ 中，$\mathbf{p} - \mathbf{y}$ 就是损失对输出的导数 $\mathbf{g}$。那里的推导只用到每个权重只出现在一个输出里，所以对任何矩阵乘法 $\mathbf{a} = \mathbf{x}W$ 都成立：</p>
+<p>Loss 对权重的导数最能说明不构造 Jacobian 的好处。按向量链式法则，Loss 对 $W_{gate}$ 的导数要经过 $\dfrac{\partial \mathbf{a}}{\partial W_{gate}}$，这是形状表中向量对矩阵的三维数组，共 $d_{ff} \times d \times d_{ff}$ 个数。取 Llama 2 7B 的 $d_{ff} = 11008$、$d = 4096$，这个数组约有 $5 \times 10^{11}$ 个元素，约为该模型全部参数量的七十倍，放不进显存。<a href="#matrix-vars">「权重矩阵与整个序列」</a>一节对 LM head 算出的 $\dfrac{\partial \ell}{\partial W} = \mathbf{x}^{T}(\mathbf{p} - \mathbf{y})$ 中，$\mathbf{p} - \mathbf{y}$ 就是 Loss 对输出的导数 $\mathbf{g}$。那里的推导只用到每个权重只出现在一个输出里，所以对任何矩阵乘法 $\mathbf{a} = \mathbf{x}W$ 都成立：</p>
 $$\frac{\partial L}{\partial W} = \mathbf{x}^{T}\mathbf{g}$$
 <p>$\mathbf{x}^T$ 是 $d \times 1$，$\mathbf{g}$ 是 $1 \times d_{ff}$，乘出来 $d \times d_{ff}$，和 $W$ 同形状。序列有 $T$ 个位置时，与 LM head 的情形相同，$\dfrac{\partial L}{\partial W} = X^T G$。</p>
 
@@ -910,12 +950,12 @@ $$\frac{\partial L}{\partial \mathbf{s}} = \mathbf{g}\,\big(\mathrm{diag}(\mathb
 <p>最后一个式子里 $\mathbf{g}\cdot\mathbf{p}$ 是标量，从 $\mathbf{g}$ 的每个分量中减去它。这个 Jacobian 不是对角矩阵，反向仍是一次点积、一次减法、一次逐元素乘，计算量与 $n$ 成正比。attention 对 $T \times T$ 的分数矩阵逐行执行这一步，LM head 之后对 $T \times V$ 的 logits 逐行执行。</p>
 
 <h3 id="op-ce">cross-entropy</h3>
-<p>前向：第 $t$ 个位置的损失 $\ell_t = -\ln p_{t,\,y_t}$，$y_t$ 是目标 token；$L = \dfrac{1}{T}\sum_t \ell_t$。</p>
+<p>前向：第 $t$ 个位置的 Loss $\ell_t = -\ln p_{t,\,y_t}$，$y_t$ 是目标 token；$L = \dfrac{1}{T}\sum_t \ell_t$。</p>
 <p>反向：$L$ 对 $p_{t,j}$ 的导数，只有 $j = y_t$ 那一项不为零，用对数规则和 $1/T$：</p>
 $$\frac{\partial L}{\partial p_{t,j}} = \begin{cases} -\dfrac{1}{T\,p_{t,y_t}} & j = y_t \\[6pt] 0 & j \neq y_t \end{cases}$$
 <p>把它作为 $\mathbf{g}$ 代入 softmax 的反向规则。$\mathbf{g}$ 只有一个非零分量，所以 $\mathbf{g}\cdot\mathbf{p} = -\dfrac{1}{T}$，于是 $\mathbf{p} \otimes (\mathbf{g} - (\mathbf{g}\cdot\mathbf{p}))$ 的第 $j$ 个分量是 $p_{t,j}\big(g_j + \frac{1}{T}\big)$。$j = y_t$ 时是 $\frac{1}{T}(p_{t,y_t} - 1)$，其余是 $\frac{1}{T}p_{t,j}$。合起来：</p>
 $$\frac{\partial L}{\partial \mathbf{s}_t} = \frac{1}{T}\big(\mathbf{p}_t - \mathbf{y}_t\big),\qquad \frac{\partial L}{\partial S} = \frac{1}{T}\,(P - Y)$$
-<p>$\mathbf{y}_t$ 是目标 token 的 one-hot 向量，$Y$ 是它们堆成的 $T \times V$ 矩阵。损失对 logits 的导数等于预测分布减去目标分布。实现中 softmax 和 cross-entropy 通常合成一个算子（PyTorch 的 <code>F.cross_entropy</code>），原因有两个：合并后的反向规则只需一次减法，不必先算出 $-1/p$ 再代回 softmax 的反向；前向按 $\ln p_j = s_j - \ln\sum_k e^{s_k}$ 计算，配合减去每行最大值，避免 $e^{s_j}$ 溢出和 $p_j$ 下溢后取对数。</p>
+<p>$\mathbf{y}_t$ 是目标 token 的 one-hot 向量，$Y$ 是它们堆成的 $T \times V$ 矩阵。Loss 对 logits 的导数等于预测分布减去目标分布。实现中 softmax 和 cross-entropy 通常合成一个算子（PyTorch 的 <code>F.cross_entropy</code>），原因有两个：合并后的反向规则只需一次减法，不必先算出 $-1/p$ 再代回 softmax 的反向；前向按 $\ln p_j = s_j - \ln\sum_k e^{s_k}$ 计算，配合减去每行最大值，避免 $e^{s_j}$ 溢出和 $p_j$ 下溢后取对数。</p>
 
 <h3 id="op-attn">GQA attention</h3>
 <p>attention 是上面几条规则的组合，没有新规则。对一个 query head $i$，设它所在的组是 $j$，前向依次是：</p>
@@ -972,7 +1012,7 @@ $$\frac{\partial L}{\partial W_{\text{fp32}}} := \frac{\partial L}{\partial W_{\
 <section id="cheatsheet">
 <h2>速查表</h2>
 
-<p>本文用到的规则汇总。$G$ 是损失对该运算输出的导数，与输出同形状。</p>
+<p>本文用到的规则汇总。$G$ 是 Loss 对该运算输出的导数，与输出同形状。</p>
 
 <div class="cheat tbl"><table>
 <thead><tr><th>运算</th><th>前向</th><th>Jacobian</th><th>反向（vector-Jacobian product）</th></tr></thead>
@@ -1003,7 +1043,7 @@ $$\frac{\partial L}{\partial W_{\text{fp32}}} := \frac{\partial L}{\partial W_{\
 <tr><td>$\dfrac{df}{dx}$，$\dfrac{\partial f}{\partial x}$</td><td>单变量导数；偏导数（其他输入固定）</td></tr>
 <tr><td>$\nabla f$，$\dfrac{\partial f}{\partial \mathbf{x}}$</td><td>梯度，$f$ 对每个输入的偏导数排成一行</td></tr>
 <tr><td>$J$，$\dfrac{\partial \mathbf{z}}{\partial \mathbf{x}}$</td><td>Jacobian，第 $j$ 行第 $i$ 列是 $\partial z_j / \partial x_i$（行对应输出，列对应输入）</td></tr>
-<tr><td>$G$，$\mathbf{g}$</td><td>损失对某个运算输出的导数，与输出同形状</td></tr>
+<tr><td>$G$，$\mathbf{g}$</td><td>Loss 对某个运算输出的导数，与输出同形状</td></tr>
 <tr><td>$\otimes$</td><td>逐元素相乘（Hadamard product）</td></tr>
 <tr><td>$\mathrm{diag}(\mathbf{v})$</td><td>以 $\mathbf{v}$ 为对角线的方阵</td></tr>
 <tr><td>$I$，$\mathbf{y}_t$，$Y$</td><td>单位矩阵；目标 token 的 one-hot 向量；它们堆成的 $T \times V$ 矩阵</td></tr>
@@ -1124,7 +1164,7 @@ const HEAD=[
   {op:'$\\mathrm{softmax}(\\mathrm{dim}=-1)$',fp:true,mark:'softmax'},
   {act:'$P \\in \\mathbb{R}^{T \\times V}$',dt:'FP32',mark:'P'},
   {op:'$\\mathrm{CrossEntropy}$',w:'$L = -\\tfrac{1}{T}\\sum_t \\ln P[t,\\,y_t]$',side:'target_ids$\\;y \\in \\mathbb{Z}^{T}$',fp:true,mark:'ce'},
-  {act:'损失$\\;L \\in \\mathbb{R}$',dt:'FP32',mark:'loss'},
+  {act:'Loss$\\;L \\in \\mathbb{R}$',dt:'FP32',mark:'loss'},
 ];
 // 主线把 N 层收成一个 Decoder 方框，右侧展开一层内部
 function buildModelCollapsed(svgId){
@@ -1238,7 +1278,7 @@ function buildTail(svgId,from,to,brace){
     {op:'$\\mathrm{softmax}$',mark:'softmax'},
     {act:'$\\mathbf{p} \\in \\mathbb{R}^{V}$',mark:'p'},
     {op:'$\\mathrm{CrossEntropy}$',w:'$\\ell = -\\ln p_y$',side:'目标 token$\\;y$',mark:'ce'},
-    {act:'损失$\\;\\ell \\in \\mathbb{R}$',mark:'loss'},
+    {act:'Loss$\\;\\ell \\in \\mathbb{R}$',mark:'loss'},
   ],{CX:150,BW:230,PW:195,gap:18,sideLen:30});
   const keys=Object.keys(marks), ms=keys.slice(keys.indexOf(from),keys.indexOf(to)+1).map(k=>marks[k]);
   const x0=Math.min(...ms.map(m=>m.x)), x1=Math.max(...ms.map(m=>m.x+m.w));
@@ -1561,7 +1601,7 @@ MathJax.startup.promise.then(()=>{
   let x=[1,-0.5], prev=[1,-0.5], prevZ=null;
   const z=v=>[0,1,2].map(j=>v[0]*W[0][j]+v[1]*W[1][j]);
   const f2=v=>(v<0?'−':'')+Math.abs(v).toFixed(2), f3=v=>(v<0?'−':'')+Math.abs(v).toFixed(3);
-  const X=i=>`<span style="color:var(--s3)">x<sub>${i}</sub></span>`, Z=j=>`<span style="color:var(--s5)">z<sub>${j}</sub></span>`;
+  const X=i=>`<span style="color:var(--s3)">$x_{${i}}$</span>`, Z=j=>`<span style="color:var(--s5)">$z_{${j}}$</span>`;
   function render(moved){
     const zz=z(x);
     [1,2].forEach(i=>{$('jx'+i+'v').textContent=x[i-1].toFixed(2);$('jx'+i+'c').textContent=f2(x[i-1]);[1,2,3].forEach(j=>$('jdw'+i+j).textContent=f2(x[i-1]));});
@@ -1582,27 +1622,27 @@ MathJax.startup.promise.then(()=>{
   const cells=[...fig.querySelectorAll('.mat .c')];
   const clear=()=>cells.forEach(o=>o.classList.remove('on'));
   const on=sel=>fig.querySelectorAll(sel).forEach(o=>o.classList.add('on'));
-  const zExpr=j=>`${Z(j)} = ${W[0][j-1]}·x<sub>1</sub> ${W[1][j-1]<0?'−':'+'} ${Math.abs(W[1][j-1])}·x<sub>2</sub>`;
+  const zExpr=j=>`${Z(j)} $= ${W[0][j-1]}\\,x_1 ${W[1][j-1]<0?'-':'+'} ${Math.abs(W[1][j-1])}\\,x_2$`;
   cells.forEach(c=>{
     const d=c.dataset;
     c.addEventListener('pointerenter',()=>{
       clear(); c.classList.add('on');
       if(d.x){ // 输入 x_i：牵动 W 的第 i 行、全部 z
         const i=+d.x; on(`.mat.w .c[data-i="${i}"]`); on('.mat.z .c'); on(`.mat.dx .c[data-di="${i}"]`); on(`.mat.dw .c[data-dwi="${i}"]`);
-        say.innerHTML=`${X(i)} 变化时三个输出的变化率：${zExpr(1)}，${zExpr(2)}，${zExpr(3)}，其中 x<sub>${i}</sub> 的系数依次是 <b>${W[i-1].join('　')}</b>，即 $W$ 的第 ${i} 行。这三个数不含 x，所以不随滑块变。`;
+        say.innerHTML=`${X(i)} 变化时三个输出的变化率：${zExpr(1)}，${zExpr(2)}，${zExpr(3)}，其中 $x_{${i}}$ 的系数依次是 <b>${W[i-1].join('　')}</b>，即 $W$ 的第 ${i} 行。这三个数不含 $\\mathbf{x}$，所以不随滑块变。`;
       }else if(d.i){ // 权重 W_ij：只影响 z_j，比例是 x_i
         const i=+d.i,j=+d.j; on(`.mat.x .c[data-x="${i}"]`); on(`.mat.z .c[data-z="${j}"]`); on(`.mat.dw .c[data-dwi="${i}"][data-j="${j}"]`); on(`.mat.dx .c[data-di="${i}"][data-j="${j}"]`);
-        say.innerHTML=`只有 ${Z(j)} 含 W<sub>${i}${j}</sub>：${zExpr(j)}，它所乘的是 ${X(i)}，所以 ∂z<sub>${j}</sub>/∂W<sub>${i}${j}</sub> = x<sub>${i}</sub> = <b>${f2(x[i-1])}</b>，这个值随 x<sub>${i}</sub> 变化。`;
+        say.innerHTML=`只有 ${Z(j)} 含 $W_{${i}${j}}$：${zExpr(j)}，它所乘的是 ${X(i)}，所以 $\\partial z_{${j}} / \\partial W_{${i}${j}} = x_{${i}}$ = <b>${f2(x[i-1])}</b>，这个值随 $x_{${i}}$ 变化。`;
       }else if(d.z){ // 输出 z_j：由 W 的第 j 列和 x 决定
         const j=+d.z; on(`.mat.w .c[data-j="${j}"]`); on('.mat.x .c'); on(`.mat.dx .c[data-j="${j}"]`); on(`.mat.dw .c[data-j="${j}"]`);
         const zz=z(x);
-        say.innerHTML=`${zExpr(j)} = ${W[0][j-1]}·(${f2(x[0])}) ${W[1][j-1]<0?'−':'+'} ${Math.abs(W[1][j-1])}·(${f2(x[1])}) = <b>${f3(zz[j-1])}</b>。它对 x<sub>1</sub>、x<sub>2</sub> 的偏导数是 $W$ 的第 ${j} 列 <b>${W[0][j-1]}　${W[1][j-1]}</b>，也就是 z<sub>${j}</sub> 的梯度。`;
+        say.innerHTML=`${zExpr(j)} $= ${W[0][j-1]} \\times (${(x[0]).toFixed(2)}) ${W[1][j-1]<0?'-':'+'} ${Math.abs(W[1][j-1])} \\times (${(x[1]).toFixed(2)})$ = <b>${f3(zz[j-1])}</b>。它对 $x_1$、$x_2$ 的偏导数是 $W$ 的第 ${j} 列 <b>${W[0][j-1]}　${W[1][j-1]}</b>，也就是 $z_{${j}}$ 的梯度。`;
       }else if(d.di){ // 左下 ∂z/∂x_i 的一格
         const i=+d.di,j=+d.j; on(`.mat.w .c[data-i="${i}"][data-j="${j}"]`); on(`.mat.x .c[data-x="${i}"]`); on(`.mat.z .c[data-z="${j}"]`);
-        say.innerHTML=`∂z<sub>${j}</sub>/∂x<sub>${i}</sub> = W<sub>${i}${j}</sub> = <b>${W[i-1][j-1]}</b>：${X(i)} 变化时 ${Z(j)} 的变化率是 ${W[i-1][j-1]}。`;
+        say.innerHTML=`$\\partial z_{${j}} / \\partial x_{${i}} = W_{${i}${j}}$ = <b>${W[i-1][j-1]}</b>：${X(i)} 变化时 ${Z(j)} 的变化率是 ${W[i-1][j-1]}。`;
       }else if(d.dwi){ // 右下 ∂z_j/∂W_ij 的一格
         const i=+d.dwi,j=+d.j; on(`.mat.w .c[data-i="${i}"][data-j="${j}"]`); on(`.mat.x .c[data-x="${i}"]`); on(`.mat.z .c[data-z="${j}"]`);
-        say.innerHTML=`∂z<sub>${j}</sub>/∂W<sub>${i}${j}</sub> = x<sub>${i}</sub> = <b>${f2(x[i-1])}</b>：W<sub>${i}${j}</sub> 变化时只有 ${Z(j)} 变化，变化率是 x<sub>${i}</sub>。`;
+        say.innerHTML=`$\\partial z_{${j}} / \\partial W_{${i}${j}} = x_{${i}}$ = <b>${f2(x[i-1])}</b>：$W_{${i}${j}}$ 变化时只有 ${Z(j)} 变化，变化率是 $x_{${i}}$。`;
       }
       typeset();
     });
@@ -1611,6 +1651,20 @@ MathJax.startup.promise.then(()=>{
   render(null);
 })();
 
+/* ---------- 单条路径 ---------- */
+MathJax.startup.promise.then(()=>{
+  const svg=document.getElementById('chainSvg');
+  const defs=el('defs',{}), m=el('marker',{id:'carr',viewBox:'0 0 10 10',refX:'9',refY:'5',markerWidth:'7',markerHeight:'7',orient:'auto'});
+  m.appendChild(el('path',{d:'M0,0 L10,5 L0,10 z',fill:'var(--ink-2)'}));defs.appendChild(m);svg.appendChild(defs);
+  const box=(x,t)=>{svg.appendChild(el('rect',{x,y:30,width:70,height:40}));label(svg,x+35,55,t,13,'middle');};
+  box(20,'$x$'); box(225,'$u$'); box(430,'$y$');
+  svg.appendChild(el('path',{d:'M225,50 L92,50',style:'marker-end:url(#carr)'}));
+  svg.appendChild(el('path',{d:'M430,50 L297,50',style:'marker-end:url(#carr)'}));
+  label(svg,157,24,'$\\dfrac{du}{dx}$',12,'middle','','var(--ink-2)');
+  label(svg,362,24,'$\\dfrac{dy}{du}$',12,'middle','','var(--ink-2)');
+  label(svg,260,98,'反向传播：从 $y$ 出发，先乘 $dy/du$，再乘 $du/dx$，得到 $dy/dx$',12,'middle','','var(--s1)');
+});
+
 /* ---------- 多条路径 ---------- */
 MathJax.startup.promise.then(()=>{
   const svg=document.getElementById('pathsSvg');
@@ -1618,16 +1672,60 @@ MathJax.startup.promise.then(()=>{
   for(const [id,col] of [['parr','var(--ink-2)'],['parrb','var(--s1)']]){const m=el('marker',{id,viewBox:'0 0 10 10',refX:'9',refY:'5',markerWidth:'7',markerHeight:'7',orient:'auto'});m.appendChild(el('path',{d:'M0,0 L10,5 L0,10 z',fill:col}));defs.appendChild(m);}
   svg.appendChild(defs);
   const box=(x,y,w,h,t)=>{svg.appendChild(el('rect',{x,y,width:w,height:h}));label(svg,x+w/2,y+h/2+5,t,13,'middle');};
-  box(20,55,70,40,'$x$');
-  box(225,15,70,40,'$g(x)$');
-  svg.appendChild(el('circle',{cx:430,cy:75,r:12}));label(svg,430,80,'+',14,'middle');
-  box(470,55,40,40,'$y$');
-  svg.appendChild(el('path',{d:'M90,65 C150,65 160,35 223,35',style:'marker-end:url(#parr)'}));
-  svg.appendChild(el('path',{d:'M295,35 C360,35 380,60 416,70',style:'marker-end:url(#parr)'}));
-  svg.appendChild(el('path',{d:'M90,85 C200,85 300,110 416,80',class:'b',style:'marker-end:url(#parrb)'}));
-  svg.appendChild(el('path',{d:'M442,75 L468,75',style:'marker-end:url(#parr)'}));
-  label(svg,150,26,'经过 $g$：贡献 $\\dfrac{dg}{dx}\\,\\Delta x$',12,'middle','','var(--ink-2)');
-  label(svg,250,125,'直接相加：贡献 $1 \\cdot \\Delta x$',12,'middle','','var(--s1)');
+  box(20,70,60,40,'$x$');
+  box(440,70,60,40,'$y$');
+  for(const [cy,t,cls] of [[24,'u_1','b'],[72,'u_2',''],[152,'u_n','']]){
+    const arr=cls?'parrb':'parr';
+    svg.appendChild(el('path',{d:`M230,${cy} C160,${cy} 150,90 82,90`,class:cls,style:`marker-end:url(#${arr})`}));
+    svg.appendChild(el('path',{d:`M440,90 C370,90 360,${cy} 292,${cy}`,class:cls,style:`marker-end:url(#${arr})`}));
+    box(230,cy-16,60,32,`$${t}$`);
+  }
+  label(svg,260,118,'$\\vdots$',13,'middle');
+  label(svg,140,45,'$\\dfrac{du_1}{dx}$',12,'middle','','var(--s1)');
+  label(svg,380,45,'$\\dfrac{\\partial y}{\\partial u_1}$',12,'middle','','var(--s1)');
+  label(svg,260,194,'反向传播：从 $y$ 出发，经过 $n$ 条路径传回 $x$，各条路径的贡献相加',12,'middle','','var(--s1)');
+});
+
+/* ---------- 向量输入的多条路径 ---------- */
+MathJax.startup.promise.then(()=>{
+  const svg=document.getElementById('vecPathsSvg');
+  const defs=el('defs',{});
+  for(const [id,col] of [['varr','var(--ink-2)'],['varrb','var(--s1)']]){const m=el('marker',{id,viewBox:'0 0 10 10',refX:'9',refY:'5',markerWidth:'7',markerHeight:'7',orient:'auto'});m.appendChild(el('path',{d:'M0,0 L10,5 L0,10 z',fill:col}));defs.appendChild(m);}
+  svg.appendChild(defs);
+  const box=(x,cy,t)=>{svg.appendChild(el('rect',{x,y:cy-16,width:60,height:32}));label(svg,x+30,cy+5,t,13,'middle');};
+  const rows=[24,72,152];                   // 第 1、2、最后一个分量的纵坐标，中间是省略号
+  // 先画灰色的边，再画高亮的边，高亮的边在上层
+  for(const hi of [false,true]) rows.forEach((a,i)=>rows.forEach(b=>{
+    if((i===0)!==hi)return;
+    svg.appendChild(el('path',{d:`M230,${b} L102,${a}`,class:hi?'b':'f',style:`marker-end:url(#${hi?'varrb':'varr'})`}));
+  }));
+  rows.forEach(b=>svg.appendChild(el('path',{d:`M440,88 C370,88 360,${b} 292,${b}`,class:'b',style:'marker-end:url(#varrb)'})));
+  ['x_1','x_2','x_m'].forEach((t,i)=>box(40,rows[i],`$${t}$`));
+  ['u_1','u_2','u_n'].forEach((t,i)=>box(230,rows[i],`$${t}$`));
+  box(440,88,'$y$');
+  label(svg,70,118,'$\\vdots$',13,'middle'); label(svg,260,118,'$\\vdots$',13,'middle');
+  label(svg,260,192,'反向传播：从 $y$ 出发，经过 $n$ 条路径传回 $x_1$',12,'middle','','var(--s1)');
+});
+
+/* ---------- LM head：Loss 对 x_i 的偏导数沿 V 条路径传回 ---------- */
+MathJax.startup.promise.then(()=>{
+  const svg=document.getElementById('headPathsSvg');
+  const defs=el('defs',{});
+  for(const [id,col] of [['harr','var(--ink-2)'],['harrb','var(--s1)']]){const m=el('marker',{id,viewBox:'0 0 10 10',refX:'9',refY:'5',markerWidth:'7',markerHeight:'7',orient:'auto'});m.appendChild(el('path',{d:'M0,0 L10,5 L0,10 z',fill:col}));defs.appendChild(m);}
+  svg.appendChild(defs);
+  const box=(x,cy,t)=>{svg.appendChild(el('rect',{x,y:cy-16,width:60,height:32}));label(svg,x+30,cy+5,t,13,'middle');};
+  // 压在边上的公式标签，底下垫一块背景色，遮住穿过的边
+  const tag=(x,cy,t)=>{const n=tex(t,12,x,cy+4,'middle','var(--ink-2)');svg.appendChild(el('rect',{x:+n.getAttribute('x')-2,y:+n.getAttribute('y')-1,width:+n.getAttribute('width')+4,height:+n.getAttribute('height')+2,class:'bg'}));svg.appendChild(n);};
+  const xs=[[24,'x_1'],[88,'x_i'],[152,'x_d']], zs=[[24,'1'],[72,'2'],[152,'V']];
+  for(const [a] of xs) if(a!==88) for(const [b] of zs) svg.appendChild(el('path',{d:`M230,${b} L102,${a}`,class:'f',style:'marker-end:url(#harr)'}));
+  for(const [b] of zs){
+    svg.appendChild(el('path',{d:`M230,${b} L102,88`,class:'b',style:'marker-end:url(#harrb)'}));
+    svg.appendChild(el('path',{d:`M440,88 C370,88 360,${b} 292,${b}`,class:'b',style:'marker-end:url(#harrb)'}));
+  }
+  for(const [b,j] of zs){ tag(170,88+0.55*(b-88),`W_{i${j}}`); tag(337,b+(88-b)*0.22,`p_${j} - y_${j}`); }
+  xs.forEach(([a,t])=>box(40,a,`$${t}$`)); zs.forEach(([b,j])=>box(230,b,`$z_${j}$`)); box(440,88,'$\\ell$');
+  label(svg,70,62,'$\\vdots$',13,'middle'); label(svg,70,126,'$\\vdots$',13,'middle'); label(svg,260,118,'$\\vdots$',13,'middle');
+  label(svg,260,194,'反向传播：从 $\\ell$ 出发，经过 $V$ 条路径传回 $x_i$，每条路径贡献 $(p_j - y_j)\\,W_{ij}$',12,'middle','','var(--s1)');
 });
 
 /* ---------- MHA 与 GQA 的对比 ---------- */
