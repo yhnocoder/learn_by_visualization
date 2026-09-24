@@ -28,14 +28,16 @@
 .recap-list:is(:hover,:focus-within){--recap-edge:1;scrollbar-width:thin}
 .recap ol{list-style:none;margin:0;padding:0 0 calc(50vh - 80px);padding-bottom:calc(50dvh - 80px);border-left:1px solid var(--recap-rule)}
 .recap li>a{color:inherit;text-decoration:none;border:0}
-.recap-part>a{display:block;padding:18px 10px 4px 14px;font-size:12px;letter-spacing:.06em;color:var(--recap-ink-3)}
-.recap li:not(.recap-part)>a{display:grid;grid-template-rows:auto 0fr;margin-left:-1px;padding:5px 8px 5px 14px;border-left:2px solid transparent;color:var(--recap-ink);transition:opacity .25s}
+.recap-part>a{display:block;padding:22px 8px 6px 14px;font-size:14.5px;font-weight:600;color:var(--recap-ink-2)}
+.recap-part.is-ahead>a{color:var(--recap-ink-3);opacity:.7}
+.recap li:not(.recap-part)>a{display:grid;grid-template-rows:auto 0fr;margin-left:-1px;padding:5px 8px 5px 14px;border-left:2px solid transparent;color:var(--recap-ink-2);transition:opacity .25s}
 .recap li:not(.recap-part):not(.is-read):not(.is-current)>a{color:var(--recap-ink-3);opacity:.7}
+.recap li:is(.is-read,.is-current)>a{font-weight:500}
 .recap li.is-current>a{color:var(--recap-accent);border-left-color:var(--recap-accent)}
 .recap li>a:hover{color:var(--recap-accent)}
-.recap-note{min-height:0;overflow:hidden;opacity:0;font-size:12.5px;line-height:1.7;color:var(--recap-ink-2);transition:opacity .3s}
+.recap-note{min-height:0;overflow:hidden;opacity:0;font-weight:400;font-size:12.5px;line-height:1.7;color:var(--recap-ink-2);transition:opacity .3s}
 .recap li.is-read>a{grid-template-rows:auto 1fr}
-.recap li.is-read .recap-note{opacity:1;padding:3px 0 6px}
+.recap li.is-read .recap-note{opacity:1;padding:2px 0 6px}
 .recap-note>:is(img,svg,video){display:block;max-width:100%;height:auto;margin:4px 0}
 .recap.is-drawer{position:fixed;top:0;bottom:0;left:0;z-index:70;align-self:normal;height:auto;width:min(85vw,340px);padding:20px 12px 0 8px;background:var(--recap-surface);box-shadow:0 0 32px rgb(0 0 0/.25);transform:translateX(-100%);visibility:hidden;transition:transform .25s,visibility .25s}
 .recap.is-drawer.is-open{transform:none;visibility:visible}
@@ -70,6 +72,9 @@
   const items=[...ol.querySelectorAll('li:not(.recap-part)>a')]
     .map(a=>({li:a.parentElement,h:document.getElementById(decodeURIComponent(a.hash.slice(1)))}))
     .filter(it=>it.h);
+  // 每个章节标题记下它后面第一个小节的序号，用来判断这一章是否还没读到
+  const parts=[...ol.querySelectorAll('.recap-part')]
+    .map(li=>({li,first:items.findIndex(it=>li.compareDocumentPosition(it.li)&Node.DOCUMENT_POSITION_FOLLOWING)}));
 
   const narrow=matchMedia('(max-width:'+(nav.dataset.drawerBelow||1240)+'px)');
   const reduce=matchMedia('(prefers-reduced-motion:reduce)');
@@ -128,6 +133,7 @@
       it.li.classList.toggle('is-current',i===cur);
       it.li.firstElementChild.toggleAttribute('aria-current',i===cur);
     });
+    parts.forEach(p=>p.li.classList.toggle('is-ahead',p.first<0||p.first>cur));
     if(cur!==current){const first=current===-2; current=cur; follow(!first);}
   }
   function schedule(){if(!pending){pending=true;requestAnimationFrame(update);}}
