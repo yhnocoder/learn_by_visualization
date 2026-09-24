@@ -193,7 +193,7 @@ ul.plain li{margin-bottom:.35em}
   <header class="mast">
     <p class="eyebrow">LLM Training Notes · 2026-09</p>
     <h1>混合精度训练：三个机制与一次迭代的全貌</h1>
-    <p class="lede">本文按「问题到机制」的顺序讲混合精度训练：为什么要把张量存成 16 位，为什么 16 位的更新会消失、梯度会归零、累加会失真，以及 fp32 master weights、loss scaling、fp32 accumulation 各自如何解决这三个问题。每个机制配一个可操作的演示，之后把三个机制合成一次完整的迭代，并以 AdamW 为例画出这次迭代的显存占用。所有数值都由页面内的浮点编码函数实时计算。</p>
+    <p class="lede">本文按“问题到机制”的顺序讲混合精度训练：为什么要把张量存成 16 位，为什么 16 位的更新会消失、梯度会归零、累加会失真，以及 fp32 master weights、loss scaling、fp32 accumulation 各自如何解决这三个问题。每个机制配一个可操作的演示，之后把三个机制合成一次完整的迭代，并以 AdamW 为例画出这次迭代的显存占用。所有数值都由页面内的浮点编码函数实时计算。</p>
   </header>
 
   <nav class="toc" aria-label="目录">
@@ -223,14 +223,14 @@ ul.plain li{margin-bottom:.35em}
   <ul class="plain">
     <li><strong>显存。</strong>每个元素从 4 字节变成 2 字节。训练显存通常由激活值主导，激活值改成 16 位后，总显存大约减半。</li>
     <li><strong>访存带宽。</strong>同样数量的元素只需要搬运一半的字节。逐元素运算、归一化、softmax 这类算子受带宽限制，位宽减半直接缩短它们的时间。</li>
-    <li><strong>算术吞吐。</strong>Micikevicius 等人在 2017 年指出，当时 GPU 上半精度算术的吞吐是单精度的 2 到 8 倍。Volta 引入的 Tensor Core 以 fp16 矩阵为输入，乘积累加到 fp16 或 fp32 输出。之后的每一代 GPU 都延续了「低精度输入、高精度累加」的结构。</li>
+    <li><strong>算术吞吐。</strong>Micikevicius 等人在 2017 年指出，当时 GPU 上半精度算术的吞吐是单精度的 2 到 8 倍。Volta 引入的 Tensor Core 以 fp16 矩阵为输入，乘积累加到 fp16 或 fp32 输出。之后的每一代 GPU 都延续了“低精度输入、高精度累加”的结构。</li>
   </ul>
   <p>代价是数值范围和精度都变窄。fp16 只有 5 位指数和 10 位尾数，能表示的最大数是 65504，最小的规格化数是 $2^{-14}$，再往下是 subnormal，到 $2^{-24}$ 为止。fp32 的对应值分别是 $3.4\times10^{38}$、$2^{-126}$ 和 $2^{-149}$。下面的表格列出本文会用到的五种格式，数值由页面内的编码函数计算，不是手抄的。</p>
 
   <h3 id="formats">五种格式的参数</h3>
   <div class="tbl" id="fmt-table"></div>
   <ul class="plain" id="fmt-notes"></ul>
-  <p>表中「ulp」是 unit in the last place，即某个数附近相邻两个可表示数的间距。对规格化数 $x = 1.f \times 2^{e}$，ulp 等于 $2^{e-m}$，$m$ 是尾数位数。尾数位数决定相对精度，指数位数决定范围。后面三个机制分别对应三种失效：更新量小于 ulp 的一半时被吸收（机制一），梯度小于最小 subnormal 时归零（机制二），累加和增大后 ulp 增大、后续加数被吸收（机制三）。</p>
+  <p>表中“ulp”是 unit in the last place，即某个数附近相邻两个可表示数的间距。对规格化数 $x = 1.f \times 2^{e}$，ulp 等于 $2^{e-m}$，$m$ 是尾数位数。尾数位数决定相对精度，指数位数决定范围。后面三个机制分别对应三种失效：更新量小于 ulp 的一半时被吸收（机制一），梯度小于最小 subnormal 时归零（机制二），累加和增大后 ulp 增大、后续加数被吸收（机制三）。</p>
 </section>
 
 <section id="s2">
@@ -257,7 +257,7 @@ ul.plain li{margin-bottom:.35em}
     <div class="status" id="up-status"></div>
     <div class="tbl"><table id="up-table"></table></div>
     <div id="up-bits"></div>
-    <figcaption><p>每一行把权重先舍入到该格式，再加上更新量 $\eta g$，结果再舍入到该格式。「更新量 / ulp」小于 0.5 时更新被吸收。「N 次格式内更新」表示每一步都在该格式内做加法并舍入；「N 次 master 更新后转回 fp16」表示在 fp32 中累加 N 次后再转成 fp16，这就是 master weights 的做法。位视图标出加法前后发生变化的位。</p></figcaption>
+    <figcaption><p>每一行把权重先舍入到该格式，再加上更新量 $\eta g$，结果再舍入到该格式。“更新量 / ulp”小于 0.5 时更新被吸收。“N 次格式内更新”表示每一步都在该格式内做加法并舍入；“N 次 master 更新后转回 fp16”表示在 fp32 中累加 N 次后再转成 fp16，这就是 master weights 的做法。位视图标出加法前后发生变化的位。</p></figcaption>
   </figure>
 
   <p>master weights 使权重占用的内存增加 50%（fp16 副本 2 字节加 fp32 副本 4 字节，对比 fp32 训练的 4 字节）。论文指出训练内存由激活值主导，激活值改成 fp16 后，总内存仍然大约减半。第五节的显存时间线会把这笔账画出来。</p>
@@ -307,7 +307,7 @@ ul.plain li{margin-bottom:.35em}
     <div class="plot" id="d-plot"></div>
     <div class="status" id="d-status"></div>
     <div class="tbl"><table id="d-table"></table></div>
-    <figcaption><p>每一步随机生成一个「本步最大梯度绝对值」：$\log_2$ 幅值以 μ 为中心、标准差 0.7，并以给定概率出现高 8 个 binade 的尖峰。最大梯度乘以 scale 超过 65504 即视为溢出。状态机与 PyTorch 一致：溢出则跳过本步、scale 减半、计数清零；连续 growth_interval 步无溢出则 scale 加倍。页面默认 growth_interval 取 20 以便观察，PyTorch 默认值是 2000。</p></figcaption>
+    <figcaption><p>每一步随机生成一个“本步最大梯度绝对值”：$\log_2$ 幅值以 μ 为中心、标准差 0.7，并以给定概率出现高 8 个 binade 的尖峰。最大梯度乘以 scale 超过 65504 即视为溢出。状态机与 PyTorch 一致：溢出则跳过本步、scale 减半、计数清零；连续 growth_interval 步无溢出则 scale 加倍。页面默认 growth_interval 取 20 以便观察，PyTorch 默认值是 2000。</p></figcaption>
   </figure>
 </section>
 
@@ -336,7 +336,7 @@ ul.plain li{margin-bottom:.35em}
 
 <section id="s5">
   <h2><span class="n">05</span>一次迭代：操作、精度与显存</h2>
-  <p>把三个机制放进同一次迭代里，得到论文 Figure 1 描述的流程：fp32 master weights 是唯一持久的权重；前向和反向用 fp16 张量，矩阵乘法在 fp32 中累加；loss 乘以 scale 后反向传播；权重梯度先检查溢出，再除以 scale，最后在 fp32 中更新 master weights。流程只有一种，但「权重存成什么」「梯度以什么精度产生」「unscale 作用在哪份张量上」三个问题有不同的答案，答案决定了显存的峰值出现在哪一步。这一节先用一个具体的模型把每个模块的账算清楚，再分别按 PyTorch 的 torch.amp、DeepSpeed 的 FP16_Optimizer、Megatron-LM 的默认路径、Megatron-LM 的 precision-aware optimizer 四种实现逐步执行同一次迭代。</p>
+  <p>把三个机制放进同一次迭代里，得到论文 Figure 1 描述的流程：fp32 master weights 是唯一持久的权重；前向和反向用 fp16 张量，矩阵乘法在 fp32 中累加；loss 乘以 scale 后反向传播；权重梯度先检查溢出，再除以 scale，最后在 fp32 中更新 master weights。流程只有一种，但“权重存成什么”“梯度以什么精度产生”“unscale 作用在哪份张量上”三个问题有不同的答案，答案决定了显存的峰值出现在哪一步。这一节先用一个具体的模型把每个模块的账算清楚，再分别按 PyTorch 的 torch.amp、DeepSpeed 的 FP16_Optimizer、Megatron-LM 的默认路径、Megatron-LM 的 precision-aware optimizer 四种实现逐步执行同一次迭代。</p>
 
   <h3 id="iter-model">以 Qwen3 dense 模型为例</h3>
   <p>选 Qwen3 的 dense 版本是因为它的每个模块都能用几个乘法算出参数量和激活值：pre-norm 结构的 RMSNorm，GQA（grouped-query attention，$a$ 个 query head 共用 $g$ 个 key/value head），对 query 和 key 逐 head 做 RMSNorm（QK-norm），RoPE，SwiGLU 前馈网络，没有 bias，没有 dropout。记 $h$ 为隐藏维度，$d = 128$ 为 head 维度，$A = a d$ 为 query 的总维度，$G = g d$ 为 key 和 value 的总维度，$I$ 为前馈网络的中间维度，$V$ 为词表大小，$L$ 为层数，$T = s b$ 为一个 micro-batch 里的 token 数。每层的参数量是</p>
@@ -344,10 +344,10 @@ ul.plain li{margin-bottom:.35em}
   <p>反向传播需要保留的激活值按 Korthikanti 等人的方法计算：只计入反向传播要用到的输入张量，每个元素 2 字节。逐模块列出，每层合计为</p>
   <div class="math-block">$$\text{act}_{\text{layer}} = \underbrace{8Th}_{\text{两个 RMSNorm、qkv、gate/up 的输入}} + \underbrace{4T(A+G)}_{\text{QK-norm 与 QK}^{\top}\text{ 的输入}} + \underbrace{2TG}_{V} + \underbrace{2TA}_{\text{o\_proj 输入}} + \underbrace{6TI}_{\text{gate、up、乘积}} + \text{softmax},$$</div>
   <p>其中 softmax 一项在朴素实现里是 $2 b a s^2$ 字节（保留注意力概率矩阵），在 FlashAttention 里只保留每行的 logsumexp，是 $4 b a s$ 字节。模型末尾的 lm_head 输出 logits 通常上转为 fp32 再算 cross-entropy，占 $4TV$ 字节，这一项在词表大、序列长时不可忽略。</p>
-  <p>显存按类别记账。与优化器有关的常驻项是 fp32 master weights $4\Psi$ 与 AdamW 的一阶矩、二阶矩各 $4\Psi$；权重的计算副本与梯度以什么精度、在什么时刻存在，取决于实现，下面三个演示逐一给出。ZeRO 论文的 $(2+2+K)\Psi$、$K = 12$，即每参数 16 字节，对应「fp16 权重 + fp16 梯度 + 12 字节优化器状态」这一种布局。</p>
+  <p>显存按类别记账。与优化器有关的常驻项是 fp32 master weights $4\Psi$ 与 AdamW 的一阶矩、二阶矩各 $4\Psi$；权重的计算副本与梯度以什么精度、在什么时刻存在，取决于实现，下面三个演示逐一给出。ZeRO 论文的 $(2+2+K)\Psi$、$K = 12$，即每参数 16 字节，对应“fp16 权重 + fp16 梯度 + 12 字节优化器状态”这一种布局。</p>
 
   <h3 id="iter-precision">哪些运算在 fp16，哪些在 fp32</h3>
-  <p>「把某个运算放在 fp32」在实现里有三种不同的含义，区别在于张量在显存中的存储精度，而不只是算术精度。</p>
+  <p>“把某个运算放在 fp32”在实现里有三种不同的含义，区别在于张量在显存中的存储精度，而不只是算术精度。</p>
   <ul class="plain">
     <li><strong>fp16 输入、fp32 算术、fp16 输出。</strong>张量在显存里始终是 fp16，fp32 只出现在寄存器和 kernel 内部的临时缓冲。矩阵乘法是典型：Tensor Core 读入 fp16 矩阵，在 fp32 累加器里求和，写回前转成 fp16。Qwen3 的 RMSNorm 也是这种：kernel 把输入升到 fp32 求均方根，再把结果转回输入的精度。演示代码里的 softmax 指定 dtype=torch.float32 计算，然后 .half()，同样属于这一类。这类运算不增加显存。</li>
     <li><strong>fp16 输入、fp32 输出。</strong>PyTorch 的 torch.autocast 对 softmax、log_softmax、layer_norm、cross_entropy 等算子就是这样处理的：把输入升到 fp32，输出留在 fp32，由下一个算子决定是否再转回 fp16。算术与上一类相同，差别是显存里多了一份 fp32 张量，下游算子收到的是 fp32 输入。</li>
@@ -363,7 +363,7 @@ ul.plain li{margin-bottom:.35em}
       <tr><td><strong>fp32 存储</strong></td><td>logits 与 cross_entropy、loss × S、梯度 ÷ S、AdamW 更新、master weights</td><td class="m">fp32</td><td class="m">fp32</td><td class="m">fp32</td><td>机制一与机制二。</td></tr>
     </tbody>
   </table></div>
-  <p><strong>换成 bf16 之后有什么不同。</strong>划分本身不变：PyTorch 的 autocast 对 fp16 与 bf16 共用同一份算子注册表，只是把「低精度类型」换成 bf16；GEMM 仍在 fp32 中累加，reduction 仍升到 fp32。变化在三处。第一，范围问题消失，softmax 里的 exp 与平方和不会溢出，loss scaling 不再需要。第二，尾数从 10 位减到 7 位，每次舍入的相对误差上限从 $2^{-11}$ 变成 $2^{-8}$，逐元素运算和残差相加的舍入更粗，reduction 放在 fp32 的必要性更强。第三，权重更新被吸收的阈值从比值 2048 提前到 256，master weights 比 fp16 时更不可省略，第六节会展开。</p>
+  <p><strong>换成 bf16 之后有什么不同。</strong>划分本身不变：PyTorch 的 autocast 对 fp16 与 bf16 共用同一份算子注册表，只是把“低精度类型”换成 bf16；GEMM 仍在 fp32 中累加，reduction 仍升到 fp32。变化在三处。第一，范围问题消失，softmax 里的 exp 与平方和不会溢出，loss scaling 不再需要。第二，尾数从 10 位减到 7 位，每次舍入的相对误差上限从 $2^{-11}$ 变成 $2^{-8}$，逐元素运算和残差相加的舍入更粗，reduction 放在 fp32 的必要性更强。第三，权重更新被吸收的阈值从比值 2048 提前到 256，master weights 比 fp16 时更不可省略，第六节会展开。</p>
 
   <h3 id="iter-impls">四种实现：同一次迭代，不同的权重与梯度布局</h3>
   <p>下面四个演示执行的是同一个前向和反向，模块、激活值、FLOPs 完全相同；不同的是权重存成什么精度、梯度以什么精度产生、unscale 作用在哪份张量上，以及由此决定的显存峰值。每个演示的代码按对应实现的源码展开成等价的 torch 语句，注释里标出源码中的方法名。模型配置由下面这一组控件共同决定。</p>
@@ -389,7 +389,7 @@ ul.plain li{margin-bottom:.35em}
   <figure id="fig-iter-mlm" class="iter-fig" data-variant="mlm"></figure>
 
   <h4 id="fig-mlmpa" class="impl-h">实现四：Megatron-LM --use-precision-aware-optimizer + TransformerEngine FusedAdam</h4>
-  <p>这是实现三的另一条路径，把「fp32 master → 更新 → 写回低精度权重」整个交给 TransformerEngine 的 FusedAdam kernel。Megatron 不再 clone 任何 master：DistributedOptimizer 在这个开关下把 shard_main_param 置 None，源码注释写明「main params are held by FusedAdam」，把 bf16 模型参数本身交给 FusedAdam，并传 master_weights=True、use_decoupled_grad=True、store_param_remainders=True。梯度仍是 DDP 的常驻 fp32 buffer，但挂到 bf16 参数的 .decoupled_grad 上，绕开 PyTorch「参数与 .grad 同 dtype」的要求。master weights 以「bf16 参数 + int16 余数」的形式存在：fp32 的高 16 位与 bf16 参数相同，FusedAdam 的状态里只保存低 16 位（每参数 2 字节，第一次 step 时建立，初值为 0）；更新 kernel 逐元素把两段拼回 fp32、做 AdamW、再拆成 round-to-nearest 的 bf16 与余数写回。m 与 v 的 dtype 由 --exp-avg-dtype 与 --exp-avg-sq-dtype 指定，上方「AdamW 矩的精度」控件在这个演示里对应这两个参数（两者都是 bf16 时 kernel 直接读写 bf16 状态）。这条路径要求 --use-distributed-optimizer，演示取数据并行度为 1，此时一个 rank 持有全部参数，与不分片相同；分片属于并行的内容，这里不展开。bf16 训练没有 loss scaling，grad_scaler 为 None。</p>
+  <p>这是实现三的另一条路径，把“fp32 master → 更新 → 写回低精度权重”整个交给 TransformerEngine 的 FusedAdam kernel。Megatron 不再 clone 任何 master：DistributedOptimizer 在这个开关下把 shard_main_param 置 None，源码注释写明“main params are held by FusedAdam”，把 bf16 模型参数本身交给 FusedAdam，并传 master_weights=True、use_decoupled_grad=True、store_param_remainders=True。梯度仍是 DDP 的常驻 fp32 buffer，但挂到 bf16 参数的 .decoupled_grad 上，绕开 PyTorch“参数与 .grad 同 dtype”的要求。master weights 以“bf16 参数 + int16 余数”的形式存在：fp32 的高 16 位与 bf16 参数相同，FusedAdam 的状态里只保存低 16 位（每参数 2 字节，第一次 step 时建立，初值为 0）；更新 kernel 逐元素把两段拼回 fp32、做 AdamW、再拆成 round-to-nearest 的 bf16 与余数写回。m 与 v 的 dtype 由 --exp-avg-dtype 与 --exp-avg-sq-dtype 指定，上方“AdamW 矩的精度”控件在这个演示里对应这两个参数（两者都是 bf16 时 kernel 直接读写 bf16 状态）。这条路径要求 --use-distributed-optimizer，演示取数据并行度为 1，此时一个 rank 持有全部参数，与不分片相同；分片属于并行的内容，这里不展开。bf16 训练没有 loss scaling，grad_scaler 为 None。</p>
   <figure id="fig-iter-mlmpa" class="iter-fig" data-variant="mlmpa"></figure>
 
   <h4 class="impl-h">四种实现的对比（按当前配置计算）</h4>
@@ -782,7 +782,7 @@ $('bf-jump').addEventListener('click',()=>{ upState.set('0.5','1e-3','0','6'); d
       bwdExtra:(m,gp,x)=>{ const cp=castP(m,x.c); const d={}; if(gp) d.g32=4*gp; if(cp) d.w16c=-2*cp; let note=''; if(gp) note+=` 权重梯度的 GEMM 输出 fp16 张量（${fmtB(2*gp)}，临时），cast 算子的反向把它转成 fp32 累加进权重的 .grad（${fmtB(4*gp)}），临时 fp16 随即释放。`; if(cp) note+=` 这个模块的 fp16 权重副本不再被引用，释放 ${fmtB(2*cp)}。`; return {delta:d,note}; },
       bwdRest:x=>({delta:{g32:4*(x.L-1)*x.layerParams,w16c:-2*(x.L-1)*x.castLayer},note:`每层产生 ${fmtB(4*x.layerParams)} 的 fp32 梯度，释放 ${fmtB(2*x.castLayer)} 的 fp16 权重副本。`}),
       postSteps:(x,push,P)=>{
-        push({title:'unscale：原地 ÷ S 并检查 inf/NaN',mode:'opt',mech:'机制二',lines:P(1),d:`scaler.unscale_ 调用 torch._amp_foreach_non_finite_check_and_unscale_，对所有 fp32 梯度原地乘以 1/S，同一个 kernel 顺带记录是否出现 inf 或 NaN。梯度本来就是 fp32，没有任何转换或拷贝。若梯度是 fp16，GradScaler 直接报错「Attempting to unscale FP16 gradients」。`,delta:{}});
+        push({title:'unscale：原地 ÷ S 并检查 inf/NaN',mode:'opt',mech:'机制二',lines:P(1),d:`scaler.unscale_ 调用 torch._amp_foreach_non_finite_check_and_unscale_，对所有 fp32 梯度原地乘以 1/S，同一个 kernel 顺带记录是否出现 inf 或 NaN。梯度本来就是 fp32，没有任何转换或拷贝。若梯度是 fp16，GradScaler 直接报错“Attempting to unscale FP16 gradients”。`,delta:{}});
         push({title:'梯度裁剪',mode:'opt',lines:P(2),d:`在 unscale 之后的 fp32 梯度上计算全局范数并裁剪，这是论文建议的 unscale 位置：在反向之后、裁剪之前，这样裁剪阈值不需要随 S 变化。`,delta:{}});
         push({title:'scaler.step：无溢出才调用 opt.step',mode:'opt',mech:'机制一',lines:P(3),d:`scaler.step 读取 unscale 时记录的 found_inf。为 0 时调用 opt.step()，AdamW 用 fp32 梯度原地更新 fp32 的权重、m、v；不为 0 时跳过 opt.step，权重不变。本演示假定没有溢出。`,delta:{}});
         push({title:'scaler.update：调整 S',mode:'opt',mech:'机制二',lines:P(4),d:`有 inf/NaN 时 S 乘 backoff_factor = 0.5 并把计数清零；否则计数加一，连续 growth_interval = 2000 步没有溢出就把 S 乘 growth_factor = 2。`,delta:{}});
@@ -965,7 +965,7 @@ $('bf-jump').addEventListener('click',()=>{ upState.set('0.5','1e-3','0','6'); d
         '        p.decoupled_grad = None                   # 只解除引用，buffer 本身常驻',
       ],
       resident:x=>({w16:2*x.psi,rem:2*x.psi,gbuf:4*x.psi,m:x.momB*x.psi,v:x.momB*x.psi,act:0,logits:0}),
-      idle:x=>`模型权重是 bf16，2Ψ = ${fmtB(2*x.psi)}。梯度 buffer 与实现三相同，fp32 常驻 4Ψ = ${fmtB(4*x.psi)}。Megatron 不创建 master：DistributedOptimizer（数据并行度 1，本 rank 持有全部参数）把 bf16 参数直接交给 TransformerEngine 的 FusedAdam。FusedAdam 在第一次 step 时建立状态：exp_avg 与 exp_avg_sq 各 ${x.momB}Ψ（${x.momB===2?'bf16':'fp32'}），master 只存 fp32 低 16 位的 int16 余数，2Ψ = ${fmtB(2*x.psi)}，初值 0，此时「bf16 参数 + 余数」拼出的 fp32 与初始权重完全相同。常驻合计每参数 ${8+2*x.momB} 字节：比实现三少 4 字节，全部来自 master 的存储方式。`,
+      idle:x=>`模型权重是 bf16，2Ψ = ${fmtB(2*x.psi)}。梯度 buffer 与实现三相同，fp32 常驻 4Ψ = ${fmtB(4*x.psi)}。Megatron 不创建 master：DistributedOptimizer（数据并行度 1，本 rank 持有全部参数）把 bf16 参数直接交给 TransformerEngine 的 FusedAdam。FusedAdam 在第一次 step 时建立状态：exp_avg 与 exp_avg_sq 各 ${x.momB}Ψ（${x.momB===2?'bf16':'fp32'}），master 只存 fp32 低 16 位的 int16 余数，2Ψ = ${fmtB(2*x.psi)}，初值 0，此时“bf16 参数 + 余数”拼出的 fp32 与初始权重完全相同。常驻合计每参数 ${8+2*x.momB} 字节：比实现三少 4 字节，全部来自 master 的存储方式。`,
       preSteps:(x,push,PRE)=>push({title:'清零梯度 buffer',mode:'pre',lines:PRE(0),d:`zero_grad_buffer 把 4Ψ 的 fp32 buffer 清零，显存不变。`,delta:{}}),
       fwdExtra:()=>({delta:{},note:''}),
       fwdRest:()=>({delta:{},note:''}),
