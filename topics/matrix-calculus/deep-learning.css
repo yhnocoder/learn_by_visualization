@@ -1,0 +1,148 @@
+.frame{gap:40px 56px}.mast{margin-bottom:0;padding-bottom:28px}
+article section:first-of-type h2{border-top:0;padding-top:0;margin-top:0}
+article h2{border-top:1px solid var(--rule-2);padding-top:36px;margin:64px 0 22px}
+article h3{margin-top:42px;margin-bottom:16px}
+article :is(h2,h3){scroll-margin-top:24px}
+article p{margin:0 0 1.25em}
+article ol.pts{padding-left:1.4em;margin:0 0 1.25em}
+article ol.pts li{margin-bottom:.4em}
+mjx-container[display="true"]{margin:.5em 0 1em !important;overflow-x:auto;overflow-y:hidden;max-width:100%;padding:4px 0}
+figure.model-fig{overflow-x:auto}.bp .model-wrap{overflow-x:auto;min-width:0}.bp .model-wrap svg{min-width:600px}
+.model-wrap{min-width:600px}
+.fold .model-wrap{min-width:0}#ffnSvg{max-width:430px;min-width:360px;margin:0 auto}figure.ffn{max-width:468px;margin-inline:auto}#attnSvg{max-width:590px;min-width:500px;margin:0 auto}figure.attn{max-width:628px;margin-inline:auto}
+figure.local{float:left;width:370px;margin:6px 28px 16px 0;padding:10px}figure.local .model-wrap{min-width:0}
+article :is(h2,h3){clear:both}
+@media(max-width:720px){figure.local{float:none;margin:20px auto}}
+.tan .plot svg{cursor:ew-resize}
+.tan .plot.d svg{cursor:default}
+.tan .plot path.curve{fill:none;stroke:var(--ink);stroke-width:2}
+.tan .plot path.dcurve{fill:none;stroke:var(--s1);stroke-width:2}
+.tan .plot line.axis{stroke:var(--axis);stroke-width:1}
+.tan .plot line.grid{stroke:var(--grid);stroke-width:1}
+.tan .plot line.tan{stroke:var(--s1);stroke-width:2}
+.tan .plot line.sec{stroke:var(--s2);stroke-width:2;stroke-dasharray:6 4}
+.tan .plot line.guide{stroke:var(--ink-3);stroke-width:1;stroke-dasharray:2 3}
+.tan .plot circle.p0{fill:var(--ink);stroke:var(--surface);stroke-width:2}
+.tan .plot circle.p1{fill:var(--s2);stroke:var(--surface);stroke-width:2}
+.tan .plot circle.pd{fill:var(--s1);stroke:var(--surface);stroke-width:2}
+.tan .plot .ov{transition:opacity .25s}
+.tan .plot .ov.off{opacity:0}
+.tan .plot svg.tex{overflow:visible;color:var(--ink-2)}
+.tan .readout{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;font-size:14px;margin:6px 0 4px;padding:10px 14px;background:var(--surface-2);border-radius:8px;align-items:center}
+.tan .readout .k{color:var(--ink-2)}
+.tan .readout b{font-family:"JetBrains Mono",ui-monospace,monospace;font-weight:500;font-variant-numeric:tabular-nums;font-size:14px}
+.tan .readout .sec b{color:var(--s2)}
+.tan .readout .tg b{color:var(--s1)}
+.tan .controls label.sec{--accent:var(--s2)}
+.tan .controls input[type=range]{accent-color:var(--accent)}
+:is(.tan,.rope) .fn{display:flex;gap:6px;flex-wrap:wrap}
+:is(.tan,.rope) .fn button{font:inherit;font-size:13px;padding:4px 12px;border:1px solid var(--rule-2);border-radius:99px;background:var(--surface);color:var(--ink-2);cursor:pointer}
+:is(.tan,.rope) .fn button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+:is(.tan,.rope) .fn button mjx-container{font-size:13px}
+.rope .stage{display:grid;grid-template-columns:320px 1fr;gap:10px 22px;align-items:center}
+.rope .plot svg{cursor:default}
+.rope .plot circle.grid{fill:none;stroke:var(--grid);stroke-width:1}
+.rope .plot line.axis{stroke:var(--axis);stroke-width:1}
+.rope .plot line.o{stroke-width:1.5;stroke-dasharray:4 3;opacity:.6}
+.rope .plot line.r{stroke-width:2.2}
+.rope .plot path.trail{fill:none;stroke-width:1.2;stroke-dasharray:2 3}
+.rope .plot path.ang{fill:none;stroke:var(--ink-3);stroke-width:1.2}
+.rope .plot svg.tex{overflow:visible}
+.rope .readout{display:grid;grid-template-columns:auto auto;gap:6px 16px;font-size:14px;padding:10px 14px;background:var(--surface-2);border-radius:8px;align-items:center;justify-content:start}
+.rope .readout b{font-family:"JetBrains Mono",ui-monospace,monospace;font-weight:500;font-variant-numeric:tabular-nums}
+.rope .readout .q{color:var(--s1)}.rope .readout .k{color:var(--s2)}
+.rope .controls input[type=range]{accent-color:var(--accent);width:130px}
+@media(max-width:720px){.rope .stage{grid-template-columns:1fr}}
+@media(max-width:600px){.tan .readout{grid-template-columns:1fr}.tan .plot text{font-size:19px}.tan .plot svg.tex{font-size:12px}}
+mark{color:var(--accent);font-weight:500;background:linear-gradient(transparent 72%,var(--accent-soft) 72%);padding:0 .06em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.shape{overflow-x:auto;margin:22px 0 28px;border:1px solid var(--rule);border-radius:10px;background:var(--surface)}
+.shape table{font-size:14px;table-layout:fixed;min-width:800px}
+.shape th,.shape td{vertical-align:middle;text-align:center;padding:12px 10px;min-width:0}
+.shape th.corner{text-align:left;color:var(--ink-3);font-weight:400;font-size:12px;line-height:1.5}
+.shape th.row{background:var(--surface-2);white-space:nowrap;vertical-align:middle;font-family:inherit;font-size:14px;color:var(--ink);letter-spacing:0;text-align:left}
+.shape thead th:not(.corner){font-size:14px;color:var(--ink);letter-spacing:0}
+.shape td.no{background:color-mix(in srgb,var(--surface-2) 60%,transparent);color:var(--ink-2)}
+.shape td.want{box-shadow:inset 0 0 0 2px var(--accent)}
+.shape td mjx-container[display="true"]{margin:0 !important;font-size:92%}
+.grad .stage{display:grid;grid-template-columns:348px 1fr;gap:10px 18px;align-items:start}
+.grad .plot svg{cursor:default}
+.grad .plot.field svg{cursor:move}
+.grad .plot line.axis{stroke:var(--axis);stroke-width:1}
+.grad .plot line.grid{stroke:var(--grid);stroke-width:1}
+.grad .plot path.curve{fill:none;stroke:var(--ink);stroke-width:2}
+.grad .plot line.tx{stroke:var(--s3);stroke-width:2}
+.grad .plot line.ty{stroke:var(--s5);stroke-width:2}
+.grad .plot line.guide{stroke:var(--ink-3);stroke-width:1;stroke-dasharray:2 3}
+.grad .plot line.slx{stroke:var(--s3);stroke-width:1.5;stroke-dasharray:5 4}
+.grad .plot line.sly{stroke:var(--s5);stroke-width:1.5;stroke-dasharray:5 4}
+.grad .plot circle.p0{fill:var(--ink);stroke:var(--surface);stroke-width:2}
+.grad .plot circle.px{fill:var(--s3);stroke:var(--surface);stroke-width:2}
+.grad .plot circle.py{fill:var(--s5);stroke:var(--surface);stroke-width:2}
+.grad .plot path.gradv{fill:none;stroke:var(--s7);stroke-width:2.5}
+.grad .plot path.cx{fill:none;stroke:var(--s3);stroke-width:2.2}
+.grad .plot path.cy{fill:none;stroke:var(--s5);stroke-width:2.2}
+.grad .plot path.box{fill:none;stroke:var(--ink-3);stroke-width:1;stroke-dasharray:3 3}
+.grad .plot path.contour{fill:none;stroke:var(--ink);stroke-width:1.4}
+.grad .plot svg.tex{overflow:visible;color:var(--ink-2)}
+.grad .plot text.t{font-size:12px;fill:var(--ink-2)}
+.grad .readout{display:grid;grid-template-columns:repeat(3,auto);gap:8px 24px;font-size:14px;margin:8px 0 4px;padding:10px 14px;background:var(--surface-2);border-radius:8px;align-items:center;justify-content:start}
+.grad .readout b{font-family:"JetBrains Mono",ui-monospace,monospace;font-weight:500;font-variant-numeric:tabular-nums}
+.grad .readout .x b{color:var(--s3)}.grad .readout .y b{color:var(--s5)}.grad .readout .g b{color:var(--s7)}
+.grad .controls input[type=range]{accent-color:var(--accent);width:110px}
+@media(max-width:720px){.grad .stage{grid-template-columns:1fr}.grad .readout{grid-template-columns:1fr}}
+.jac{clear:both}
+.jac .eq{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 14px;margin:6px 0 14px;font-size:15px}
+.jac .eq .op{font-size:18px;color:var(--ink-2)}
+.jac .mat{position:relative;display:inline-grid;gap:3px;padding:5px 8px;border-left:1.5px solid var(--ink-2);border-right:1.5px solid var(--ink-2)}
+.jac .mat::before,.jac .mat::after{content:"";position:absolute;top:0;bottom:0;width:6px;border-top:1.5px solid var(--ink-2);border-bottom:1.5px solid var(--ink-2)}
+.jac .mat::before{left:0}.jac .mat::after{right:0}
+.jac .mat .c{min-width:64px;padding:6px 8px;border-radius:5px;text-align:center;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:14px;font-variant-numeric:tabular-nums;background:var(--surface-2);transition:background .15s,box-shadow .15s}
+.jac .mat .c small{display:block;font-size:11px;color:var(--ink-3);font-family:inherit;margin-top:1px}
+.jac .mat .c.zero b{color:var(--ink-3)}
+.jac .mat .c.on{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.jac .mat.x .c{--accent:var(--s3)}.jac .mat.z .c{--accent:var(--s5)}
+.jac .mat.x .c small,.jac .mat.z .c small{color:inherit;opacity:.75}
+.jac .mat.x .c{color:var(--s3)}.jac .mat.z .c{color:var(--s5)}
+.jac .mat.x .c b,.jac .mat.z .c b,.jac .mat .c b{font-weight:500}
+.jac .mat.x .c b,.jac .mat.z .c b{color:var(--ink)}
+.jac .name{font-size:15px;margin-right:2px}
+.jac .side{margin-top:4px}
+.jac .side .rows{display:flex;flex-wrap:wrap;gap:0 18px}
+.jac .side .rows .row{gap:6px}
+.jac .side .rows .mat .c{min-width:44px;padding:3px 4px;font-size:13px}
+.jac .side .h{font-size:13.5px;color:var(--ink-2);margin-bottom:6px;line-height:1.7}
+.jac .side .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.jac .side .mat .c{min-width:56px;padding:4px 6px}
+.jac .say{min-height:3.2em;font-size:14.5px;padding:10px 14px;background:var(--surface-2);border-radius:8px;line-height:1.7;margin-top:10px}
+.jac .say b{font-family:"JetBrains Mono",ui-monospace,monospace;font-weight:500;font-variant-numeric:tabular-nums}
+.jac .controls label.x{--accent:var(--s3)}
+.jac .controls input[type=range]{accent-color:var(--accent);width:150px}
+@media(max-width:720px){.jac .mat .c{min-width:54px;padding:5px 6px;font-size:13px}}
+.paths>svg{width:100%;max-width:520px;height:auto;display:block;margin:0 auto}
+.paths>svg>text{font:13px "Noto Sans SC","PingFang SC",system-ui,sans-serif;fill:var(--ink);white-space:pre}
+.paths>svg>rect{fill:var(--surface-2);stroke:var(--rule-2);rx:6}
+.paths>svg>path{fill:none;stroke:var(--ink-2);stroke-width:1.3}
+.paths>svg>path.b{stroke:var(--s1)}
+.paths>svg>path.f{opacity:.35}
+.paths>svg>rect.bg{fill:var(--surface);stroke:none}
+.paths svg.tex{overflow:visible;color:var(--ink)}
+.gqa{overflow-x:auto}.gqa>svg{min-width:560px;width:100%;height:auto;display:block}
+#gqaSvg text{font:13px "Noto Sans SC","PingFang SC",system-ui,sans-serif;fill:var(--ink-2)}
+#gqaSvg rect{fill:var(--surface-2);stroke:var(--rule-2);rx:6}
+#gqaSvg path{fill:none;stroke:var(--ink-3);stroke-width:1.3}
+#gqaSvg rect.g1,#gqaSvg path.g1{stroke:var(--s1)}#gqaSvg rect.g2,#gqaSvg path.g2{stroke:var(--s2)}
+#gqaSvg svg.tex{overflow:visible;color:var(--ink)}
+.bp .nav{display:flex;align-items:center;gap:12px;margin:4px 0 10px}
+.bp .nav .cnt{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:13px;color:var(--ink-2);min-width:5em}
+.bp .step{padding:12px 16px;background:var(--surface-2);border-radius:8px;font-size:14.5px;line-height:1.8;min-height:7em}
+.bp .step p{margin:0 0 .5em}.bp .step p:last-child{margin:0}
+.bp .step .t{color:var(--accent);font-weight:500}
+.bp .step mjx-container[display="true"]{margin:.3em 0 .5em !important;overflow-x:auto;overflow-y:hidden;max-width:100%}
+.model-wrap rect.hlrect{fill:var(--accent);fill-opacity:.12;stroke:var(--accent);stroke-width:1.5}
+.cheat table{font-size:14px}.cheat td,.cheat th{vertical-align:middle;padding:10px 12px}
+.cheat td:first-child{white-space:nowrap;font-weight:500}
+.refs{font-size:14px;color:var(--ink-2);line-height:1.75}.refs ol{padding-left:1.6em;margin:0}.refs li{margin-bottom:6px}.refs li::marker{color:var(--ink-3)}
+.rules{overflow-x:auto;margin:14px 0 10px;border:1px solid var(--rule);border-radius:10px;background:var(--surface)}
+.rules table{font-size:14.5px}
+.rules th,.rules td{padding:10px 12px;vertical-align:middle}
+.rules td:first-child{white-space:nowrap;font-weight:500}
