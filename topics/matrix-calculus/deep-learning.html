@@ -7,65 +7,47 @@
 <p class="watermark" style="font-size:13px;color:var(--ink-2)">规则本身与 Terence Parr 和 Jeremy Howard 的 <a href="index.html">《深度学习所需的矩阵微积分》</a>一致。本文更换了贯穿全文的例子，并按模型的计算顺序重新组织。</p>
 </header>
 
-<nav class="toc" aria-label="文章目录">
-<button class="toc-toggle" aria-expanded="true">目录</button>
-<p class="t">目录</p>
+<nav class="recap" aria-label="Recap" data-drawer-below="1240">
 <ol>
-<li><a href="#intro">引言</a>
-<ol>
-<li><a href="#model">本文使用的模型</a></li>
-<li><a href="#shapes">深度学习中导数的形状</a></li>
-</ol></li>
-<li><a href="#review">标量对标量：导数</a>
-<ol>
-<li><a href="#derivative">什么是导数</a></li>
-<li><a href="#rules">求导规则</a></li>
-<li><a href="#chain-scalar">单变量链式法则</a></li>
-<li><a href="#swish">例：Sigmoid 与 Swish 的导数</a></li>
-</ol></li>
-<li><a href="#partials">标量对向量：梯度</a>
-<ol>
-<li><a href="#partial">偏导数</a></li>
-<li><a href="#gradient">梯度</a></li>
-<li><a href="#chain-paths">全导数链式法则</a></li>
-<li><a href="#loss-grad">例：Loss 对 logits 的梯度</a></li>
-<li><a href="#in-model">例：Loss 对 LM head 输入的梯度</a></li>
-</ol></li>
-<li><a href="#vector">向量对向量：Jacobian</a>
-<ol>
-<li><a href="#jacobian">Jacobian</a></li>
-<li><a href="#elementwise">逐元素运算的 Jacobian</a></li>
-<li><a href="#softmax">softmax 的 Jacobian</a></li>
-<li><a href="#chain-vector">向量链式法则</a></li>
-<li><a href="#softmax-ce">例：分两步求 Loss 对 logits 的梯度</a></li>
-<li><a href="#head-jac">例：LM head 的 Jacobian</a></li>
-<li><a href="#ffn-jac">例：SwiGLU FFN 的 Jacobian</a></li>
-</ol></li>
-<li><a href="#matrix">标量对矩阵：权重的梯度</a>
-<ol>
-<li><a href="#weight-grad">权重的梯度</a></li>
-<li><a href="#sequence">整个序列</a></li>
-<li><a href="#op-matmul">矩阵乘法的反向规则</a></li>
-<li><a href="#head-weight">例：LM head 的权重</a></li>
-</ol></li>
-<li><a href="#backprop">反向传播：vector-Jacobian product</a>
-<ol>
-<li><a href="#vjp">vector-Jacobian product</a></li>
-<li><a href="#no-jacobian">不构造 Jacobian</a></li>
-<li><a href="#accumulate">多条路径的导数相加</a></li>
-</ol></li>
-<li><a href="#backward">整个模型的反向传播</a>
-<ol>
-<li><a href="#op-attn">例：GQA attention</a></li>
-<li><a href="#op-embed">例：Embedding</a></li>
-<li><a href="#op-cast">例：FP32 到 BF16 的转换</a></li>
-<li><a href="#walkthrough">反向传播的全部步骤</a></li>
-</ol></li>
-<li><a href="#cheatsheet">速查表</a>
-<ol>
-<li><a href="#notation">符号说明</a></li>
-<li><a href="#references">参考文献</a></li>
-</ol></li>
+<li class="recap-part"><a href="#intro">引言</a></li>
+<li><a href="#model">本文使用的模型<div class="recap-note">decoder-only Transformer：Embedding，$N$ 层 Decoder（RMSNorm、GQA attention、SwiGLU FFN，各带一个残差连接），最后的 RMSNorm，LM head，softmax 与 cross-entropy。求导沿箭头的反方向进行。</div></a></li>
+<li><a href="#shapes">深度学习中导数的形状<div class="recap-note">输出有 $m$ 个分量、输入有 $n$ 个分量时，导数有 $m \times n$ 个数。Loss 是标量，所以它对任何变量的导数与该变量同形状。本文用行向量，Jacobian 的行对应输出、列对应输入（numerator layout）。</div></a></li>
+<li class="recap-part"><a href="#review">标量对标量：导数</a></li>
+<li><a href="#derivative">什么是导数<div class="recap-note">$\dfrac{dy}{dx} = \lim\limits_{\Delta x \to 0} \dfrac{f(x+\Delta x) - f(x)}{\Delta x}$，即 $f$ 的图像在 $x$ 处切线的斜率。</div></a></li>
+<li><a href="#rules">求导规则<div class="recap-note">加法和常数倍可以拆开分别求导。乘积法则 $(fg)' = f'g + fg'$，$(\ln x)' = 1/x$，$\sigma' = \sigma(1-\sigma)$。</div></a></li>
+<li><a href="#chain-scalar">单变量链式法则<div class="recap-note">$y = f(u)$，$u = g(x)$ 时 $\dfrac{dy}{dx} = \dfrac{dy}{du}\,\dfrac{du}{dx}$。从最外层的 $y$ 开始，逐层往回乘。</div></a></li>
+<li><a href="#swish">例：Sigmoid 与 Swish 的导数<div class="recap-note">$\mathrm{Swish}(x) = x\,\sigma(x)$，按乘积法则得 $\mathrm{Swish}'(x) = \sigma(x)\big(1 + x(1-\sigma(x))\big)$。逐元素函数 $f$ 的导数记作 $f'$。</div></a></li>
+<li class="recap-part"><a href="#partials">标量对向量：梯度</a></li>
+<li><a href="#partial">偏导数<div class="recap-note">$\dfrac{\partial f}{\partial x}$ 是其余输入固定、只让 $x$ 变化时的导数。例如 $\dfrac{\partial}{\partial x}\,3x^2y = 6xy$。</div></a></li>
+<li><a href="#gradient">梯度<div class="recap-note">梯度把全部偏导数排成一行：$\nabla f = \dfrac{\partial f}{\partial \mathbf{x}}$，满足 $df = \nabla f \cdot d\mathbf{x}$。梯度垂直于等值线，指向 $f$ 增大最快的方向。</div></a></li>
+<li><a href="#chain-paths">全导数链式法则<div class="recap-note">$x$ 经过多个中间变量影响 $y$ 时，各条路径的贡献相加：$\dfrac{dy}{dx} = \sum_k \dfrac{\partial y}{\partial u_k}\,\dfrac{du_k}{dx}$。输入是向量时，对每个分量 $x_i$ 分别使用这条规则。</div></a></li>
+<li><a href="#loss-grad">例：Loss 对 logits 的梯度<div class="recap-note">$\ell = -\ln p_y$，$\mathbf{p} = \mathrm{softmax}(\mathbf{z})$，结果是 $\dfrac{\partial \ell}{\partial \mathbf{z}} = \mathbf{p} - \mathbf{y}$，其中 $\mathbf{y}$ 是目标 token 的 one-hot 向量。</div></a></li>
+<li><a href="#in-model">例：Loss 对 LM head 输入的梯度<div class="recap-note">$\mathbf{z} = \mathbf{x}W$ 中 $\dfrac{\partial z_j}{\partial x_i} = W_{ij}$。对 $V$ 条路径求和：$\dfrac{\partial \ell}{\partial x_i} = \sum_j (p_j - y_j)\,W_{ij}$。</div></a></li>
+<li class="recap-part"><a href="#vector">向量对向量：Jacobian</a></li>
+<li><a href="#jacobian">Jacobian<div class="recap-note">$J_{ji} = \dfrac{\partial z_j}{\partial x_i}$。$\mathbf{z} = \mathbf{x}W$ 时 $J = W^{T}$。Loss 对输入的导数是 $\dfrac{\partial L}{\partial \mathbf{x}} = \dfrac{\partial L}{\partial \mathbf{z}}\,J$。</div></a></li>
+<li><a href="#elementwise">逐元素运算的 Jacobian<div class="recap-note">逐元素函数的 Jacobian 是对角矩阵 $\mathrm{diag}\big(f'(\mathbf{x})\big)$。逐元素相乘 $\mathbf{a} \otimes \mathbf{b}$ 对 $\mathbf{a}$ 的 Jacobian 是 $\mathrm{diag}(\mathbf{b})$。</div></a></li>
+<li><a href="#softmax">softmax 的 Jacobian<div class="recap-note">$J = \mathrm{diag}(\mathbf{p}) - \mathbf{p}^{T}\mathbf{p}$。反向计算 $\dfrac{\partial L}{\partial \mathbf{s}} = \mathbf{p} \otimes \Big(\dfrac{\partial L}{\partial \mathbf{p}} - \dfrac{\partial L}{\partial \mathbf{p}} \cdot \mathbf{p}\Big)$，不需要写出 $n \times n$ 的矩阵。</div></a></li>
+<li><a href="#chain-vector">向量链式法则<div class="recap-note">嵌套运算的 Jacobian 是各层 Jacobian 按从外到内的顺序相乘：$\dfrac{\partial \mathbf{z}}{\partial \mathbf{x}} = \dfrac{\partial \mathbf{z}}{\partial \mathbf{u}}\,\dfrac{\partial \mathbf{u}}{\partial \mathbf{x}}$。</div></a></li>
+<li><a href="#softmax-ce">例：分两步求 Loss 对 logits 的梯度<div class="recap-note">先求 $\dfrac{\partial \ell}{\partial \mathbf{p}}$，再代入 softmax 的反向公式，结果同样是 $\mathbf{p} - \mathbf{y}$。实现中两者合成一个运算（<code>F.cross_entropy</code>）。</div></a></li>
+<li><a href="#head-jac">例：LM head 的 Jacobian<div class="recap-note">用 Jacobian 写成一次行向量乘矩阵：$\dfrac{\partial \ell}{\partial \mathbf{x}} = (\mathbf{p} - \mathbf{y})\,W^{T}$。</div></a></li>
+<li><a href="#ffn-jac">例：SwiGLU FFN 的 Jacobian<div class="recap-note">由三次矩阵乘法的 $W^{T}$、Swish 的 $\mathrm{diag}\big(\mathrm{Swish}'(\mathbf{a})\big)$ 和逐元素乘的 $\mathrm{diag}$ 相乘得到。$\mathbf{x}$ 经过 gate 和 up 两条路径，两项相加。</div></a></li>
+<li class="recap-part"><a href="#matrix">标量对矩阵：权重的梯度</a></li>
+<li><a href="#weight-grad">权重的梯度<div class="recap-note">一个位置上 $\mathbf{z} = \mathbf{x}W$：$\dfrac{\partial L}{\partial W_{ij}} = x_i\,\dfrac{\partial L}{\partial z_j}$，合起来是 $\dfrac{\partial L}{\partial W} = \mathbf{x}^{T}\dfrac{\partial L}{\partial \mathbf{z}}$。计算时不需要写出三维数组 $\dfrac{\partial \mathbf{z}}{\partial W}$。</div></a></li>
+<li><a href="#sequence">整个序列<div class="recap-note">$T$ 个位置按行堆成 $X$，$G = \dfrac{\partial L}{\partial Z}$。每个位置分别使用同一个 $J = W^{T}$；权重被 $T$ 个位置共用，$\dfrac{\partial L}{\partial W} = \sum_t \mathbf{x}_t^{T}\,\dfrac{\partial L}{\partial \mathbf{z}_t} = X^{T}G$。</div></a></li>
+<li><a href="#op-matmul">矩阵乘法的反向规则<div class="recap-note">$Z = XW$：$\dfrac{\partial L}{\partial X} = GW^{T}$，$\dfrac{\partial L}{\partial W} = X^{T}G$。两个因子都随输入变化时（$Z = AB$）同样成立。</div></a></li>
+<li><a href="#head-weight">例：LM head 的权重<div class="recap-note">$L = \frac{1}{T}\sum_t \ell_t$，所以 $G = \frac{1}{T}(P - Y)$，$\dfrac{\partial L}{\partial W_{out}} = X^{T}G$。这是本文第一次得到 Loss 对模型参数的导数。</div></a></li>
+<li class="recap-part"><a href="#backprop">反向传播：vector-Jacobian product</a></li>
+<li><a href="#vjp">vector-Jacobian product<div class="recap-note">每经过一个运算计算一次 $\dfrac{\partial L}{\partial \mathbf{x}} = \dfrac{\partial L}{\partial \mathbf{z}}\,J$。从 Loss 开始按前向的相反顺序进行，每一步都是行向量乘矩阵，计算量远小于先把各个 Jacobian 相乘。</div></a></li>
+<li><a href="#no-jacobian">不构造 Jacobian<div class="recap-note">逐元素函数的反向是 $G \otimes f'(A)$，逐元素乘是 $G \otimes B$，矩阵乘法直接计算 $GW^{T}$。每个运算的反向只做几次与前向同规模的计算。</div></a></li>
+<li><a href="#accumulate">多条路径的导数相加<div class="recap-note">一个量被多个运算使用时，各运算传回的导数相加。残差连接 $Y = X + H$ 中 $\dfrac{\partial L}{\partial X} = G + (\text{子层传回的})$；共用权重的导数是各位置贡献之和。</div></a></li>
+<li class="recap-part"><a href="#backward">整个模型的反向传播</a></li>
+<li><a href="#op-attn">例：GQA attention<div class="recap-note">由矩阵乘法、常数缩放和逐行 softmax 组成，没有新规则。$K_j$、$V_j$ 的导数是组内各 head 传回的梯度之和；$X$ 的导数是 $Q$、$K$、$V$ 三条路径之和。</div></a></li>
+<li><a href="#op-embed">例：Embedding<div class="recap-note">前向是 one-hot 矩阵乘 $E$。反向把 $G$ 的第 $t$ 行加到 $\dfrac{\partial L}{\partial E}$ 的第 $\text{tok}_t$ 行上，同一个 token 出现几次就累加几次。</div></a></li>
+<li><a href="#op-cast">例：FP32 到 BF16 的转换<div class="recap-note">舍入按定义导数为零，框架约定反向为恒等运算（straight-through estimator）。更新累加在 FP32 主权重上。</div></a></li>
+<li><a href="#walkthrough">反向传播的全部步骤<div class="recap-note">从 $\dfrac{\partial L}{\partial L} = 1$ 开始，依次经过 cross-entropy 与 softmax、LM head、$N$ 层 Decoder、Embedding。每个权重都得到与自己同形状的导数。</div></a></li>
+<li class="recap-part"><a href="#cheatsheet">速查表</a></li>
+<li><a href="#notation">符号说明<div class="recap-note">$T$、$d$、$V$、$N$ 是序列长度、模型宽度、词表大小和 Decoder 层数。$G$ 是 Loss 对运算输出的导数，$\otimes$ 是逐元素相乘。</div></a></li>
+<li><a href="#references">参考文献<div class="recap-note">Parr 与 Howard 的原文，自动微分教材，混合精度训练，straight-through estimator，RMSNorm 和 RoPE 的论文。</div></a></li>
 </ol>
 </nav>
 
@@ -855,6 +837,7 @@ window.MathJax = { tex:{ inlineMath:[['$','$']], displayMath:[['$$','$$']] }, sv
 </script>
 <script src="../../shared/vendor/mathjax/3.2.2/tex-svg.js"></script>
 <script src="../../shared/article.js"></script>
+<script src="../../shared/recap.js"></script>
 <script>
 (()=>{
 /* ---------- 模型计算图 ---------- */

@@ -146,3 +146,4 @@ mark{color:var(--accent);font-weight:500;background:linear-gradient(transparent 
 .rules table{font-size:14.5px}
 .rules th,.rules td{padding:10px 12px;vertical-align:middle}
 .rules td:first-child{white-space:nowrap;font-weight:500}
+@media(min-width:1241px){.frame{grid-template-columns:280px minmax(0,820px)}.frame:has(>.recap.is-collapsed){grid-template-columns:0 minmax(0,1156px);column-gap:0}}
