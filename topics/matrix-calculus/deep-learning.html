@@ -17,7 +17,7 @@
 <li><a href="#rules">求导规则<div class="recap-note">加法和常数倍可以拆开分别求导。乘积法则 $(fg)' = f'g + fg'$，$(\ln x)' = 1/x$，$\sigma' = \sigma(1-\sigma)$。</div></a></li>
 <li><a href="#chain-scalar">单变量链式法则<div class="recap-note">$y = f(u)$，$u = g(x)$ 时 $\dfrac{dy}{dx} = \dfrac{dy}{du}\,\dfrac{du}{dx}$。从最外层的 $y$ 开始，逐层往回乘。</div></a></li>
 <li><a href="#swish">例：Sigmoid 与 Swish 的导数<div class="recap-note">$\mathrm{Swish}(x) = x\,\sigma(x)$，按乘积法则得 $\mathrm{Swish}'(x) = \sigma(x)\big(1 + x(1-\sigma(x))\big)$。逐元素函数 $f$ 的导数记作 $f'$。</div></a></li>
-<li class="recap-part"><a href="#partials">标量对向量：梯度</a></li>
+<li class="recap-part"><a href="#partials">标量对向量</a></li>
 <li><a href="#partial">偏导数<div class="recap-note">$\dfrac{\partial f}{\partial x}$ 是其余输入固定、只让 $x$ 变化时的导数。例如 $\dfrac{\partial}{\partial x}\,3x^2y = 6xy$。</div></a></li>
 <li><a href="#gradient">梯度<div class="recap-note">梯度把全部偏导数排成一行：$\nabla f = \dfrac{\partial f}{\partial \mathbf{x}}$，满足 $df = \nabla f \cdot d\mathbf{x}$。梯度垂直于等值线，指向 $f$ 增大最快的方向。</div></a></li>
 <li><a href="#chain-paths">全导数链式法则<div class="recap-note">$x$ 经过多个中间变量影响 $y$ 时，各条路径的贡献相加：$\dfrac{dy}{dx} = \sum_k \dfrac{\partial y}{\partial u_k}\,\dfrac{du_k}{dx}$。输入是向量时，对每个分量 $x_i$ 分别使用这条规则。</div></a></li>
@@ -26,14 +26,14 @@
 <li class="recap-part"><a href="#vector">向量对向量：Jacobian</a></li>
 <li><a href="#jacobian">Jacobian<div class="recap-note">$J_{ji} = \dfrac{\partial z_j}{\partial x_i}$。$\mathbf{z} = \mathbf{x}W$ 时 $J = W^{T}$。Loss 对输入的导数是 $\dfrac{\partial L}{\partial \mathbf{x}} = \dfrac{\partial L}{\partial \mathbf{z}}\,J$。</div></a></li>
 <li><a href="#elementwise">逐元素运算的 Jacobian<div class="recap-note">逐元素函数的 Jacobian 是对角矩阵 $\mathrm{diag}\big(f'(\mathbf{x})\big)$。逐元素相乘 $\mathbf{a} \otimes \mathbf{b}$ 对 $\mathbf{a}$ 的 Jacobian 是 $\mathrm{diag}(\mathbf{b})$。</div></a></li>
-<li><a href="#softmax">softmax 的 Jacobian<div class="recap-note">$J = \mathrm{diag}(\mathbf{p}) - \mathbf{p}^{T}\mathbf{p}$。反向计算 $\dfrac{\partial L}{\partial \mathbf{s}} = \mathbf{p} \otimes \Big(\dfrac{\partial L}{\partial \mathbf{p}} - \dfrac{\partial L}{\partial \mathbf{p}} \cdot \mathbf{p}\Big)$，不需要写出 $n \times n$ 的矩阵。</div></a></li>
+<li><a href="#softmax">softmax 的 Jacobian<div class="recap-note">$J = \mathrm{diag}(\mathbf{p}) - \mathbf{p}^{T}\mathbf{p}$。反向计算 $\dfrac{\partial L}{\partial \mathbf{x}} = \mathbf{p} \otimes \Big(\dfrac{\partial L}{\partial \mathbf{p}} - \dfrac{\partial L}{\partial \mathbf{p}} \cdot \mathbf{p}\Big)$，不需要写出 $n \times n$ 的矩阵。</div></a></li>
 <li><a href="#chain-vector">向量链式法则<div class="recap-note">嵌套运算的 Jacobian 是各层 Jacobian 按从外到内的顺序相乘：$\dfrac{\partial \mathbf{z}}{\partial \mathbf{x}} = \dfrac{\partial \mathbf{z}}{\partial \mathbf{u}}\,\dfrac{\partial \mathbf{u}}{\partial \mathbf{x}}$。</div></a></li>
 <li><a href="#softmax-ce">例：分两步求 Loss 对 logits 的梯度<div class="recap-note">先求 $\dfrac{\partial \ell}{\partial \mathbf{p}}$，再代入 softmax 的反向公式，结果同样是 $\mathbf{p} - \mathbf{y}$。实现中两者合成一个运算（<code>F.cross_entropy</code>）。</div></a></li>
 <li><a href="#head-jac">例：LM head 的 Jacobian<div class="recap-note">用 Jacobian 写成一次行向量乘矩阵：$\dfrac{\partial \ell}{\partial \mathbf{x}} = (\mathbf{p} - \mathbf{y})\,W^{T}$。</div></a></li>
 <li><a href="#ffn-jac">例：SwiGLU FFN 的 Jacobian<div class="recap-note">由三次矩阵乘法的 $W^{T}$、Swish 的 $\mathrm{diag}\big(\mathrm{Swish}'(\mathbf{a})\big)$ 和逐元素乘的 $\mathrm{diag}$ 相乘得到。$\mathbf{x}$ 经过 gate 和 up 两条路径，两项相加。</div></a></li>
-<li class="recap-part"><a href="#matrix">标量对矩阵：权重的梯度</a></li>
+<li class="recap-part"><a href="#matrix">标量对矩阵</a></li>
 <li><a href="#weight-grad">权重的梯度<div class="recap-note">一个位置上 $\mathbf{z} = \mathbf{x}W$：$\dfrac{\partial L}{\partial W_{ij}} = x_i\,\dfrac{\partial L}{\partial z_j}$，合起来是 $\dfrac{\partial L}{\partial W} = \mathbf{x}^{T}\dfrac{\partial L}{\partial \mathbf{z}}$。计算时不需要写出三维数组 $\dfrac{\partial \mathbf{z}}{\partial W}$。</div></a></li>
-<li><a href="#sequence">整个序列<div class="recap-note">$T$ 个位置按行堆成 $X$，$G = \dfrac{\partial L}{\partial Z}$。每个位置分别使用同一个 $J = W^{T}$；权重被 $T$ 个位置共用，$\dfrac{\partial L}{\partial W} = \sum_t \mathbf{x}_t^{T}\,\dfrac{\partial L}{\partial \mathbf{z}_t} = X^{T}G$。</div></a></li>
+<li><a href="#sequence">输入（矩阵）的梯度<div class="recap-note">$T$ 个位置按行堆成 $X$，$G = \dfrac{\partial L}{\partial Z}$。对输入逐行计算，$\dfrac{\partial L}{\partial X} = GW^{T}$；权重被 $T$ 个位置共用，$\dfrac{\partial L}{\partial W} = \sum_t \mathbf{x}_t^{T}\,\dfrac{\partial L}{\partial \mathbf{z}_t} = X^{T}G$。</div></a></li>
 <li><a href="#op-matmul">矩阵乘法的反向规则<div class="recap-note">$Z = XW$：$\dfrac{\partial L}{\partial X} = GW^{T}$，$\dfrac{\partial L}{\partial W} = X^{T}G$。两个因子都随输入变化时（$Z = AB$）同样成立。</div></a></li>
 <li><a href="#head-weight">例：LM head 的权重<div class="recap-note">$L = \frac{1}{T}\sum_t \ell_t$，所以 $G = \frac{1}{T}(P - Y)$，$\dfrac{\partial L}{\partial W_{out}} = X^{T}G$。这是本文第一次得到 Loss 对模型参数的导数。</div></a></li>
 <li class="recap-part"><a href="#backprop">反向传播：vector-Jacobian product</a></li>
@@ -331,7 +331,7 @@ $$\mathrm{Swish}'(x) = \frac{d\,\mathrm{Swish}(x)}{dx} = \sigma(x)\,\big(1 + x\,
 </section>
 
 <section id="partials">
-<h2>标量对向量：梯度</h2>
+<h2>标量对向量</h2>
 
 <p>现在我们考虑多个输入合成一个输出的情况，例如 LM head 的第 $j$ 个 logit 的前向计算为：</p>
 $$z_j = \sum_{k=1}^{d} x_k W_{kj} = \mathbf{x}\,W_{:,j}$$
@@ -475,22 +475,37 @@ $$\frac{\partial \ell}{\partial x_i} = \sum_{j=1}^{V} \frac{\partial \ell}{\part
 <figure class="paths">
 <svg id="headPathsSvg" viewBox="0 0 520 200" role="img" aria-label="反向传播的方向：Loss 连到 z_1 到 z_V，每个 z_j 再连到 x_1 到 x_d 的每一个；高亮从 Loss 经过 V 条路径传回 x_i，每条路径上 Loss 到 z_j 一段的偏导数是 p_j - y_j，z_j 到 x_i 一段是 W_ij"></svg>
 </figure>
-<p>也就是 $\mathbf{p} - \mathbf{y}$ 与 $W$ 第 $i$ 行的点积。对 $\mathbf{x}$ 的 $d$ 个分量各算一次，排成一行，就得到 Loss 对 $\mathbf{x}$ 的导数，它与 $\mathbf{x}$ 同形状：</p>
-$$\frac{\partial \ell}{\partial \mathbf{x}} = \Big[\,\frac{\partial \ell}{\partial x_1}\ \ \cdots\ \ \frac{\partial \ell}{\partial x_d}\,\Big] = \Big[\,\sum_{j=1}^{V} (p_j - y_j)\,W_{1j}\ \ \cdots\ \ \sum_{j=1}^{V} (p_j - y_j)\,W_{dj}\,\Big]$$
-<p><a href="#head-jac">「例：LM head 的 Jacobian」</a>用下一章的 Jacobian 把这一行写成一次矩阵乘法。</p>
+<p>我们用 <mark>Jacobian</mark> 来计算 Loss 对输入的导数（<a href="#jacobian">Jacobian 在下一章</a>即将介绍，这里先直接给出答案）。$\mathbf{z}$ 对 $\mathbf{x}$ 的 Jacobian 矩阵如下：</p>
+$$
+\begin{aligned}
+J = \dfrac{\partial \mathbf{z}}{\partial \mathbf{x}} &= \begin{bmatrix} W_{11} & W_{21} & \cdots & W_{d1} \\[8pt] W_{12} & W_{22} & \cdots & W_{d2} \\[4pt] \vdots & \vdots & & \vdots \\[4pt] \vdots & \vdots & & \vdots \\[4pt] W_{1V} & W_{2V} & \cdots & W_{dV} \end{bmatrix} = W^{T}
+\end{aligned}$$
+<p>从 $\ell$ 到 $x_i$ 的导数可以写成：</p>
+$$\frac{\partial \ell}{\partial x_i} = \sum_{j=1}^{V} \frac{\partial \ell}{\partial z_j}\,\frac{\partial z_j}{\partial x_i} = \sum_{j=1}^{V} \frac{\partial \ell}{\partial z_j}\,J_{ji}$$
+<p>第 $i$ 个分量是 $\mathbf{p}-\mathbf{y}$ 与 $J$ 第 $i$ 列（即 $W$ 第 $i$ 行）的点积；$d$ 个分量合起来，也就是 $(\mathbf{p}-\mathbf{y})J$：</p>
+$$\frac{\partial \ell}{\partial \mathbf{x}} = \frac{\partial \ell}{\partial \mathbf{z}}J = (\mathbf{p} - \mathbf{y})J$$
 
 </section>
 
 <section id="vector">
 <h2>向量对向量：Jacobian</h2>
 
-<p>输入和输出都是向量时，输出的每个分量对输入的每个分量各有一个偏导数，<a href="#chain-paths">「全导数链式法则」</a>一节里的 $\dfrac{\partial u_k}{\partial x_i}$ 就是这样一组偏导数。本章把它们排成一个矩阵，称为 Jacobian。有了 Jacobian，上一章对每个分量分别做的求和可以合成一次矩阵乘法。</p>
-
 <h3 id="jacobian">Jacobian</h3>
 
-<p>设函数 $f$ 的输入是 $\mathbf{x} \in \mathbb{R}^{n}$，输出是 $\mathbf{z} = f(\mathbf{x}) \in \mathbb{R}^{m}$。$\mathbf{z}$ 的 $m$ 个分量对 $\mathbf{x}$ 的 $n$ 个分量各有一个偏导数 $\dfrac{\partial z_j}{\partial x_i}$，共 $m \times n$ 个。把它们排成一个矩阵，第 $j$ 行第 $i$ 列放 $\dfrac{\partial z_j}{\partial x_i}$，即输入的第 $i$ 个分量变化时，输出的第 $j$ 个分量的变化率。这个矩阵称为 $\mathbf{z}$ 对 $\mathbf{x}$ 的 Jacobian，记作 $J$ 或 $\dfrac{\partial \mathbf{z}}{\partial \mathbf{x}}$：</p>
-$$J = \begin{bmatrix} \dfrac{\partial z_1}{\partial x_1} & \dfrac{\partial z_1}{\partial x_2} & \cdots & \dfrac{\partial z_1}{\partial x_n} \\[8pt] \dfrac{\partial z_2}{\partial x_1} & \dfrac{\partial z_2}{\partial x_2} & \cdots & \dfrac{\partial z_2}{\partial x_n} \\[4pt] \vdots & \vdots & & \vdots \\[4pt] \dfrac{\partial z_m}{\partial x_1} & \dfrac{\partial z_m}{\partial x_2} & \cdots & \dfrac{\partial z_m}{\partial x_n} \end{bmatrix},\qquad J_{ji} = \frac{\partial z_j}{\partial x_i}$$
-<p><strong>一行</strong>对应一个输出 $z_j$，它就是 $z_j$ 对 $\mathbf{x}$ 的梯度。<strong>一列</strong>对应一个输入 $x_i$，给出 $x_i$ 变化时每个输出分量的变化率。行对应输出，列对应输入，这是<a href="#shapes">引言</a>里说的 numerator layout。$J$ 是 $m \times n$ 的矩阵，对应形状表里向量对向量一格。</p>
+<p>设函数 $f$ 的输入是 $\mathbf{x} \in \mathbb{R}^{n}$，输出是 $\mathbf{z} = f(\mathbf{x}) \in \mathbb{R}^{m}$。$\mathbf{z}$ 的每个分量 $z_j$ 对 $\mathbf{x}$ 的每个分量 $x_i$ 都有一个偏导数 $\dfrac{\partial z_j}{\partial x_i}$。把它们排成一个矩阵，第 $j$ 行第 $i$ 列放 $\dfrac{\partial z_j}{\partial x_i}$。这个矩阵称为 $\mathbf{z}$ 对 $\mathbf{x}$ 的 Jacobian，记作 $J$ 或 $\dfrac{\partial \mathbf{z}}{\partial \mathbf{x}}$：</p>
+$$
+\begin{aligned}
+J &= \begin{bmatrix} \dfrac{\partial z_1}{\partial x_1} & \dfrac{\partial z_1}{\partial x_2} & \cdots & \dfrac{\partial z_1}{\partial x_n} \\[8pt] \dfrac{\partial z_2}{\partial x_1} & \dfrac{\partial z_2}{\partial x_2} & \cdots & \dfrac{\partial z_2}{\partial x_n} \\[4pt] \vdots & \vdots & & \vdots \\[4pt] \dfrac{\partial z_m}{\partial x_1} & \dfrac{\partial z_m}{\partial x_2} & \cdots & \dfrac{\partial z_m}{\partial x_n} \end{bmatrix}\\
+J_{ji} &= \frac{\partial z_j}{\partial x_i}
+\end{aligned}$$
+<p>也可以表示成下面的形式：</p>
+$$
+\begin{aligned}
+J &= \begin{bmatrix} \dfrac{\partial z_1}{\partial \mathbf{x}} \\ \dfrac{\partial z_2}{\partial \mathbf{x}} \\ \vdots \\ \dfrac{\partial z_m}{\partial \mathbf{x}} \end{bmatrix}\qquad \dfrac{\partial z_j}{\partial \mathbf{x}} \in \mathbb{R}^{1\times n}\\
+J &= \begin{bmatrix} \dfrac{\partial \mathbf{z}}{\partial x_1} & \dfrac{\partial \mathbf{z}}{\partial x_2} & \cdots & \dfrac{\partial \mathbf{z}}{\partial x_n} \end{bmatrix}\qquad \dfrac{\partial \mathbf{z}}{\partial x_i} \in \mathbb{R}^{m\times 1}
+\end{aligned}
+$$
+<p><mark>行对应输出，列对应输入</mark>。<strong>一行</strong>对应一个输出 $z_j$，它就是 $z_j$ 对 $\mathbf{x}$ 的梯度。<strong>一列</strong>对应一个输入 $x_i$，给出 $x_i$ 变化时每个输出分量的变化率。</p>
 
 <p>最常见的例子是矩阵乘法 $\mathbf{z} = \mathbf{x}W$，$W$ 是 $n \times m$ 的矩阵，第 $j$ 个输出是 $z_j = \sum_{k=1}^{n} x_k W_{kj}$。对 $x_i$ 求偏导数时，其余的 $x_k$ 和全部 $W$ 都当作常数，和式里只有 $x_iW_{ij}$ 含 $x_i$，所以 $\dfrac{\partial z_j}{\partial x_i} = W_{ij}$，即 $J_{ji} = W_{ij}$：</p>
 $$J = W^{T}$$
@@ -515,51 +530,68 @@ $$J = W^{T}$$
 <div class="say" id="jsay">移动滑块改变 $\mathbf{x}$，指针停在任意一格上显示该格的含义。</div>
 </figure>
 
-<p>矩阵乘法的 Jacobian 是权重矩阵的转置。它不依赖 $\mathbf{x}$，因为 $\mathbf{z}$ 是 $\mathbf{x}$ 的线性函数，各处的变化率相同。图中下方的 $J$ 与上方的 $W$ 互为转置：$J$ 的第 $i$ 列是 $W$ 的第 $i$ 行，$J$ 的第 $j$ 行是 $W$ 的第 $j$ 列。</p>
-
-<p>Jacobian 用来计算 Loss 对输入的导数。设 Loss $L$ 经过 $\mathbf{z}$ 依赖 $\mathbf{x}$，已知 Loss 对输出的导数 $\dfrac{\partial L}{\partial \mathbf{z}}$，它是一个行向量。$x_i$ 经过 $z_1, \ldots, z_m$ 影响 $L$，按<a href="#chain-paths">全导数链式法则</a>：</p>
-$$\frac{\partial L}{\partial x_i} = \sum_{j=1}^{m} \frac{\partial L}{\partial z_j}\,\frac{\partial z_j}{\partial x_i} = \sum_{j=1}^{m} \frac{\partial L}{\partial z_j}\,J_{ji}$$
-<p>右边是 $\dfrac{\partial L}{\partial \mathbf{z}}$ 与 $J$ 第 $i$ 列的点积。$n$ 个分量合起来，是行向量乘矩阵：</p>
-$$\frac{\partial L}{\partial \mathbf{x}} = \frac{\partial L}{\partial \mathbf{z}}\,J$$
-
 <h3 id="elementwise">逐元素运算的 Jacobian</h3>
 
-<p>逐元素运算对输入的每个分量分别作用同一个单变量函数：$z_j = f(x_j)$。$z_j$ 只由 $x_j$ 算出，与 $x_i$（$i \neq j$）无关，所以 Jacobian 的非对角线元素全为零。对角线元素素是单变量导数 $f'(x_j)$。例如 $f(x) = x^2$，$\mathbf{x} = [\,1\ \ 2\ \ 3\,]$：</p>
-$$\frac{\partial \mathbf{z}}{\partial \mathbf{x}} = \begin{bmatrix} 2 & 0 & 0 \\ 0 & 4 & 0 \\ 0 & 0 & 6 \end{bmatrix} = \mathrm{diag}(2\mathbf{x})$$
-<p>$\mathrm{diag}(\mathbf{v})$ 表示以向量 $\mathbf{v}$ 为对角线的方阵。一般地，逐元素函数的 Jacobian 是 $\mathrm{diag}\big(f'(\mathbf{x})\big)$，其中 $f'(\mathbf{x})$ 表示对每个分量分别求 $f'$。sigmoid、Swish、指数都属于这一类。输入有 $n$ 个分量时，这个 Jacobian 有 $n^2$ 个元素，其中只有对角线上的 $n$ 个可能不为零，所以它由对角线上的向量完全确定。<a href="#no-jacobian">「不构造 Jacobian」</a>一节利用这一点，把 Loss 对输入的导数写成逐元素乘法。</p>
+<p>一般地，输出的第 $j$ 个分量只依赖输入的第 $j$ 个分量，所以 Jacobian <mark>一定是对角矩阵</mark>。</p>
 
+<p><strong>一元运算</strong></p>
+<p>设 $\mathbf{x} \in \mathbb{R}^{n}$，$\mathbf{z} = f(\mathbf{x})$，其中 $z_j = f(x_j)$。按定义逐项求偏导：</p>
+$$\frac{\partial z_j}{\partial x_i} = \begin{cases} f'(x_j) & i = j \\ 0 & i \neq j \end{cases}$$
+<p>也就是</p>
+$$J = \frac{\partial \mathbf{z}}{\partial \mathbf{x}} = \mathrm{diag}\big(f'(x_1), \ldots, f'(x_n)\big) = \mathrm{diag}\big(f'(\mathbf{x})\big)$$
+<p>几个常见例子：</p>
+<ul>
+  <li>ReLU：$f'(x_j) = \mathbb{1}[x_j > 0]$，所以 $J = \mathrm{diag}\big(\mathbb{1}[\mathbf{x} > 0]\big)$；</li>
+  <li>sigmoid：$\sigma'(x_j) = \sigma(x_j)\big(1 - \sigma(x_j)\big)$，所以 $J = \mathrm{diag}\big(\sigma(\mathbf{x}) \otimes (1 - \sigma(\mathbf{x}))\big)$；</li>
+  <li>$\exp$：$J = \mathrm{diag}(e^{\mathbf{x}})$；</li>
+  <li>$\tanh$：$J = \mathrm{diag}\big(1 - \tanh^2(\mathbf{x})\big)$。</li>
+</ul>
+
+<p><strong>二元运算</strong></p>
 <p>两个向量之间的逐元素运算同理。以逐元素相乘 $\mathbf{z} = \mathbf{a} \otimes \mathbf{b}$ 为例，$z_j = a_j b_j$。对 $\mathbf{a}$ 求偏导时把 $\mathbf{b}$ 当作常数，$\dfrac{\partial z_j}{\partial a_j} = b_j$，非对角线元素仍为零；对 $\mathbf{b}$ 求偏导同理：</p>
 $$\frac{\partial (\mathbf{a} \otimes \mathbf{b})}{\partial \mathbf{a}} = \mathrm{diag}(\mathbf{b}),\qquad \frac{\partial (\mathbf{a} \otimes \mathbf{b})}{\partial \mathbf{b}} = \mathrm{diag}(\mathbf{a})$$
 
 <h3 id="softmax">softmax 的 Jacobian</h3>
 
-<p>softmax 的输入是 $\mathbf{s} \in \mathbb{R}^{n}$，输出 $\mathbf{p} \in \mathbb{R}^{n}$ 是 $p_j = \dfrac{e^{s_j}}{\sum_k e^{s_k}}$。用商法则算 $\dfrac{\partial p_j}{\partial s_i}$，分子 $e^{s_j}$ 只在 $i = j$ 时依赖 $s_i$，分母对每个 $s_i$ 的导数是 $e^{s_i}$：</p>
-$$\frac{\partial p_j}{\partial s_i} = \frac{[i=j]\,e^{s_j}\sum_k e^{s_k} - e^{s_j}e^{s_i}}{\big(\sum_k e^{s_k}\big)^2} = [i=j]\,p_j - p_j p_i$$
-<p>$[i = j]$ 在 $i = j$ 时为 1，否则为 0。整个 Jacobian 是 $\mathrm{diag}(\mathbf{p}) - \mathbf{p}^T\mathbf{p}$，即一个对角矩阵减去一个秩为 1 的矩阵。例如 $\mathbf{s} = [\,\ln 4\ \ \ln 3\ \ \ln 2\ \ 0\,]$，这时 $e^{s_j}$ 依次是 4、3、2、1，$\mathbf{p} = [\,0.4\ \ 0.3\ \ 0.2\ \ 0.1\,]$：</p>
+<p>softmax 的输入是 $\mathbf{x} \in \mathbb{R}^{n}$，输出是 $\mathbf{p} \in \mathbb{R}^{n}$：</p>
+$$p_j = \frac{e^{x_j}}{\sum_k e^{x_k}}$$
+<p>分子 $e^{x_j}$ 只在 $i = j$ 时依赖 $x_i$，分母则对每个 $x_i$ 的导数都有贡献：</p>
+$$\frac{\partial p_j}{\partial x_i} = \frac{\delta_{ij}\,e^{x_j}}{\sum_k e^{x_k}} - \frac{e^{x_j}\,e^{x_i}}{\big(\sum_k e^{x_k}\big)^2} = \delta_{ij}\,p_j - p_j p_i$$
+<p>其中 $\delta_{ij}$ 是 Kronecker delta：$i = j$ 时为 1，$i \neq j$ 时为 0。写成矩阵：</p>
+$$J = \mathrm{diag}(\mathbf{p}) - \mathbf{p}^{T}\mathbf{p}$$
+<p>例如 $\mathbf{x} = [\,\ln 4\ \ \ln 3\ \ \ln 2\ \ 0\,]$，这时 $e^{x_j}$ 依次是 4、3、2、1，$\mathbf{p} = [\,0.4\ \ 0.3\ \ 0.2\ \ 0.1\,]$：</p>
 $$J = \begin{bmatrix} 0.24 & -0.12 & -0.08 & -0.04 \\ -0.12 & 0.21 & -0.06 & -0.03 \\ -0.08 & -0.06 & 0.16 & -0.02 \\ -0.04 & -0.03 & -0.02 & 0.09 \end{bmatrix}$$
-<p>对角线元素为正：$s_j$ 增大时 $p_j$ 增大。非对角线元素为负：$s_i$ 增大时其余的 $p_j$ 减小。每一列之和为零，因为 $\mathbf{p}$ 的分量之和总是 1，任何一个 $s_i$ 变化都不改变这个和。</p>
-<p>按 <a href="#jacobian">Jacobian</a> 一节的结果，Loss 对 $\mathbf{s}$ 的导数是 Loss 对输出的导数 $\dfrac{\partial L}{\partial \mathbf{p}}$ 乘 $J$：</p>
-$$\begin{aligned}\frac{\partial L}{\partial \mathbf{s}} &= \frac{\partial L}{\partial \mathbf{p}}\,\big(\mathrm{diag}(\mathbf{p}) - \mathbf{p}^T\mathbf{p}\big) \\ &= \frac{\partial L}{\partial \mathbf{p}} \otimes \mathbf{p} - \Big(\frac{\partial L}{\partial \mathbf{p}}\cdot\mathbf{p}\Big)\,\mathbf{p} \\ &= \mathbf{p} \otimes \Big(\frac{\partial L}{\partial \mathbf{p}} - \frac{\partial L}{\partial \mathbf{p}}\cdot\mathbf{p}\Big)\end{aligned}$$
-<p>最后一个式子里 $\dfrac{\partial L}{\partial \mathbf{p}}\cdot\mathbf{p}$ 是标量，从 $\dfrac{\partial L}{\partial \mathbf{p}}$ 的每个分量中减去它。计算只需要一次点积、一次减法和一次逐元素乘，计算量与 $n$ 成正比，不需要写出 $n \times n$ 的 Jacobian。</p>
+<p>对角线元素为正：<mark>$x_j$ 增大时，$p_j$ 增大</mark>。非对角线元素为负：<mark>$x_i$ 增大时，其余的 $p_j$（$j \neq i$）减小。</mark></p>
+
+<p>计算 Loss 对 $\mathbf{x}$ 的导数不需要构造 $n \times n$ 的 $J$。记 Loss 对输出的导数为 $\mathbf{g} = \dfrac{\partial L}{\partial \mathbf{p}}$：</p>
+$$\frac{\partial L}{\partial \mathbf{x}} = \mathbf{g}J = \mathbf{g} \otimes \mathbf{p} - (\mathbf{g}\cdot\mathbf{p})\,\mathbf{p} = \mathbf{p} \otimes \big(\mathbf{g} - \mathbf{g}\cdot\mathbf{p}\big)$$
+<p>$\mathbf{g}\cdot\mathbf{p} = \sum_k p_k g_k$ 是标量，等于 $\mathbf{g}$ 的各分量以 $\mathbf{p}$ 为权重的加权平均值。整个计算是量与 $n$ 成正比。</p>
+<p>这个结果有两个性质：</p>
+<ul>
+  <li>$\mathbf{p}$ 的分量之和固定为 1，所以 <mark>$J$ 每一列之和为零</mark>；</li>
+  <li>把 $\mathbf{x}$ 的每个分量加上同一个常数，$\mathbf{p}$ 不变，所以 <mark>$J$ 每一行之和为零</mark>。</li>
+</ul>
+<p>softmax 后面接 cross-entropy 时，$L = -\sum_j y_j \ln p_j$，其中 $\mathbf{y}$ 是目标 token 的 one-hot 向量。这时 $g_j = -\dfrac{y_j}{p_j}$，代入上式化简得到</p>
+$$\frac{\partial L}{\partial \mathbf{x}} = \mathbf{p} - \mathbf{y}$$
+<p>推导过程见<a href="#softmax-ce">「例：分两步求 Loss 对 logits 的梯度」</a>。这个结果形式简单，并且避开了单独计算 $\ln p_j$ 时的数值问题，所以深度学习框架通常把 softmax 和 cross-entropy 合成一个运算。</p>
 
 <h3 id="chain-vector">向量链式法则</h3>
 
 <p>两个运算嵌套时，先由 $\mathbf{x} \in \mathbb{R}^{n}$ 算出 $\mathbf{u} \in \mathbb{R}^{q}$，再由 $\mathbf{u}$ 算出 $\mathbf{z} \in \mathbb{R}^{m}$。设两个运算各自的 Jacobian $\dfrac{\partial \mathbf{u}}{\partial \mathbf{x}}$（$q \times n$）和 $\dfrac{\partial \mathbf{z}}{\partial \mathbf{u}}$（$m \times q$）已经算出，我们要计算整体的 Jacobian $\dfrac{\partial \mathbf{z}}{\partial \mathbf{x}}$，即 $m \times n$ 个偏导数 $\dfrac{\partial z_j}{\partial x_i}$。</p>
 
-<p>$x_i$ 经由 $u_1, u_2, \ldots, u_q$ 影响 $z_j$，属于<a href="#chain-paths">多条路径</a>的情形，每条路径上外层乘内层，再求和：</p>
+<p>$x_i$ 经由 $u_1, u_2, \ldots, u_q$ 影响 $z_j$，属于<a href="#chain-paths">多条路径</a>的情形，需要使用全导数：</p>
 $$\frac{\partial z_j}{\partial x_i} = \sum_{k=1}^{q} \frac{\partial z_j}{\partial u_k}\,\frac{\partial u_k}{\partial x_i}$$
 <p>右边对 $k$ 求和的形式正是矩阵乘法的定义：第一个矩阵的第 $j$ 行与第二个矩阵的第 $i$ 列的点积。所以整体的 Jacobian 是两个 Jacobian 的乘积：</p>
 $$\frac{\partial \mathbf{z}}{\partial \mathbf{x}} = \frac{\partial \mathbf{z}}{\partial \mathbf{u}}\,\frac{\partial \mathbf{u}}{\partial \mathbf{x}}$$
 
 <p>例如先做矩阵乘法 $\mathbf{u} = \mathbf{x}W$，再逐元素平方 $z_j = u_j^2$。$W$ 取<a href="#jacobian">「Jacobian」</a>一节图中的矩阵，$\mathbf{x} = [\,1\ \ -0.5\,]$，这时 $\mathbf{u} = [\,0.75\ \ -2.5\ \ 1\,]$。两个 Jacobian 分别是 $W^{T}$ 和 $\mathrm{diag}(2\mathbf{u})$：</p>
 $$\frac{\partial \mathbf{z}}{\partial \mathbf{x}} = \mathrm{diag}(2\mathbf{u})\,W^{T} = \begin{bmatrix} 1.5 & 0 & 0 \\ 0 & -5 & 0 \\ 0 & 0 & 2 \end{bmatrix}\begin{bmatrix} 1 & 0.5 \\ -2 & 1 \\ 0.5 & -1 \end{bmatrix} = \begin{bmatrix} 1.5 & 0.75 \\ 10 & -5 \\ 1 & -2 \end{bmatrix}$$
-<p>左乘对角矩阵，等于把 $W^{T}$ 的第 $j$ 行乘 $2u_j$。</p>
 
-<p>这是向量链式法则：外层的 Jacobian 乘内层的 Jacobian，相乘顺序与单变量版本相同。嵌套更多层时，把各层的 Jacobian 按从外到内的顺序相乘。</p>
+<p>嵌套更多层时，把各层的 Jacobian 按从外到内的顺序相乘。<strong>外</strong>意味着更靠近输出，也就是和前向的计算顺序相反。如前向是先 $\mathbf{x} \to \mathbf{u}$ 再 $\mathbf{u} \to \mathbf{z}$，那计算 Jacobian 的时候就是 $\frac{\partial \mathbf{z}}{\partial \mathbf{u}}\,\frac{\partial \mathbf{u}}{\partial \mathbf{x}}$。</p>
 
 <h3 id="softmax-ce">例：分两步求 Loss 对 logits 的梯度</h3>
 
-<p>LM head 之后的 softmax 接着 cross-entropy。<a href="#loss-grad">「例：Loss 对 logits 的梯度」</a>把两者合在一起直接求导，这里用<a href="#softmax">「softmax 的 Jacobian」</a>分两步计算：先求 $\ell$ 对 softmax 输出 $\mathbf{p}$ 的导数，再代入那一节的公式。softmax 的输入是 logits，下面把 $\mathbf{s}$ 写成 $\mathbf{z}$。</p>
+<p>LM head 之后的 softmax 接着 cross-entropy。<a href="#loss-grad">「例：Loss 对 logits 的梯度」</a>把两者合在一起直接求导，这里用<a href="#softmax">「softmax 的 Jacobian」</a>分两步计算：先求 $\ell$ 对 softmax 输出 $\mathbf{p}$ 的导数，再代入那一节的公式。softmax 的输入是 logits，下面把 $\mathbf{x}$ 写成 $\mathbf{z}$。</p>
 <p>$\ell = -\ln p_y$ 只含 $p_y$，按对数函数的求导规则：</p>
 $$\frac{\partial \ell}{\partial p_j} = \begin{cases} -\dfrac{1}{p_y} & j = y \\[6pt] 0 & j \neq y \end{cases}$$
 <p>$\dfrac{\partial \ell}{\partial \mathbf{p}}$ 只有一个非零分量，所以 $\dfrac{\partial \ell}{\partial \mathbf{p}}\cdot\mathbf{p} = -\dfrac{1}{p_y} \cdot p_y = -1$。代入公式，$\dfrac{\partial \ell}{\partial \mathbf{z}}$ 的第 $j$ 个分量是 $p_j\Big(\dfrac{\partial \ell}{\partial p_j} + 1\Big)$。$j = y$ 时是 $p_y - 1$，其余是 $p_j$。合起来：</p>
@@ -597,65 +629,67 @@ $$\frac{\partial \mathbf{h}}{\partial \mathbf{x}} = W_{down}^{T}\,\Big(\mathrm{d
 </section>
 
 <section id="matrix">
-<h2>标量对矩阵：权重的梯度</h2>
-
-<p>训练还需要 Loss 对权重的导数。权重是矩阵，Loss 对它的导数位于<a href="#shapes">形状表</a>中标量对矩阵一格，与权重同形状。计算它要经过输出向量对权重矩阵的导数，这是表中灰格里的三维数组。模型里的矩阵还有另一种：$T$ 个位置的向量按行堆成的矩阵，例如 $T \times d$ 的 $X$，从一个位置推广到整个序列时会遇到它。本章先求一个位置上 Loss 对权重的导数，再推广到整个序列，得到矩阵乘法的反向规则。</p>
+<h2>标量对矩阵</h2>
 
 <h3 id="weight-grad">权重的梯度</h3>
 
-<p>仍取矩阵乘法 $\mathbf{z} = \mathbf{x}W$，$\mathbf{x} \in \mathbb{R}^{n}$，$W$ 是 $n \times m$ 的矩阵，已知 Loss 对输出的导数 $\dfrac{\partial L}{\partial \mathbf{z}}$。先求每个输出分量对权重的偏导数。对 $W_{ij}$ 求偏导数时，$\mathbf{x}$ 和其余权重都当作常数，$z_j = \sum_k x_k W_{kj}$ 的 $n$ 项里只有 $x_iW_{ij}$ 含 $W_{ij}$，所以 $\dfrac{\partial z_j}{\partial W_{ij}} = x_i$。$W$ 第 $j$ 列以外的元素不出现在 $z_j$ 里，$z_j$ 对它们的偏导数为 0。把 $z_j$ 对 $W$ 每个元素的偏导数按 $W$ 的位置排列，得到 $z_j$ 对 $W$ 的导数 $\dfrac{\partial z_j}{\partial W}$。它与 $W$ 同形状，只有第 $j$ 列不为零，这一列是 $\mathbf{x}^T$。下图取与<a href="#jacobian">「Jacobian」</a>一节相同的 $\mathbf{x}$ 和 $W$，下方是 $z_1$、$z_2$、$z_3$ 各自对 $W$ 的导数。</p>
+<p>仍取矩阵乘法 $\mathbf{z} = \mathbf{x}W$，$\mathbf{x} \in \mathbb{R}^{n}$，$W$ 是 $n \times m$ 的矩阵。已知 Loss 对输出的导数 $\dfrac{\partial L}{\partial \mathbf{z}}$，要求 Loss 对 $W$ 的导数 $\dfrac{\partial L}{\partial W}$。它与 $W$ 同形状，第 $i$ 行第 $j$ 列是 $\dfrac{\partial L}{\partial W_{ij}}$。</p>
 
-<figure class="jac" id="figWgrad">
-<div class="controls">
-<label class="x">$x_1$ <input type="range" id="wx1" min="-2" max="2" step="0.01" value="1"> <span class="v" id="wx1v">1.00</span></label>
-<label class="x">$x_2$ <input type="range" id="wx2" min="-2" max="2" step="0.01" value="-0.5"> <span class="v" id="wx2v">-0.50</span></label>
-</div>
-<div class="eq" id="weq">
-<span class="name">$\mathbf{x}$</span><div class="mat x" style="grid-template-columns:repeat(2,auto)"><div class="c" data-x="1"><b id="wx1c">0</b><small>$x_1$</small></div><div class="c" data-x="2"><b id="wx2c">0</b><small>$x_2$</small></div></div>
-<span class="op">·</span><span class="name">$W$</span><div class="mat w" style="grid-template-columns:repeat(3,auto)"><div class="c" data-i="1" data-j="1"><b>1</b><small>$W_{11}$</small></div><div class="c" data-i="1" data-j="2"><b>-2</b><small>$W_{12}$</small></div><div class="c" data-i="1" data-j="3"><b>0.5</b><small>$W_{13}$</small></div><div class="c" data-i="2" data-j="1"><b>0.5</b><small>$W_{21}$</small></div><div class="c" data-i="2" data-j="2"><b>1</b><small>$W_{22}$</small></div><div class="c" data-i="2" data-j="3"><b>-1</b><small>$W_{23}$</small></div></div>
-<span class="op">=</span><span class="name">$\mathbf{z}$</span><div class="mat z" style="grid-template-columns:repeat(3,auto)"><div class="c" data-z="1"><b id="wz1">0</b><small>$z_1$</small></div><div class="c" data-z="2"><b id="wz2">0</b><small>$z_2$</small></div><div class="c" data-z="3"><b id="wz3">0</b><small>$z_3$</small></div></div>
-</div>
-<div class="side">
-<div>
-<div class="h">$\mathbf{z}$ 对 $W$ 的导数：每个 $z_j$ 对 $W$ 的导数与 $W$ 同形状。$z_j$ 只含 $W$ 的第 $j$ 列，所以 $\partial z_j / \partial W$ 只有第 $j$ 列不为零，这一列是 $\mathbf{x}$ 的转置，随 $\mathbf{x}$ 变。三个矩阵合起来是 $3 \times 2 \times 3$ 的三维数组 $\partial \mathbf{z} / \partial W$。</div>
-<div class="rows">
-<div class="row"><span class="name">$\dfrac{\partial z_1}{\partial W}$ =</span><div class="mat dw" style="grid-template-columns:repeat(3,auto)"><div class="c" data-k="1" data-dwi="1" data-j="1"><b id="wdw11">0</b></div><div class="c zero" data-k="1" data-dwi="1" data-j="2"><b>0</b></div><div class="c zero" data-k="1" data-dwi="1" data-j="3"><b>0</b></div><div class="c" data-k="1" data-dwi="2" data-j="1"><b id="wdw21">0</b></div><div class="c zero" data-k="1" data-dwi="2" data-j="2"><b>0</b></div><div class="c zero" data-k="1" data-dwi="2" data-j="3"><b>0</b></div></div></div>
-<div class="row"><span class="name">$\dfrac{\partial z_2}{\partial W}$ =</span><div class="mat dw" style="grid-template-columns:repeat(3,auto)"><div class="c zero" data-k="2" data-dwi="1" data-j="1"><b>0</b></div><div class="c" data-k="2" data-dwi="1" data-j="2"><b id="wdw12">0</b></div><div class="c zero" data-k="2" data-dwi="1" data-j="3"><b>0</b></div><div class="c zero" data-k="2" data-dwi="2" data-j="1"><b>0</b></div><div class="c" data-k="2" data-dwi="2" data-j="2"><b id="wdw22">0</b></div><div class="c zero" data-k="2" data-dwi="2" data-j="3"><b>0</b></div></div></div>
-<div class="row"><span class="name">$\dfrac{\partial z_3}{\partial W}$ =</span><div class="mat dw" style="grid-template-columns:repeat(3,auto)"><div class="c zero" data-k="3" data-dwi="1" data-j="1"><b>0</b></div><div class="c zero" data-k="3" data-dwi="1" data-j="2"><b>0</b></div><div class="c" data-k="3" data-dwi="1" data-j="3"><b id="wdw13">0</b></div><div class="c zero" data-k="3" data-dwi="2" data-j="1"><b>0</b></div><div class="c zero" data-k="3" data-dwi="2" data-j="2"><b>0</b></div><div class="c" data-k="3" data-dwi="2" data-j="3"><b id="wdw23">0</b></div></div></div>
+<p><strong>第一步：$W_{ij}$ 影响哪些输出。</strong>$z_j = \sum_k x_k W_{kj}$ 只用到 $W$ 的第 $j$ 列，$W_{ij}$ 只出现在 $z_j$ 的 $x_iW_{ij}$ 这一项里，所以</p>
+$$\frac{\partial z_j}{\partial W_{ij}} = x_i$$
+<p>其余输出分量不含 $W_{ij}$，对它的偏导数为 0。</p>
 
-</div></div>
+<p><strong>第二步：链式法则。</strong>$W_{ij}$ 只经过 $z_j$ 影响 $L$，只有一条路径，按<a href="#chain-scalar">单变量链式法则</a>：</p>
+$$\frac{\partial L}{\partial W_{ij}} = \frac{\partial L}{\partial z_j}\,\frac{\partial z_j}{\partial W_{ij}} = x_i\,\frac{\partial L}{\partial z_j}$$
+
+<p><strong>第三步：排成矩阵。</strong>第 $i$ 行第 $j$ 列是 $x_i\,\dfrac{\partial L}{\partial z_j}$，这正是 $n \times 1$ 的列向量 $\mathbf{x}^{T}$ 乘 $1 \times m$ 的行向量 $\dfrac{\partial L}{\partial \mathbf{z}}$：</p>
+$$\frac{\partial L}{\partial W} = \mathbf{x}^{T}\,\frac{\partial L}{\partial \mathbf{z}}$$
+<p>下图取 $\mathbf{x} = [\,1\ \ -0.5\,]$，$\dfrac{\partial L}{\partial \mathbf{z}} = [\,1\ \ 0\ \ -1\,]$。</p>
+
+<figure class="jac" id="figOuter">
+<div class="eq">
+<span class="name">$\mathbf{x}^{T}$</span><div class="mat x" data-m="x"></div>
+<span class="op">·</span><span class="name">$\dfrac{\partial L}{\partial \mathbf{z}}$</span><div class="mat z" data-m="g"></div>
+<span class="op">=</span><span class="name">$\dfrac{\partial L}{\partial W}$</span><div class="mat" data-m="o0"></div>
 </div>
-<div class="say" id="wsay">移动滑块改变 $\mathbf{x}$，指针停在任意一格上显示该格的含义。</div>
+<div class="say">指针停在任意一格上显示该格的计算。</div>
 </figure>
-<p>$W_{ij}$ 只通过 $z_j$ 影响 $L$：$W_{ij}$ 变化时，其余输出分量不变。固定其余参数，$z_j$ 是 $W_{ij}$ 的单变量函数，$L$ 是 $z_j$ 的单变量函数，只有一条路径。按<a href="#chain-scalar">单变量链式法则</a>：</p>
-$$\frac{\partial L}{\partial W_{ij}} = \frac{\partial L}{\partial z_j}\,\frac{\partial z_j}{\partial W_{ij}} = \frac{\partial L}{\partial z_j}\,x_i$$
-<p>把 $n \times m$ 个结果按 $W$ 的位置排列，第 $i$ 行第 $j$ 列放 $\dfrac{\partial L}{\partial W_{ij}}$，就得到 Loss 对整个 $W$ 的导数，它与 $W$ 同形状：</p>
-$$\frac{\partial L}{\partial W} = \begin{bmatrix} \dfrac{\partial L}{\partial W_{11}} & \cdots & \dfrac{\partial L}{\partial W_{1m}} \\[8pt] \vdots & & \vdots \\[4pt] \dfrac{\partial L}{\partial W_{n1}} & \cdots & \dfrac{\partial L}{\partial W_{nm}} \end{bmatrix} = \begin{bmatrix} x_1\,\dfrac{\partial L}{\partial z_1} & \cdots & x_1\,\dfrac{\partial L}{\partial z_m} \\[8pt] \vdots & & \vdots \\[4pt] x_n\,\dfrac{\partial L}{\partial z_1} & \cdots & x_n\,\dfrac{\partial L}{\partial z_m} \end{bmatrix} = \mathbf{x}^{T}\,\frac{\partial L}{\partial \mathbf{z}}$$
-<p>$\mathbf{x}^T$ 是 $n \times 1$ 的列向量，$\dfrac{\partial L}{\partial \mathbf{z}}$ 是 $1 \times m$ 的行向量，两者相乘得到 $n \times m$ 的矩阵，第 $i$ 行第 $j$ 列是 $x_i\,\dfrac{\partial L}{\partial z_j}$。例如取上图中的初始值 $\mathbf{x} = [\,1\ \ -0.5\,]$，并设 $\dfrac{\partial L}{\partial \mathbf{z}} = [\,1\ \ 0\ \ -1\,]$：</p>
-$$\mathbf{x}^{T}\,\frac{\partial L}{\partial \mathbf{z}} = \begin{bmatrix} 1 \\ -0.5 \end{bmatrix}\begin{bmatrix} 1 & 0 & -1 \end{bmatrix} = \begin{bmatrix} 1 & 0 & -1 \\ -0.5 & 0 & 0.5 \end{bmatrix}$$
 
-<p>按链式法则，这个计算经过 $\mathbf{z}$ 对 $W$ 的导数。它属于向量对矩阵：$\mathbf{z}$ 的每个分量对 $W$ 的每个元素各有一个偏导数 $\dfrac{\partial z_j}{\partial W_{ik}}$，一共 $m \times n \times m$ 个。它们的值上面已经算出：$k = j$ 时是 $x_i$，$k \neq j$ 时是 0。上图下方的三个矩阵合起来就是 $m = 3$ 时的这个数组。数组里可能不为零的只有 $n \times m$ 个数，取值是 $\mathbf{x}$ 的 $n$ 个分量，每个分量重复 $m$ 次。每个权重只通过一个输出分量影响 Loss，所以上面的计算只用到 $x_i$ 和 $\dfrac{\partial L}{\partial z_j}$，不需要写出这个三维数组。</p>
+<p>按链式法则的一般形式，$\dfrac{\partial L}{\partial W}$ 要经过 $\dfrac{\partial \mathbf{z}}{\partial W}$。这是向量对矩阵的导数，共有 $m \times n \times m$ 个偏导数 $\dfrac{\partial z_k}{\partial W_{ij}}$。第一步已经给出它的全部元素：$k = j$ 时为 $x_i$，其余为 0。按 $k$ 分开看，每个 $\dfrac{\partial z_k}{\partial W}$ 是与 $W$ 同形状的矩阵，只有第 $k$ 列不为零，这一列是 $\mathbf{x}^{T}$。第二步只用到 $k = j$ 的元素，所以计算 $\dfrac{\partial L}{\partial W}$ 不需要写出这个数组。</p>
 
-<h3 id="sequence">整个序列</h3>
+<h3 id="sequence">输入（矩阵）的梯度</h3>
 
-<p>上一节只取了一个位置。训练时 $T$ 个位置一起计算：$X \in \mathbb{R}^{T \times n}$ 的第 $t$ 行是位置 $t$ 的输入 $\mathbf{x}_t$，$Z = XW \in \mathbb{R}^{T \times m}$ 的第 $t$ 行是 $\mathbf{z}_t = \mathbf{x}_tW$。</p>
+<p>训练时一个序列的 $T$ 个位置一起计算。把各位置的输入按行堆成 $T \times n$ 的矩阵 $X$，$Z = XW$ 的第 $t$ 行是 $\mathbf{z}_t = \mathbf{x}_tW$。Loss 对各位置输出的导数按同样的方式堆成 $T \times m$ 的矩阵 $G = \dfrac{\partial L}{\partial Z}$，第 $t$ 行是 $\dfrac{\partial L}{\partial \mathbf{z}_t}$。</p>
 
-<p>$Z$ 对 $X$ 的导数属于形状表里矩阵对矩阵一格，一共 $T \times m \times T \times n$ 个偏导数，是一个四维数组。$Z$ 的第 $t$ 行只由 $X$ 的第 $t$ 行算出，所以 $t \neq s$ 时，$\mathbf{z}_t$ 对 $\mathbf{x}_s$ 的偏导数全为零；$t = s$ 时，$\mathbf{z}_t$ 对 $\mathbf{x}_t$ 的 Jacobian 是 <a href="#jacobian">Jacobian</a> 一节的 $J = W^T$。所以这个四维数组里可能不为零的只有 $T$ 个 $m \times n$ 的块，每一块都是同一个 $J$。$Z$ 对其中一行 $\mathbf{x}_s$ 的导数属于形状表里矩阵对向量一格，它是这个四维数组的一部分，其中也只有 $J$ 这一块可能不为零。</p>
+<p><strong>对输入的导数：逐行计算。</strong>$\mathbf{x}_t$ 只影响 $\mathbf{z}_t$，所以每一行都按一个位置计算。$\mathbf{z}_t$ 对 $\mathbf{x}_t$ 的 Jacobian 是<a href="#jacobian">「Jacobian」</a>一节的 $W^{T}$：</p>
+$$\frac{\partial L}{\partial \mathbf{x}_t} = \frac{\partial L}{\partial \mathbf{z}_t}\,W^{T}$$
+<p>$T$ 行合起来是 $\dfrac{\partial L}{\partial X} = GW^{T}$。模型里的大多数运算都对每个位置分别计算，对输入的导数也都逐行计算。attention 让每个位置读取其他位置，是例外，见<a href="#op-attn">「例：GQA attention」</a>。</p>
 
-<p>因此反向传播对每个位置分别使用同一个 $J$，与只有一个位置时相同。模型里的大多数运算都对每个位置分别计算；attention 让每个位置读取其他位置，是例外，见<a href="#op-attn">「例：GQA attention」</a>。</p>
-
-<p>上面几个数组的内容都能直接写出来：大部分元素是零，不为零的部分由 $\mathbf{x}$ 或 $J$ 组成。</p>
-
-<p>把 Loss 对每个位置输出的导数 $\dfrac{\partial L}{\partial \mathbf{z}_t}$ 按行堆成 $T \times m$ 的矩阵 $G = \dfrac{\partial L}{\partial Z}$。Loss 对 $X$ 的导数逐行计算，第 $t$ 行是 $\dfrac{\partial L}{\partial \mathbf{z}_t}\,J = \dfrac{\partial L}{\partial \mathbf{z}_t}\,W^{T}$，合起来是 $\dfrac{\partial L}{\partial X} = GW^{T}$。权重 $W$ 则被 $T$ 个位置共用，每个 $W_{ij}$ 经过 $T$ 个位置的输出影响 $L$。按<a href="#chain-paths">全导数链式法则</a>，$L$ 对它的导数是 $T$ 个位置的贡献之和：</p>
+<p><strong>对权重的导数：各位置相加。</strong>$W$ 被 $T$ 个位置共用，每个 $W_{ij}$ 经过 $\mathbf{z}_1, \ldots, \mathbf{z}_T$ 影响 $L$。按<a href="#chain-paths">全导数链式法则</a>，把 $T$ 条路径的贡献相加，每一条都是上一节的外积：</p>
 $$\frac{\partial L}{\partial W} = \sum_{t=1}^{T} \mathbf{x}_t^{T}\,\frac{\partial L}{\partial \mathbf{z}_t} = X^{T}G$$
-<p>$X^T$ 是 $n \times T$，$G$ 是 $T \times m$，矩阵乘法中对 $T$ 的求和就是对 $T$ 个位置的求和。</p>
+<p>$X^{T}G$ 是 $n \times T$ 乘 $T \times m$，矩阵乘法中对 $T$ 的求和就是对位置的求和。下图取 $T = 3$，位置 1 沿用上一节的数值。</p>
+
+<figure class="jac sum" id="figSum">
+<div class="eq">
+<span class="name">$X$</span><div class="mat x" data-m="x"></div>
+<span class="name">$G$</span><div class="mat z" data-m="g"></div>
+</div>
+<div class="eq">
+<div class="blk"><span class="cap">位置 1</span><div class="mat" data-m="o0"></div></div><span class="op">+</span>
+<div class="blk"><span class="cap">位置 2</span><div class="mat" data-m="o1"></div></div><span class="op">+</span>
+<div class="blk"><span class="cap">位置 3</span><div class="mat" data-m="o2"></div></div><span class="op">=</span>
+<div class="blk"><span class="cap">$X^{T}G$</span><div class="mat" data-m="s"></div></div>
+</div>
+<div class="say">每个位置贡献一个外积 $\mathbf{x}_t^{T}\,\dfrac{\partial L}{\partial \mathbf{z}_t}$，三个外积相加得到 $X^{T}G$。指针停在任意一格上显示该格的计算。</div>
+</figure>
+
+<p>按链式法则的一般形式，$\dfrac{\partial L}{\partial X}$ 要经过 $\dfrac{\partial Z}{\partial X}$。这是矩阵对矩阵的导数，共有 $T \times m \times T \times n$ 个偏导数 $\dfrac{\partial Z_{tj}}{\partial X_{si}}$：$s \neq t$ 时为 0，$s = t$ 时为 $W_{ij}$。也就是说，这个四维数组里不为零的只有 $T$ 个 $m \times n$ 的块，每一块都是 $W^{T}$。$Z$ 对一行 $\mathbf{x}_s$ 的导数是矩阵对向量，它是这个数组的一部分，其中也只有一块 $W^{T}$ 不为零。逐行计算只用到 $W^{T}$，所以不需要写出这两个数组。</p>
 
 <h3 id="op-matmul">矩阵乘法的反向规则</h3>
 
-<p>前两节的结果合起来，就是矩阵乘法的反向规则。设前向是 $Z = XW$，$X$ 是 $T \times n$，$W$ 是 $n \times m$，$Z$ 是 $T \times m$，已知 Loss 对输出的导数 $G = \dfrac{\partial L}{\partial Z}$（$T \times m$），Loss 对输入和对权重的导数是：</p>
-$$\frac{\partial L}{\partial X} = G\,W^{T},\qquad \frac{\partial L}{\partial W} = X^{T}G$$
-<p class="aside"><span class="k">形状检查</span>$G W^T$：$T \times m$ 乘 $m \times n$ 得 $T \times n$，和 $X$ 相同。$X^T G$：$n \times T$ 乘 $T \times m$ 得 $n \times m$，和 $W$ 相同。</p>
-<p>反向传播经过一次矩阵乘法时，用到的只有 $G$、$W$ 和前向计算时保存的 $X$。推导没有用到 $W$ 是权重这一点，两个因子都随输入变化时公式同样成立：$Z = AB$ 时，$\dfrac{\partial L}{\partial A} = GB^{T}$，$\dfrac{\partial L}{\partial B} = A^{T}G$。</p>
+<p>前两节的结果合起来，就是矩阵乘法的反向规则。设前向是 $Z = XW$，$X \in \mathbb{R}^{T \times n}$，$W \in \mathbb{R}^{n \times m}$，$Z \in \mathbb{R}^{T \times m}$。已知 Loss 对输出的导数 $\dfrac{\partial L}{\partial Z} \in \mathbb{R}^{T \times m}$，Loss 对输入和对权重的导数是：</p>
+$$\frac{\partial L}{\partial X} = \dfrac{\partial L}{\partial Z}\,W^{T} \in \mathbb{R}^{T \times n},\qquad \frac{\partial L}{\partial W} = X^{T}\dfrac{\partial L}{\partial Z} \in \mathbb{R}^{n \times m}$$
+<p>反向传播经过一次矩阵乘法时，用到的只有 $\dfrac{\partial L}{\partial Z}$、$W$ 和前向计算时保存的 $X$。</p>
 
 <h3 id="head-weight">例：LM head 的权重</h3>
 
@@ -789,7 +823,7 @@ $$\frac{\partial L}{\partial W_{\text{fp32}}} := \frac{\partial L}{\partial W_{\
 <tr><td>相加</td><td>$Y = X + H$</td><td>$I$，$I$</td><td>两边各得 $G$；多条路径到达同一处时相加</td></tr>
 <tr><td>常数倍</td><td>$Y = \alpha X$</td><td>$\alpha I$</td><td>$\alpha G$</td></tr>
 <tr><td>平均</td><td>$L = \frac{1}{T}\sum_t \ell_t$</td><td>$[\frac{1}{T}\ \cdots\ \frac{1}{T}]$</td><td>$\partial L/\partial \ell_t = \frac{1}{T}$</td></tr>
-<tr><td>softmax（逐行）</td><td>$\mathbf{p} = \mathrm{softmax}(\mathbf{s})$</td><td>$\mathrm{diag}(\mathbf{p}) - \mathbf{p}^{T}\mathbf{p}$</td><td>$\mathbf{p} \otimes \big(\frac{\partial L}{\partial \mathbf{p}} - \frac{\partial L}{\partial \mathbf{p}}\cdot\mathbf{p}\big)$</td></tr>
+<tr><td>softmax（逐行）</td><td>$\mathbf{p} = \mathrm{softmax}(\mathbf{x})$</td><td>$\mathrm{diag}(\mathbf{p}) - \mathbf{p}^{T}\mathbf{p}$</td><td>$\mathbf{p} \otimes \big(\frac{\partial L}{\partial \mathbf{p}} - \frac{\partial L}{\partial \mathbf{p}}\cdot\mathbf{p}\big)$</td></tr>
 <tr><td>softmax + cross-entropy</td><td>$L = -\frac{1}{T}\sum_t \ln p_{t,y_t}$</td><td>合并后不单独出现</td><td>$\partial L/\partial Z = \frac{1}{T}(P - Y)$</td></tr>
 <tr><td>Embedding</td><td>$X_0[t] = E[\text{tok}_t]$</td><td>one-hot 矩阵</td><td>把 $G$ 的第 $t$ 行加到 $\partial L/\partial E$ 的第 $\text{tok}_t$ 行</td></tr>
 <tr><td>FP32 到 BF16</td><td>$W_{\text{bf16}} = \mathrm{round}(W_{\text{fp32}})$</td><td>按定义为零</td><td>约定为恒等：$G$ 转回 FP32 原样通过</td></tr>
@@ -1255,32 +1289,27 @@ MathJax.startup.promise.then(()=>{
   render();
 })();
 
-/* ---------- x·W = z 的两张图：Jacobian（figJac）和 z 对 W 的导数（figWgrad） ---------- */
+/* ---------- x·W = z 的 Jacobian（figJac） ---------- */
 (function(){
   const W=[[1,-2,0.5],[0.5,1,-1]]; // W[i-1][j-1]，x 长度 2，z 长度 3
   const z=v=>[0,1,2].map(j=>v[0]*W[0][j]+v[1]*W[1][j]);
   const f2=v=>(v<0?'−':'')+Math.abs(v).toFixed(2), f3=v=>(v<0?'−':'')+Math.abs(v).toFixed(3);
   const X=i=>`<span style="color:var(--s3)">$x_{${i}}$</span>`, Z=j=>`<span style="color:var(--s5)">$z_{${j}}$</span>`;
   const zExpr=j=>`${Z(j)} $= ${W[0][j-1]}\\,x_1 ${W[1][j-1]<0?'-':'+'} ${Math.abs(W[1][j-1])}\\,x_2$`;
-  // p 是元素 id 的前缀；jac 为 true 时下方是 Jacobian J，为 false 时下方是三个 ∂z_j/∂W
-  function setup(figId,p,jac){
-    const $=id=>document.getElementById(p+id), fig=document.getElementById(figId), say=$('say');
+  {
+    const $=id=>document.getElementById('j'+id), fig=document.getElementById('figJac'), say=$('say');
     let x=[1,-0.5], prev=[1,-0.5], prevZ=null;
     let tsq=Promise.resolve();
     const typeset=()=>{tsq=tsq.then(()=>MathJax.typesetPromise([say])).catch(()=>{});};
     function render(moved){
       const zz=z(x);
-      [1,2].forEach(i=>{$('x'+i+'v').textContent=x[i-1].toFixed(2);$('x'+i+'c').textContent=f2(x[i-1]);if(!jac)[1,2,3].forEach(j=>$('dw'+i+j).textContent=f2(x[i-1]));});
+      [1,2].forEach(i=>{$('x'+i+'v').textContent=x[i-1].toFixed(2);$('x'+i+'c').textContent=f2(x[i-1]);});
       [1,2,3].forEach(j=>$('z'+j).textContent=f3(zz[j-1]));
       if(moved!=null&&prevZ){
         const dxi=x[moved]-prev[moved];
         if(Math.abs(dxi)>1e-9){
-          if(jac){
-            const ratios=zz.map((v,j)=>f2((v-prevZ[j])/dxi));
-            say.innerHTML=`${X(moved+1)} 变化 <b>${f2(dxi)}</b>，三个输出分别变化 <b>${zz.map((v,j)=>f3(v-prevZ[j])).join('　')}</b>，比值 <b>${ratios.join('　')}</b>，即 $J$ 的第 ${moved+1} 列，也就是 $W$ 的第 ${moved+1} 行。`;
-          }else{
-            say.innerHTML=`${X(moved+1)} 变为 <b>${f2(x[moved])}</b>。三个矩阵第 ${moved+1} 行的非零元都等于 $x_{${moved+1}}$，随之变为 <b>${f2(x[moved])}</b>；为零的元素不变。`;
-          }
+          const ratios=zz.map((v,j)=>f2((v-prevZ[j])/dxi));
+          say.innerHTML=`${X(moved+1)} 变化 <b>${f2(dxi)}</b>，三个输出分别变化 <b>${zz.map((v,j)=>f3(v-prevZ[j])).join('　')}</b>，比值 <b>${ratios.join('　')}</b>，即 $J$ 的第 ${moved+1} 列，也就是 $W$ 的第 ${moved+1} 行。`;
           typeset();
         }
       }
@@ -1296,42 +1325,20 @@ MathJax.startup.promise.then(()=>{
         clear(); c.classList.add('on');
         if(d.x){ // 输入 x_i
           const i=+d.x; on(`.mat.w .c[data-i="${i}"]`); on('.mat.z .c');
-          if(jac){
-            on(`.mat.dx .c[data-di="${i}"]`);
-            say.innerHTML=`${X(i)} 变化时三个输出的变化率：${zExpr(1)}，${zExpr(2)}，${zExpr(3)}，其中 $x_{${i}}$ 的系数依次是 <b>${W[i-1].join('　')}</b>，即 $J$ 的第 ${i} 列，也就是 $W$ 的第 ${i} 行。这三个数不含 $\\mathbf{x}$，所以不随滑块变。`;
-          }else{
-            on(`.mat.dw .c[data-dwi="${i}"]:not(.zero)`);
-            say.innerHTML=`在每个 $z_j$ 里，${X(i)} 乘的是 $W_{${i}j}$，所以 $\\partial z_j / \\partial W_{${i}j} = x_{${i}}$ = <b>${f2(x[i-1])}</b>。它出现在每个 $\\partial z_j / \\partial W$ 的第 ${i} 行第 $j$ 列，随滑块变化。`;
-          }
+          on(`.mat.dx .c[data-di="${i}"]`);
+          say.innerHTML=`${X(i)} 变化时三个输出的变化率：${zExpr(1)}，${zExpr(2)}，${zExpr(3)}，其中 $x_{${i}}$ 的系数依次是 <b>${W[i-1].join('　')}</b>，即 $J$ 的第 ${i} 列，也就是 $W$ 的第 ${i} 行。这三个数不含 $\\mathbf{x}$，所以不随滑块变。`;
         }else if(d.i){ // 权重 W_ij
           const i=+d.i,j=+d.j; on(`.mat.x .c[data-x="${i}"]`); on(`.mat.z .c[data-z="${j}"]`);
-          if(jac){
-            on(`.mat.dx .c[data-di="${i}"][data-j="${j}"]`);
-            say.innerHTML=`$W_{${i}${j}}$ 是 ${zExpr(j)} 中 ${X(i)} 的系数，所以 $\\partial z_{${j}} / \\partial x_{${i}} = W_{${i}${j}}$ = <b>${W[i-1][j-1]}</b>，它位于 $J$ 的第 ${j} 行第 ${i} 列。`;
-          }else{
-            on(`.mat.dw .c[data-dwi="${i}"][data-j="${j}"]:not(.zero)`);
-            say.innerHTML=`只有 ${Z(j)} 含 $W_{${i}${j}}$：${zExpr(j)}，它所乘的是 ${X(i)}，所以 $\\partial z_{${j}} / \\partial W_{${i}${j}} = x_{${i}}$ = <b>${f2(x[i-1])}</b>，这个值随 $x_{${i}}$ 变化。`;
-          }
+          on(`.mat.dx .c[data-di="${i}"][data-j="${j}"]`);
+          say.innerHTML=`$W_{${i}${j}}$ 是 ${zExpr(j)} 中 ${X(i)} 的系数，所以 $\\partial z_{${j}} / \\partial x_{${i}} = W_{${i}${j}}$ = <b>${W[i-1][j-1]}</b>，它位于 $J$ 的第 ${j} 行第 ${i} 列。`;
         }else if(d.z){ // 输出 z_j
           const j=+d.z, zz=z(x); on(`.mat.w .c[data-j="${j}"]`); on('.mat.x .c');
           const val=`${zExpr(j)} $= ${W[0][j-1]} \\times (${(x[0]).toFixed(2)}) ${W[1][j-1]<0?'-':'+'} ${Math.abs(W[1][j-1])} \\times (${(x[1]).toFixed(2)})$ = <b>${f3(zz[j-1])}</b>。`;
-          if(jac){
-            on(`.mat.dx .c[data-j="${j}"]`);
-            say.innerHTML=val+`它对 $x_1$、$x_2$ 的偏导数是 $W$ 的第 ${j} 列 <b>${W[0][j-1]}　${W[1][j-1]}</b>，也就是 $z_{${j}}$ 的梯度，即 $J$ 的第 ${j} 行。`;
-          }else{
-            on(`.mat.dw .c[data-k="${j}"]`);
-            say.innerHTML=val+`它只含 $W$ 的第 ${j} 列，所以 $\\partial z_{${j}} / \\partial W$ 只有第 ${j} 列不为零，这一列是 <b>${f2(x[0])}　${f2(x[1])}</b>，即 $\\mathbf{x}$ 的转置。`;
-          }
+          on(`.mat.dx .c[data-j="${j}"]`);
+          say.innerHTML=val+`它对 $x_1$、$x_2$ 的偏导数是 $W$ 的第 ${j} 列 <b>${W[0][j-1]}　${W[1][j-1]}</b>，也就是 $z_{${j}}$ 的梯度，即 $J$ 的第 ${j} 行。`;
         }else if(d.di){ // J 的一格
           const i=+d.di,j=+d.j; on(`.mat.w .c[data-i="${i}"][data-j="${j}"]`); on(`.mat.x .c[data-x="${i}"]`); on(`.mat.z .c[data-z="${j}"]`);
           say.innerHTML=`$\\partial z_{${j}} / \\partial x_{${i}} = W_{${i}${j}}$ = <b>${W[i-1][j-1]}</b>：${X(i)} 变化时 ${Z(j)} 的变化率是 ${W[i-1][j-1]}。`;
-        }else if(d.dwi){ // ∂z_k/∂W 的一格，k = j 时不为零
-          const k=+d.k,i=+d.dwi,j=+d.j; on(`.mat.w .c[data-i="${i}"][data-j="${j}"]`); on(`.mat.z .c[data-z="${k}"]`);
-          if(k!==j) say.innerHTML=`${Z(k)} 只含 $W$ 的第 ${k} 列，不含 $W_{${i}${j}}$，所以 $\\partial z_{${k}} / \\partial W_{${i}${j}} = 0$。`;
-          else{
-            on(`.mat.x .c[data-x="${i}"]`);
-            say.innerHTML=`$\\partial z_{${j}} / \\partial W_{${i}${j}} = x_{${i}}$ = <b>${f2(x[i-1])}</b>：$W_{${i}${j}}$ 变化时只有 ${Z(j)} 变化，变化率是 $x_{${i}}$。`;
-          }
         }
         typeset();
       });
@@ -1339,8 +1346,62 @@ MathJax.startup.promise.then(()=>{
     fig.querySelectorAll('.mat').forEach(m=>m.addEventListener('pointerleave',clear));
     render(null);
   }
-  setup('figJac','j',true);
-  setup('figWgrad','w',false);
+})();
+
+/* ---------- 权重梯度的两张图：一个位置的外积（figOuter），T 个位置的外积之和（figSum） ---------- */
+(function(){
+  const fmt=v=>(v<0?'−':'')+Math.abs(v), par=v=>v<0?`(${fmt(v)})`:fmt(v);
+  // X 的第 t 行是位置 t 的输入，G 的第 t 行是 Loss 对位置 t 输出的导数
+  function setup(figId,X,G){
+    const fig=document.getElementById(figId), say=fig.querySelector('.say');
+    const T=X.length, n=X[0].length, m=G[0].length, sum=T>1;
+    const O=X.map((x,t)=>x.map(xi=>G[t].map(g=>xi*g)));   // O[t] 是位置 t 的外积
+    const S=O[0].map((row,i)=>row.map((_,j)=>O.reduce((a,o)=>a+o[i][j],0)));
+    const cell=(r,t,i,j,v)=>`<div class="c" data-r="${r}" data-t="${t}" data-i="${i}" data-j="${j}"><b>${fmt(v)}</b></div>`;
+    const fill=(el,rows,cols,f)=>{el.style.gridTemplateColumns=`repeat(${cols},auto)`;let h='';for(let a=0;a<rows;a++)for(let b=0;b<cols;b++)h+=f(a,b);el.innerHTML=h;};
+    fig.querySelectorAll('.mat').forEach(el=>{
+      const k=el.dataset.m;
+      if(k==='x'){ if(sum) fill(el,T,n,(t,i)=>cell('x',t,i,-1,X[t][i])); else fill(el,n,1,i=>cell('x',0,i,-1,X[0][i])); }
+      else if(k==='g') fill(el,T,m,(t,j)=>cell('g',t,-1,j,G[t][j]));
+      else if(k==='s') fill(el,n,m,(i,j)=>cell('s',-1,i,j,S[i][j]));
+      else { const t=+k.slice(1); fill(el,n,m,(i,j)=>cell('o',t,i,j,O[t][i][j])); }
+    });
+    let tsq=Promise.resolve();
+    const typeset=()=>{tsq=tsq.then(()=>MathJax.typesetPromise([say])).catch(()=>{});};
+    const cells=[...fig.querySelectorAll('.mat .c')];
+    const clear=()=>cells.forEach(o=>o.classList.remove('on'));
+    const on=sel=>fig.querySelectorAll(`.mat .c${sel}`).forEach(o=>o.classList.add('on'));
+    const prod=(t,i,j)=>`${par(X[t][i])} × ${par(G[t][j])} = <b>${fmt(O[t][i][j])}</b>`;
+    cells.forEach(el=>el.addEventListener('pointerenter',()=>{
+      clear(); el.classList.add('on');
+      const r=el.dataset.r, t=+el.dataset.t, i=+el.dataset.i, j=+el.dataset.j, I=i+1, J=j+1, P=t+1;
+      if(r==='o'){
+        on(`[data-r="x"][data-t="${t}"][data-i="${i}"]`); on(`[data-r="g"][data-t="${t}"][data-j="${j}"]`); on(`[data-r="s"][data-i="${i}"][data-j="${j}"]`);
+        say.innerHTML=sum
+          ? `位置 ${P} 的外积第 ${I} 行第 ${J} 列：$X_{${P}${I}}\\,G_{${P}${J}}$ = ${prod(t,i,j)}。它是 $X^{T}G$ 同一格求和中的一项。`
+          : `第 ${I} 行第 ${J} 列：$x_{${I}}\\,\\partial L / \\partial z_{${J}}$ = ${prod(t,i,j)}。`;
+      }else if(r==='s'){
+        on(`[data-r="o"][data-i="${i}"][data-j="${j}"]`); on(`[data-r="x"][data-i="${i}"]`); on(`[data-r="g"][data-j="${j}"]`);
+        say.innerHTML=`$\\partial L / \\partial W_{${I}${J}} = \\sum_t X_{t${I}}\\,G_{t${J}}$ = ${X.map((_,t)=>`${par(X[t][i])} × ${par(G[t][j])}`).join(' + ')} = <b>${fmt(S[i][j])}</b>，三项依次来自三个位置。`;
+      }else if(r==='x'){
+        on(`[data-r="o"][data-t="${t}"][data-i="${i}"]`); on(`[data-r="g"][data-t="${t}"]`);
+        const row=`<b>${O[t][i].map(fmt).join('　')}</b>`;
+        say.innerHTML=sum
+          ? `$X_{${P}${I}}$ = <b>${fmt(X[t][i])}</b> 乘 $G$ 的第 ${P} 行，得到位置 ${P} 的外积的第 ${I} 行 ${row}。`
+          : `$x_{${I}}$ = <b>${fmt(X[t][i])}</b> 乘 $\\partial L / \\partial \\mathbf{z}$，得到第 ${I} 行 ${row}。`;
+      }else{
+        on(`[data-r="o"][data-t="${t}"][data-j="${j}"]`); on(`[data-r="x"][data-t="${t}"]`);
+        const col=`<b>${O[t].map(row=>fmt(row[j])).join('　')}</b>`;
+        say.innerHTML=sum
+          ? `$G_{${P}${J}}$ = <b>${fmt(G[t][j])}</b> 乘 $X$ 第 ${P} 行的转置，得到位置 ${P} 的外积的第 ${J} 列 ${col}。`
+          : `$\\partial L / \\partial z_{${J}}$ = <b>${fmt(G[t][j])}</b> 乘 $\\mathbf{x}^{T}$，得到第 ${J} 列 ${col}。`;
+      }
+      typeset();
+    }));
+    fig.querySelectorAll('.mat').forEach(el=>el.addEventListener('pointerleave',clear));
+  }
+  setup('figOuter',[[1,-0.5]],[[1,0,-1]]);
+  setup('figSum',[[1,-0.5],[0.5,2],[-1,1]],[[1,0,-1],[0,1,0.5],[0.5,-1,0]]);
 })();
 
 /* ---------- 单条路径 ---------- */
@@ -1417,7 +1478,7 @@ MathJax.startup.promise.then(()=>{
   for(const [b,j] of zs){ tag(170,88+0.55*(b-88),`W_{i${j}}`); tag(337,b+(88-b)*0.22,`p_${j} - y_${j}`); }
   xs.forEach(([a,t])=>box(40,a,`$${t}$`)); zs.forEach(([b,j])=>box(230,b,`$z_${j}$`)); box(440,88,'$\\ell$');
   label(svg,70,62,'$\\vdots$',13,'middle'); label(svg,70,126,'$\\vdots$',13,'middle'); label(svg,260,118,'$\\vdots$',13,'middle');
-  label(svg,260,194,'反向传播：从 $\\ell$ 出发，经过 $V$ 条路径传回 $x_i$，每条路径贡献 $(p_j - y_j)\\,W_{ij}$',12,'middle','','var(--s1)');
+label(svg,260,194,'反向传播：每条路径贡献 $(p_j - y_j)\\,W_{ij}$',12,'middle','','var(--s1)');
 });
 
 /* ---------- MHA 与 GQA 的对比 ---------- */
