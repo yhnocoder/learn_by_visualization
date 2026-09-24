@@ -177,7 +177,7 @@ widest 3</textarea>
           <button class="btn quiet" id="btnInferAll" disabled>全部执行</button>
           <span class="hint" id="inferStatus"></span>
         </div>
-        <div class="hint">推理不再统计频次，只看训练学到的规则顺序。两种模式结果相同：「扫描」是从第 1 条规则起逐条试；「取优先级最高」是 Sennrich 参考实现的做法，每次在当前序列里找排名最靠前的相邻对合并，直到没有规则可用。</div>
+        <div class="hint">推理不再统计频次，只看训练学到的规则顺序。两种模式结果相同：“扫描”是从第 1 条规则起逐条试；“取优先级最高”是 Sennrich 参考实现的做法，每次在当前序列里找排名最靠前的相邻对合并，直到没有规则可用。</div>
       </div>
     </section>
 
@@ -377,7 +377,7 @@ widest 3</textarea>
   function resetInfer(){
     inferState=null;
     $('steps').innerHTML=''; $('stepsEmpty').style.display='';
-    $('stepsEmpty').textContent = merges.length ? '点「开始切分」。' : '先训练几步，再回来切分。';
+    $('stepsEmpty').textContent = merges.length ? '点“开始切分”。' : '先训练几步，再回来切分。';
     $('result').hidden=true;
     $('inferPairs').innerHTML='<span class="empty">还没开始。</span>';
     $('btnNext').disabled=true; $('btnInferAll').disabled=true;
