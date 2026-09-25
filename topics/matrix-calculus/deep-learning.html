@@ -3,7 +3,7 @@
 <header class="mast">
 <p class="eyebrow">Deep Learning · Matrix Calculus</p>
 <h1>深度学习中的矩阵微积分</h1>
-<p class="lede">从一个完整的 Transformer 语言模型出发，给出训练时反向传播用到的求导规则，以及每条规则在模型里出现的位置。</p>
+<p class="lede">从一个完整的 Transformer 语言模型出发，梳理训练时反向传播用到的求导规则。</p>
 <p class="watermark" style="font-size:13px;color:var(--ink-2)">规则本身与 Terence Parr 和 Jeremy Howard 的 <a href="index.html">《深度学习所需的矩阵微积分》</a>一致。本文更换了贯穿全文的例子，并按模型的计算顺序重新组织。</p>
 </header>
 
@@ -84,7 +84,7 @@ $$\text{backward} = \text{局部导数} + \text{链式法则}$$
 
 <p><mark>已知输出的梯度，如何得到输入和参数的梯度？</mark></p>
 
-<p>感谢链式法则，整张计算图虽然看起来很大，真正需要掌握的求导规则其实只有有限几种。矩阵乘法、逐元素运算、归一化、Softmax、残差连接，这些求导的规则只需要我们分别定义一次，之后遇到相同结构可直接服用。反向传播就是这些“子模块”的求导规则沿计算图不断组合的结果。</p>
+<p>感谢链式法则，整张计算图虽然看起来很大，真正需要掌握的求导规则其实只有有限几种。矩阵乘法、逐元素运算、归一化、Softmax、残差连接等，这些求导的规则只需要我们分别定义一次，之后遇到相同结构可直接复用。反向传播就是这些“子模块”的求导规则沿计算图不断组合的结果。</p>
 
 <p>图中还包含 RMSNorm、SwiGLU FFN、GQA Attention 和 RoPE。下面的折叠部分只负责补充它们的前向定义和记号；如果你已经熟悉这些模块，可以直接跳过。真正开始求导时，再按需回来查对应公式即可。</p>
 
@@ -296,26 +296,28 @@ $$\frac{dy}{dx} = \lim_{\Delta x \to 0} \frac{f(x+\Delta x) - f(x)}{\Delta x}$$
 
 <tr><td>Swish</td><td>$x\,\sigma(x)$</td><td>$\sigma(x) + x\,\sigma(x)\,\big(1-\sigma(x)\big)$</td><td></td></tr>
 
-<tr><td>链式法则</td><td>$f(g(x))$</td><td>$\dfrac{df}{du}\,\dfrac{du}{dx}$，其中 $u = g(x)$</td><td>$\dfrac{d}{dx}\,\sin(x^2) = \cos(x^2) \cdot 2x$</td></tr>
-
 </tbody></table></div>
 
-
 <p>$\dfrac{d}{dx}$ 也可以看成一个运算符，输入一个函数，输出另一个函数。可以这么思考：</p>
-<p>加法可以拆开：$\dfrac{d}{dx}(f(x) + g(x)) = \dfrac{d}{dx}f(x) + \dfrac{d}{dx}g(x)$</p>
-<p>常数因子可以提到它前面：$\dfrac{d}{dx}(\alpha f(x)) = \alpha \dfrac{d}{dx}f(x)$</p>
+<ul>
+  <li>加法可以拆开：$\dfrac{d}{dx}\big(f(x) + g(x)\big) = \dfrac{d}{dx}f(x) + \dfrac{d}{dx}g(x)$；</li>
+  <li>常数因子可以提到它前面：$\dfrac{d}{dx}\big(\alpha f(x)\big) = \alpha \dfrac{d}{dx}f(x)$。</li>
+</ul>
 <p>所以对复杂表达式求导可以先拆分、分别求导、再组合：</p>
 $$\frac{d}{dx}\,9(x + x^2) = 9\,\frac{d}{dx}(x + x^2) = 9\Big(\frac{d}{dx}x + \frac{d}{dx}x^2\Big) = 9(1 + 2x) = 9 + 18x$$
 
 <h3 id="chain-scalar">单变量链式法则</h3>
 
-<p>规则表最后一行的链式法则用于对嵌套的函数求导，反向传播的每一步都要用到它。$y$ 通过中间变量 $u$ 依赖 $x$：$y = f(u)$，$u = g(x)$。$y$ 对 $x$ 的导数等于 $y$ 对 $u$ 的导数乘 $u$ 对 $x$ 的导数：</p>
+<p>链式法则处理的是函数嵌套。若 $y = f(u)$，$u = g(x)$，那么 $y$ 对 $x$ 的导数为</p>
 $$\frac{dy}{dx} = \frac{dy}{du}\,\frac{du}{dx}$$
+<p>也就是说，要计算 $x$ 的一个微小变化最终如何影响 $y$，可以把这条依赖路径上每一段的局部导数依次相乘。前向计算沿 $x \rightarrow u \rightarrow y$ 进行，而求导沿相反方向 $y \rightarrow u \rightarrow x$ 进行。</p>
+<p>如果依赖链更长，例如 $x \rightarrow v \rightarrow u \rightarrow y$，那么</p>
+$$\frac{dy}{dx} = \frac{dy}{du}\,\frac{du}{dv}\,\frac{dv}{dx}$$
+<p>反向传播做的正是这件事：从最终的 Loss 出发，沿计算图反向传播梯度，每经过一个节点，就乘上这个节点对应的局部导数，只是变量从标量推广成了向量、矩阵和更高阶 Tensor，这部分很快会讲到。</p>
+
 <figure class="paths">
 <svg id="chainSvg" viewBox="0 0 520 104" role="img" aria-label="反向传播的方向：从 y 经过 u 传回 x，只有一条路径"></svg>
 </figure>
-<p>这是单变量链式法则：外层函数的导数乘内层函数的导数。计算时由 $x$ 算出 $u$，再由 $u$ 算出 $y$；求导的顺序相反，图中的箭头从 $y$ 出发，每经过一段就乘上这一段的导数。嵌套更多层时，从最外层的 $y$ 开始逐层往回乘。$y$ 依赖 $u$，$u$ 依赖 $v$，$v$ 依赖 $x$，则</p>
-$$\frac{dy}{dx} = \frac{dy}{du}\,\frac{du}{dv}\,\frac{dv}{dx}$$
 
 <h3 id="swish">例：Sigmoid 与 Swish 的导数</h3>
 
@@ -333,34 +335,40 @@ $$
 $$
 
 <p>Swish 是两个函数的乘积：$\mathrm{Swish}(x) = x \cdot \sigma(x)$。按乘积法则，再代入上面的 $\dfrac{d\sigma}{dx}$：</p>
-$$\frac{d\,\mathrm{Swish}(x)}{dx} = 1 \cdot \sigma(x) + x\,\frac{d\sigma}{dx} = \sigma(x) + x\,\sigma(x)\,\big(1-\sigma(x)\big) = \sigma(x)\,\big(1 + x\,(1-\sigma(x))\big)$$
 
-<p>后文会把 Swish 逐元素作用在向量和矩阵上，反向传播要在每个元素处计算上面这个导数。为了书写方便，把它记作：</p>
-$$\mathrm{Swish}'(x) = \frac{d\,\mathrm{Swish}(x)}{dx} = \sigma(x)\,\big(1 + x\,(1-\sigma(x))\big)$$
-<p>本文对其他逐元素函数 $f$ 的导数也这样记作 $f'$。</p>
+$$
+\begin{aligned}
+\frac{d\,\mathrm{Swish}(x)}{dx}
+&= 1 \cdot \sigma(x) + x\,\frac{d\sigma}{dx}\\
+&= \sigma(x) + x\,\sigma(x)\,\big(1-\sigma(x)\big)\\
+&= \sigma(x)\,\big(1 + x\,(1-\sigma(x))\big)
+\end{aligned}
+$$
 
 </section>
 
 <section id="partials">
 <h2>标量对向量</h2>
 
-<p>现在我们考虑多个输入合成一个输出的情况，例如 LM head 的第 $j$ 个 logit 的前向计算为：</p>
-$$z_j = \sum_{k=1}^{d} x_k W_{kj} = \mathbf{x}\,W_{:,j}$$
-<p>其中 $\mathbf{x} = [\,x_1\ \ x_2\ \ \cdots\ \ x_d\,]$ 是输入的行向量，$W$ 是 LM head 的权重矩阵（模型图中的 $W_{out}$），$W_{:,j} = [\,W_{1j}\ \ W_{2j}\ \ \cdots\ \ W_{dj}\,]^{T}$ 是 $W$ 的第 $j$ 列，即 PyTorch 里的 <code>W[:, j]</code>。$z_j$ 依赖 $d$ 个输入 $x_k$ 和 $d$ 个权重 $W_{kj}$。我们需要梳理清楚：对其中一个求导时，其他输入怎么处理。本章先用一个两个输入的函数讲清楚这个问题，最后的两个例子再回到 LM head。</p>
+<p>前面讨论的函数只有一个输入，例如 $y = f(x)$。但神经网络中的一个输出通常同时依赖许多量。例如 LM head 的一个 logit：</p>
+$$z_j = \sum_{k=1}^{d} x_k W_{kj}$$
+<p>$z_j$ 同时依赖 $x_1, \ldots, x_d$ 和 $W_{1j}, \ldots, W_{dj}$。如果我们只想知道其中某一个量变化时 $z_j$ 如何变化，就需要在其他量保持不变的情况下对它求导。这就是偏导数。</p>
+<p>我们先用一个只有两个输入的函数把这个概念讲清楚，再回到上面的 LM head。</p>
 
 <h3 id="partial">偏导数</h3>
 
-<p>$f(x, y) = 3x^2 y$ 有两个输入，可以沿 $x$ 方向改变，也可以沿 $y$。我们先只让一个输入变化。</p>
+<p>对多元函数，只改变其中一个自变量、保持其他自变量不变时得到的导数称为偏导数，通常用 $\partial$ 表示，写作 $\dfrac{\partial f}{\partial x}$，在 $(x_0, y_0)$ 处的值写作 $\left.\dfrac{\partial f}{\partial x}\right|_{(x_0,y_0)}$。</p>
 
-<p><mark>固定 $y$，只让 $x$ 变化</mark>，$f$ 就是 $x$ 的单变量函数，上一章的方法可以直接用：它的图像在 $x$ 处的切线斜率，就是 $x$ 变化时 $f$ 的变化率。这个斜率称为 $f$ 对 $x$ 的偏导数，记作 $\dfrac{\partial f}{\partial x}$。计算时把 $y$ 当作常数：</p>
+<p>举个例子：设 $f(x, y) = 3x^2 y$ 有两个输入，可以沿 $x$ 方向改变，也可以沿 $y$。我们先只让一个输入变化。</p>
+
+<p><mark>固定 $y$，只让 $x$ 变化</mark>。固定 $y = y_0$ 后，$x \mapsto f(x, y_0)$ 就成为一个关于 $x$ 的单变量函数，因此可以直接使用前面的一元求导规则。它的图像是一条单变量曲线 $z = f(x, y_0)$，这条曲线在 $x = x_0$ 处的切线斜率，就是 $x$ 变化时 $f$ 的变化率。</p>
+
+<p>计算时把 $y$ 当作常数：</p>
 $$\frac{\partial}{\partial x}\,3x^2y = 3y \cdot \frac{d}{dx}x^2 = 3y \cdot 2x = 6xy$$
 <p><mark>固定 $x$，只让 $y$ 变化</mark>，得到 $f$ 对 $y$ 的偏导数：</p>
 $$\frac{\partial}{\partial y}\,3x^2y = 3x^2 \cdot \frac{d}{dy}y = 3x^2$$
 
-<p>符号 $\partial$ 和 $d$ 的区别是：$\partial$ 表示函数还有其他输入，求导时它们保持不变。对只有一个输入的函数，$\dfrac{\partial f}{\partial x}$ 与 $\dfrac{df}{dx}$ 相同。</p>
-
-<p>下图左边是 $f(x, y)$ 的取值，黑点是选定的位置 $(x_0, y_0)$，经过黑点的黑色曲线是 $f$ 的等值线，曲线上每一点的 $f$ 都等于 $f(x_0, y_0)$。右边两张图是过这个点、分别固定 $y = y_0$ 和固定 $x = x_0$ 切出的两条单变量曲线，各带一条切线，两条切线的斜率就是两个偏导数。</p>
-<p>左图上从黑点出发的绿色箭头沿 $x$ 方向，长度是 $\dfrac{\partial f}{\partial x}$；粉色箭头沿 $y$ 方向，长度是 $\dfrac{\partial f}{\partial y}$；偏导数为负时箭头朝反方向。紫色箭头是两者合成的向量，在下一节说明。</p>
+<p>所以，一个二元函数在同一点可以有两个不同的局部变化率 $\dfrac{\partial f}{\partial x}$ 和 $\dfrac{\partial f}{\partial y}$。前者描述沿 $x$ 方向移动时函数怎样变化，后者描述沿 $y$ 方向移动时函数怎样变化。如果函数有更多输入，道理完全一样。</p>
 
 <figure class="grad" id="figGrad">
 <div class="controls">
@@ -379,28 +387,52 @@ $$\frac{\partial}{\partial y}\,3x^2y = 3x^2 \cdot \frac{d}{dy}y = 3x^2$$
 <div class="y">$\dfrac{\partial f}{\partial y} = 3x_0^2$ = <b id="gpy">4.320</b></div>
 <div class="g">$\nabla f$ = [<b id="gg1">5.760</b>&nbsp; <b id="gg2">4.320</b>]</div>
 </div>
+<figcaption>
+  <p>左边是 $f(x, y)$ 的取值，经过选定的位置 $(x_0, y_0)$ 的曲线是 $f$ 的等值线，曲线上每一点的 $f$ 都等于 $f(x_0, y_0)$。</p>
+  <p>绿色箭头：$\dfrac{\partial f}{\partial x}$；粉色箭头：$\dfrac{\partial f}{\partial y}$。紫色箭头是两者合成的向量。</p>
+  <p>右边两张图是过 $(x_0, y_0)$、分别固定 $y = y_0$ 和固定 $x = x_0$ 切出的两条单变量曲线，各带一条切线，两条切线的斜率就是两个偏导数。</p>
+</figcaption>
 </figure>
+
+<p>现在重新回到 LM head：</p>
+
+$$z_j = \sum_{k=1}^{d} x_k W_{kj}$$
+<p>展开就是</p>
+$$z_j = x_1W_{1j} + x_2W_{2j} + \cdots + x_dW_{dj}$$
+<p>假设只改变 $x_k$，其他 $x$ 和所有权重都保持不变。与 $x_k$ 有关的只有 $x_kW_{kj}$ 这一项，因此</p>
+$$\frac{\partial z_j}{\partial x_k} = W_{kj}$$
+<p>$x_k$ 增加一个很小的量时，它对 $z_j$ 的影响会被权重 $W_{kj}$ 缩放。同样，如果只改变权重 $W_{kj}$，其他变量保持不变：</p>
+$$\frac{\partial z_j}{\partial W_{kj}} = x_k$$
+<p>所以在线性层里，输入对输出的影响由权重决定，而权重对输出的影响由对应的输入决定。</p>
+<p>例如 $z_j = x_1W_{1j} + x_2W_{2j} + x_3W_{3j}$，那么</p>
+$$\frac{\partial z_j}{\partial x_1} = W_{1j},\qquad \frac{\partial z_j}{\partial x_2} = W_{2j},\qquad \frac{\partial z_j}{\partial x_3} = W_{3j}$$
+<p>到这里，我们仍然是在一次研究一个标量输入。但实际反向传播不会只问 $\dfrac{\partial z_j}{\partial x_1}$ 是多少，它通常需要同时知道 $z_j$ 对整个输入向量 $\mathbf{x} = [\,x_1\ \ \cdots\ \ x_d\,]$ 的变化率。也就是说，我们想把 $\dfrac{\partial z_j}{\partial x_1}, \dfrac{\partial z_j}{\partial x_2}, \ldots, \dfrac{\partial z_j}{\partial x_d}$ 一次组织起来。这组偏导数组成的向量，就是下一节要讨论的梯度。</p>
 
 <h3 id="gradient">梯度</h3>
 
-<p>训练时我们希望一次性更新全部参数（同时变化），所以我们还要知道 $x$ 变化 $\Delta x$、$y$ 同时变化 $\Delta y$ 时，$f$ 变化多少。</p>
-<p>$\Delta x$、$\Delta y$ 都很小时，可以把同时变化拆成两步。先只让 $x$ 变化。对单变量函数 $g(x)$，导数是 $\Delta x$ 趋于零时比值 $\dfrac{\Delta g}{\Delta x}$ 的极限，所以 $\Delta x$ 很小时 $\Delta g \approx \dfrac{dg}{dx}\,\Delta x$。把这个近似用在 $x$ 方向上，$f$ 变化约 $\dfrac{\partial f}{\partial x}\,\Delta x$；再只让 $y$ 变化，$f$ 再变化约 $\dfrac{\partial f}{\partial y}\,\Delta y$。第二步是在 $x$ 已经变化之后的位置求偏导，但 $\Delta x$ 很小时，那里的偏导数与原位置几乎相同。所以 $f$ 的变化约等于两个偏导数各自的贡献之和：</p>
-$$\Delta f \approx \frac{\partial f}{\partial x}\,\Delta x + \frac{\partial f}{\partial y}\,\Delta y$$
-<p>$\Delta x$、$\Delta y$ 越小，近似越准确。把 $\Delta$ 换成 $d$，表示变化量趋于零时的情形，近似变成等式：</p>
-
+<p>偏导数一次只描述一个输入分量变化时，函数如何变化。但训练模型时，参数通常会同时改变。我们还需要知道：当多个输入一起发生微小变化时，输出会怎样变化。</p>
+<p>设 $f = f(x, y)$。当 $x, y$ 分别发生很小的变化 $dx, dy$ 时，$f$ 的一阶变化为</p>
+$$df = \frac{\partial f}{\partial x}\,dx + \frac{\partial f}{\partial y}\,dy$$
+<p>把两个输入写成行向量：</p>
 $$
-df = \dfrac{\partial f}{\partial x}dx + \dfrac{\partial f}{\partial y}dy
+\mathbf{x} = [\,x\ \ y\,]\qquad d\mathbf{x} = [\,dx\ \ dy\,]
 $$
 
-<p>单变量函数 $g(x)$ 同样有 $dg = \dfrac{dg}{dx}\,dx$。</p>
-
-<p>把两个输入写成一个向量 $\mathbf{x} = [\,x\ \ y\,]$，它的变化量是 $d\mathbf{x} = [\,d x\ \ d y\,]$。</p>
-<p>两个偏导数也排成一个向量：</p>
-$$\nabla f = \frac{\partial f}{\partial \mathbf{x}} = \Big[\,\frac{\partial f}{\partial x}\ \ \frac{\partial f}{\partial y}\,\Big] = [\,6xy\ \ 3x^2\,]$$
-<p>这个向量称为 $f$ 的梯度，记作 $\nabla f$ 或 $\dfrac{\partial f}{\partial \mathbf{x}}$，$\nabla$ 读作 nabla。上面的 $df$ 于是可以写成点积：</p>
+<p>再把两个偏导数排成一个行向量：</p>
+$$\nabla f = \frac{\partial f}{\partial \mathbf{x}} = \Big[\,\frac{\partial f}{\partial x}\quad \frac{\partial f}{\partial y}\,\Big]$$
+<p>这个向量称为 $f$ 的梯度，记作 $\nabla f$ 或 $\dfrac{\partial f}{\partial \mathbf{x}}$，$\nabla$ 读作 nabla。于是全微分可以写成点积：</p>
 $$df = \nabla f \cdot d\mathbf{x}$$
-<p>上图的紫色箭头就是 $\nabla f$，它由绿色和粉色两个箭头合成。紫色箭头总是垂直于经过黑点的等值线：沿等值线移动 $d\mathbf{x}$，$f$ 不变，$df = \nabla f \cdot d\mathbf{x} = 0$，所以 $\nabla f$ 与等值线在黑点处的方向垂直。点积等于两个向量的长度之积乘夹角的余弦，所以在长度相同的所有 $d\mathbf{x}$ 中，与 $\nabla f$ 同方向的那个使 $\nabla f \cdot d\mathbf{x}$ 最大，即梯度指向 $f$ 增大最快的方向。</p>
-<p>与单变量的 $dg = \dfrac{dg}{dx}\,dx$ 对照，导数的位置换成了梯度，乘法换成了点积。输入有 $n$ 个分量时，梯度就是 $n$ 个偏导数排成一行，对应形状表里标量对向量一格。Loss $L$ 的梯度 $\nabla L$ 由 Loss 对每个参数的偏导数组成，优化器沿 $-\nabla L$ 的方向更新参数，每个参数用到的只是自己那一个偏导数 $\dfrac{\partial L}{\partial w}$。</p>
+<p>例如前面的函数 $f(x, y) = 3x^2y$ 有 $\dfrac{\partial f}{\partial x} = 6xy$，$\dfrac{\partial f}{\partial y} = 3x^2$，因此</p>
+$$\nabla f = [\,6xy\quad 3x^2\,]$$
+<p>梯度把“<mark>每个输入分量分别如何影响 $f$</mark>”收集到了一个向量中。而 $df = \nabla f \cdot d\mathbf{x}$ 进一步告诉我们：给定输入变化 $d\mathbf{x}$，可以直接由梯度算出 $f$ 的一阶变化。</p>
+<p>梯度还有一个重要的几何意义。若沿等值线移动，那么 $f$ 不变，因此 $df = \nabla f \cdot d\mathbf{x} = 0$，所以<mark>梯度与等值线垂直</mark>。另一方面，</p>
+$$df = \|\nabla f\|\,\|d\mathbf{x}\|\cos\theta$$
+<p>其中 $\theta$ 是梯度与移动方向之间的夹角。在移动距离 $\|d\mathbf{x}\|$ 固定时，$\theta = 0$ 时 $df$ 最大。因此，<mark>梯度指向函数局部增长最快的方向，负梯度则指向下降最快的方向</mark>。</p>
+<p>这一点正好对应模型训练。若标量 Loss 为 $L = L(\mathbf{w})$，其中 $\mathbf{w} = [\,w_1\ \ w_2\ \ \cdots\ \ w_n\,]$，那么</p>
+$$\nabla_{\mathbf{w}}L = \frac{\partial L}{\partial \mathbf{w}} = \Big[\,\frac{\partial L}{\partial w_1}\quad \frac{\partial L}{\partial w_2}\quad \cdots\quad \frac{\partial L}{\partial w_n}\,\Big]$$
+<p>梯度中的第 $i$ 个分量，就是参数 $w_i$ 发生微小变化时 Loss 的变化率。梯度下降沿负梯度方向更新参数：</p>
+$$\mathbf{w} \leftarrow \mathbf{w} - \eta\,\nabla_{\mathbf{w}}L$$
+<p>这里先把参数写成向量只是为了方便说明。实际的 PyTorch 参数可以是任意维 Tensor；后面会看到，标量 Loss 对一个 Tensor 求导时，得到的梯度与这个 Tensor 具有相同的形状。</p>
 
 <h3 id="chain-paths">全导数链式法则</h3>
 
