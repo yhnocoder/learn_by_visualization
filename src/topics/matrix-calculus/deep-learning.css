@@ -25,8 +25,8 @@ article h2{border-top:1px solid var(--rule-2); padding-top:36px; margin:64px 0 2
 article h3{margin-top:42px; margin-bottom:16px}
 article :is(h2,h3){clear:both}
 article p{margin:0 0 1.25em}
-article ol.pts{padding-left:1.4em; margin:0 0 1.25em}
-article ol.pts li{margin-bottom:.4em}
+article .pts ol{padding-left:1.4em; margin:0 0 1.25em}
+article .pts li{margin-bottom:.4em}
 mjx-container[display="true"]{margin:.5em 0 1em !important; padding:4px 0}
 mark{color:var(--accent); font-weight:500; background:linear-gradient(transparent 72%,var(--accent-soft) 72%); padding:0 .06em; -webkit-box-decoration-break:clone; box-decoration-break:clone}
 article blockquote{margin:22px 0 28px; padding:20px 26px; border:0; border-radius:12px; background:var(--surface-2); font-family:var(--font-heading); font-size:18px; line-height:1.7; color:var(--ink); text-wrap:pretty}

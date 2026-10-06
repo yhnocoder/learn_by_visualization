@@ -371,21 +371,23 @@ $x_0$ 取不同位置时切线的斜率不同，所以导数 $\dfrac{dy}{dx}$ �
 
 下表列出本文用到的标量求导规则。这些规则读者在微积分课上都见过，如果不理解需要重新上高中。
 
-<div class="rules"><table>
-<thead><tr><th>规则</th><th>$f(x)$</th><th>$\dfrac{d}{dx}f(x)$</th><th>例子</th></tr></thead>
-<tbody>
-<tr><td>不含 $x$ 的量</td><td>$c$</td><td>$0$</td><td>$\dfrac{d}{dx}\,99 = 0$；只要 $y$ 不依赖 $x$，$\dfrac{d}{dx}\,3y = 0$</td></tr>
-<tr><td>常数倍</td><td>$c\,f$</td><td>$c\,\dfrac{df}{dx}$</td><td>$\dfrac{d}{dx}\,3x^2 = 3 \cdot 2x = 6x$</td></tr>
-<tr><td>幂函数</td><td>$x^n$</td><td>$n\,x^{n-1}$</td><td>$\dfrac{d}{dx}\,x^3 = 3x^2$；$\dfrac{d}{dx}\,x^{-1} = -x^{-2}$</td></tr>
-<tr><td>加法</td><td>$f + g$</td><td>$\dfrac{df}{dx} + \dfrac{dg}{dx}$</td><td>$\dfrac{d}{dx}\,(x^2 + 3x) = 2x + 3$</td></tr>
-<tr><td>减法</td><td>$f - g$</td><td>$\dfrac{df}{dx} - \dfrac{dg}{dx}$</td><td>$\dfrac{d}{dx}\,(x^2 - 3x) = 2x - 3$</td></tr>
-<tr><td>乘积法则</td><td>$f\,g$</td><td>$f\,\dfrac{dg}{dx} + \dfrac{df}{dx}\,g$</td><td>$\dfrac{d}{dx}\,(x^2 \cdot x) = x^2 \cdot 1 + 2x \cdot x = 3x^2$</td></tr>
-<tr><td>商法则</td><td>$\dfrac{f}{g}$</td><td>$\dfrac{\dfrac{df}{dx}\,g - f\,\dfrac{dg}{dx}}{g^2}$</td><td>$\dfrac{d}{dx}\,\dfrac{x}{x+1} = \dfrac{(x+1) - x}{(x+1)^2} = \dfrac{1}{(x+1)^2}$</td></tr>
-<tr><td>指数函数</td><td>$e^x$</td><td>$e^x$</td><td>$\dfrac{d}{dx}\,e^{2x} = 2e^{2x}$（配合链式法则）</td></tr>
-<tr><td>对数函数</td><td>$\ln x$</td><td>$\dfrac{1}{x}$</td><td>$\dfrac{d}{dx}\,\ln(x^2) = \dfrac{1}{x^2} \cdot 2x = \dfrac{2}{x}$（配合链式法则）</td></tr>
-<tr><td>sigmoid</td><td>$\sigma(x) = \dfrac{1}{1+e^{-x}}$</td><td>$\sigma(x)\,\big(1-\sigma(x)\big)$</td><td></td></tr>
-<tr><td>Swish</td><td>$x\,\sigma(x)$</td><td>$\sigma(x) + x\,\sigma(x)\,\big(1-\sigma(x)\big)$</td><td></td></tr>
-</tbody></table></div>
+<div class="rules">
+
+| 规则 | $f(x)$ | $\dfrac{d}{dx}f(x)$ | 例子 |
+|---|---|---|---|
+| 不含 $x$ 的量 | $c$ | $0$ | $\dfrac{d}{dx}\,99 = 0$；只要 $y$ 不依赖 $x$，$\dfrac{d}{dx}\,3y = 0$ |
+| 常数倍 | $c\,f$ | $c\,\dfrac{df}{dx}$ | $\dfrac{d}{dx}\,3x^2 = 3 \cdot 2x = 6x$ |
+| 幂函数 | $x^n$ | $n\,x^{n-1}$ | $\dfrac{d}{dx}\,x^3 = 3x^2$；$\dfrac{d}{dx}\,x^{-1} = -x^{-2}$ |
+| 加法 | $f + g$ | $\dfrac{df}{dx} + \dfrac{dg}{dx}$ | $\dfrac{d}{dx}\,(x^2 + 3x) = 2x + 3$ |
+| 减法 | $f - g$ | $\dfrac{df}{dx} - \dfrac{dg}{dx}$ | $\dfrac{d}{dx}\,(x^2 - 3x) = 2x - 3$ |
+| 乘积法则 | $f\,g$ | $f\,\dfrac{dg}{dx} + \dfrac{df}{dx}\,g$ | $\dfrac{d}{dx}\,(x^2 \cdot x) = x^2 \cdot 1 + 2x \cdot x = 3x^2$ |
+| 商法则 | $\dfrac{f}{g}$ | $\dfrac{\dfrac{df}{dx}\,g - f\,\dfrac{dg}{dx}}{g^2}$ | $\dfrac{d}{dx}\,\dfrac{x}{x+1} = \dfrac{(x+1) - x}{(x+1)^2} = \dfrac{1}{(x+1)^2}$ |
+| 指数函数 | $e^x$ | $e^x$ | $\dfrac{d}{dx}\,e^{2x} = 2e^{2x}$（配合链式法则） |
+| 对数函数 | $\ln x$ | $\dfrac{1}{x}$ | $\dfrac{d}{dx}\,\ln(x^2) = \dfrac{1}{x^2} \cdot 2x = \dfrac{2}{x}$（配合链式法则） |
+| sigmoid | $\sigma(x) = \dfrac{1}{1+e^{-x}}$ | $\sigma(x)\,\big(1-\sigma(x)\big)$ |  |
+| Swish | $x\,\sigma(x)$ | $\sigma(x) + x\,\sigma(x)\,\big(1-\sigma(x)\big)$ |  |
+
+</div>
 
 $\dfrac{d}{dx}$ 也可以看成一个运算符，输入一个函数，输出另一个函数。可以这么思考：
 
@@ -963,7 +965,7 @@ $$
 
 仍取矩阵乘法 $\mathbf{z} = \mathbf{x}W$，$\mathbf{x} \in \mathbb{R}^{n}$，$W$ 是 $n \times m$ 的矩阵。已知 Loss 对输出的导数 $\dfrac{\partial L}{\partial \mathbf{z}}$，要求 Loss 对 $W$ 的导数 $\dfrac{\partial L}{\partial W}$。它与 $W$ 同形状，第 $i$ 行第 $j$ 列是 $\dfrac{\partial L}{\partial W_{ij}}$。
 
-<strong>第一步：$W_{ij}$ 影响哪些输出。</strong>$z_j = \sum_k x_k W_{kj}$ 只用到 $W$ 的第 $j$ 列，$W_{ij}$ 只出现在 $z_j$ 的 $x_iW_{ij}$ 这一项里，所以
+**第一步：$W_{ij}$ 影响哪些输出。**$z_j = \sum_k x_k W_{kj}$ 只用到 $W$ 的第 $j$ 列，$W_{ij}$ 只出现在 $z_j$ 的 $x_iW_{ij}$ 这一项里，所以
 
 $$
 \frac{\partial z_j}{\partial W_{ij}} = x_i
@@ -971,7 +973,7 @@ $$
 
 其余输出分量不含 $W_{ij}$，对它的偏导数为 0。
 
-<strong>第二步：链式法则。</strong>$W_{ij}$ 只经过 $z_j$ 影响 $L$，只有一条路径，按[单变量链式法则](#chain-scalar)：
+**第二步：链式法则。**$W_{ij}$ 只经过 $z_j$ 影响 $L$，只有一条路径，按[单变量链式法则](#chain-scalar)：
 
 $$
 \frac{\partial L}{\partial W_{ij}} = \frac{\partial L}{\partial z_j}\,\frac{\partial z_j}{\partial W_{ij}} = x_i\,\frac{\partial L}{\partial z_j}
@@ -993,7 +995,7 @@ $$
 
 训练时一个序列的 $T$ 个位置一起计算。把各位置的输入按行堆成 $T \times n$ 的矩阵 $X$，$Z = XW$ 的第 $t$ 行是 $\mathbf{z}_t = \mathbf{x}_tW$。Loss 对各位置输出的导数按同样的方式堆成 $T \times m$ 的矩阵 $G = \dfrac{\partial L}{\partial Z}$，第 $t$ 行是 $\dfrac{\partial L}{\partial \mathbf{z}_t}$。
 
-<strong>对输入的导数：逐行计算。</strong>$\mathbf{x}_t$ 只影响 $\mathbf{z}_t$，所以每一行都按一个位置计算。$\mathbf{z}_t$ 对 $\mathbf{x}_t$ 的 Jacobian 是[“Jacobian”](#jacobian)一节的 $W^{T}$：
+**对输入的导数：逐行计算。**$\mathbf{x}_t$ 只影响 $\mathbf{z}_t$，所以每一行都按一个位置计算。$\mathbf{z}_t$ 对 $\mathbf{x}_t$ 的 Jacobian 是[“Jacobian”](#jacobian)一节的 $W^{T}$：
 
 $$
 \frac{\partial L}{\partial \mathbf{x}_t} = \frac{\partial L}{\partial \mathbf{z}_t}\,W^{T}
@@ -1001,7 +1003,7 @@ $$
 
 $T$ 行合起来是 $\dfrac{\partial L}{\partial X} = GW^{T}$。模型里的大多数运算都对每个位置分别计算，对输入的导数也都逐行计算。attention 让每个位置读取其他位置，是例外，见[“例：GQA attention”](#op-attn)。
 
-<strong>对权重的导数：各位置相加。</strong>$W$ 被 $T$ 个位置共用，每个 $W_{ij}$ 经过 $\mathbf{z}_1, \ldots, \mathbf{z}_T$ 影响 $L$。按[全导数链式法则](#chain-paths)，把 $T$ 条路径的贡献相加，每一条都是上一节的外积：
+**对权重的导数：各位置相加。**$W$ 被 $T$ 个位置共用，每个 $W_{ij}$ 经过 $\mathbf{z}_1, \ldots, \mathbf{z}_T$ 影响 $L$。按[全导数链式法则](#chain-paths)，把 $T$ 条路径的贡献相加，每一条都是上一节的外积：
 
 $$
 \frac{\partial L}{\partial W} = \sum_{t=1}^{T} \mathbf{x}_t^{T}\,\frac{\partial L}{\partial \mathbf{z}_t} = X^{T}G
@@ -1114,13 +1116,15 @@ $T$ 个位置堆成矩阵时，Jacobian 为对角矩阵的几种运算写成矩�
 
 attention 是前面几章各条规则的组合，没有新规则。对一个 query head $i$，设它所在的组是 $j$，前向依次是：
 
-<ol class="pts">
-<li>三次矩阵乘法：$Q_i = XW_Q^{(i)}$，$K_j = XW_K^{(j)}$，$V_j = XW_V^{(j)}$。</li>
-<li>矩阵乘法加常数缩放加 mask：$S_i = Q_iK_j^T/\sqrt{d_h} + M$。</li>
-<li>逐行 softmax：$P_i = \mathrm{softmax}(S_i)$。</li>
-<li>矩阵乘法：$A_i = P_iV_j$。</li>
-<li>拼接所有 head，矩阵乘法：$A = [A_1 \cdots A_{n_h}]\,W_O$。</li>
-</ol>
+<div class="pts">
+
+1. 三次矩阵乘法：$Q_i = XW_Q^{(i)}$，$K_j = XW_K^{(j)}$，$V_j = XW_V^{(j)}$。
+2. 矩阵乘法加常数缩放加 mask：$S_i = Q_iK_j^T/\sqrt{d_h} + M$。
+3. 逐行 softmax：$P_i = \mathrm{softmax}(S_i)$。
+4. 矩阵乘法：$A_i = P_iV_j$。
+5. 拼接所有 head，矩阵乘法：$A = [A_1 \cdots A_{n_h}]\,W_O$。
+
+</div>
 
 反向按相反顺序：$W_O$ 那次矩阵乘法给出 $\dfrac{\partial L}{\partial W_O}$，并把 $G$ 拆回每个 head 的 $\dfrac{\partial L}{\partial A_i}$；$A_i = P_iV_j$ 给出 $\dfrac{\partial L}{\partial P_i}$ 和 $V_j$ 的一份梯度；对 $T \times T$ 的 $P_i$ 逐行使用 softmax 的反向公式，给出 $\dfrac{\partial L}{\partial S_i}$；除以 $\sqrt{d_h}$；$Q_iK_j^T$ 那次矩阵乘法给出 $\dfrac{\partial L}{\partial Q_i}$ 和 $K_j$ 的一份梯度。
 
@@ -1241,42 +1245,46 @@ $$
 
 本文用到的规则汇总。$G$ 是 Loss 对该运算输出的导数，与输出同形状。
 
-<div class="cheat tbl"><table>
-<thead><tr><th>运算</th><th>前向</th><th>Jacobian</th><th>反向（vector-Jacobian product）</th></tr></thead>
-<tbody>
-<tr><td>矩阵乘法</td><td>$Z = XW$</td><td>$\partial \mathbf{z}/\partial \mathbf{x} = W^{T}$</td><td>$\partial L/\partial X = GW^{T}$，$\partial L/\partial W = X^{T}G$</td></tr>
-<tr><td>逐元素函数</td><td>$H = f(A)$</td><td>$\mathrm{diag}(f'(\mathbf{a}))$</td><td>$G \otimes f'(A)$</td></tr>
-<tr><td>逐元素乘</td><td>$H = A \otimes B$</td><td>$\mathrm{diag}(\mathbf{b})$，$\mathrm{diag}(\mathbf{a})$</td><td>$\partial L/\partial A = G \otimes B$，$\partial L/\partial B = G \otimes A$</td></tr>
-<tr><td>相加</td><td>$Y = X + H$</td><td>$I$，$I$</td><td>两边各得 $G$；多条路径到达同一处时相加</td></tr>
-<tr><td>常数倍</td><td>$Y = \alpha X$</td><td>$\alpha I$</td><td>$\alpha G$</td></tr>
-<tr><td>平均</td><td>$L = \frac{1}{T}\sum_t \ell_t$</td><td>$[\frac{1}{T}\ \cdots\ \frac{1}{T}]$</td><td>$\partial L/\partial \ell_t = \frac{1}{T}$</td></tr>
-<tr><td>softmax（逐行）</td><td>$\mathbf{p} = \mathrm{softmax}(\mathbf{x})$</td><td>$\mathrm{diag}(\mathbf{p}) - \mathbf{p}^{T}\mathbf{p}$</td><td>$\mathbf{p} \otimes \big(\frac{\partial L}{\partial \mathbf{p}} - \frac{\partial L}{\partial \mathbf{p}}\cdot\mathbf{p}\big)$</td></tr>
-<tr><td>softmax + cross-entropy</td><td>$L = -\frac{1}{T}\sum_t \ln p_{t,y_t}$</td><td>合并后不单独出现</td><td>$\partial L/\partial Z = \frac{1}{T}(P - Y)$</td></tr>
-<tr><td>Embedding</td><td>$X_0[t] = E[\text{tok}_t]$</td><td>one-hot 矩阵</td><td>把 $G$ 的第 $t$ 行加到 $\partial L/\partial E$ 的第 $\text{tok}_t$ 行</td></tr>
-<tr><td>FP32 到 BF16</td><td>$W_{\text{bf16}} = \mathrm{round}(W_{\text{fp32}})$</td><td>按定义为零</td><td>约定为恒等：$G$ 转回 FP32 原样通过</td></tr>
-</tbody></table></div>
+<div class="cheat tbl">
+
+| 运算 | 前向 | Jacobian | 反向（vector-Jacobian product） |
+|---|---|---|---|
+| 矩阵乘法 | $Z = XW$ | $\partial \mathbf{z}/\partial \mathbf{x} = W^{T}$ | $\partial L/\partial X = GW^{T}$，$\partial L/\partial W = X^{T}G$ |
+| 逐元素函数 | $H = f(A)$ | $\mathrm{diag}(f'(\mathbf{a}))$ | $G \otimes f'(A)$ |
+| 逐元素乘 | $H = A \otimes B$ | $\mathrm{diag}(\mathbf{b})$，$\mathrm{diag}(\mathbf{a})$ | $\partial L/\partial A = G \otimes B$，$\partial L/\partial B = G \otimes A$ |
+| 相加 | $Y = X + H$ | $I$，$I$ | 两边各得 $G$；多条路径到达同一处时相加 |
+| 常数倍 | $Y = \alpha X$ | $\alpha I$ | $\alpha G$ |
+| 平均 | $L = \frac{1}{T}\sum_t \ell_t$ | $[\frac{1}{T}\ \cdots\ \frac{1}{T}]$ | $\partial L/\partial \ell_t = \frac{1}{T}$ |
+| softmax（逐行） | $\mathbf{p} = \mathrm{softmax}(\mathbf{x})$ | $\mathrm{diag}(\mathbf{p}) - \mathbf{p}^{T}\mathbf{p}$ | $\mathbf{p} \otimes \big(\frac{\partial L}{\partial \mathbf{p}} - \frac{\partial L}{\partial \mathbf{p}}\cdot\mathbf{p}\big)$ |
+| softmax + cross-entropy | $L = -\frac{1}{T}\sum_t \ln p_{t,y_t}$ | 合并后不单独出现 | $\partial L/\partial Z = \frac{1}{T}(P - Y)$ |
+| Embedding | $X_0[t] = E[\text{tok}_t]$ | one-hot 矩阵 | 把 $G$ 的第 $t$ 行加到 $\partial L/\partial E$ 的第 $\text{tok}_t$ 行 |
+| FP32 到 BF16 | $W_{\text{bf16}} = \mathrm{round}(W_{\text{fp32}})$ | 按定义为零 | 约定为恒等：$G$ 转回 FP32 原样通过 |
+
+</div>
 
 链式法则的三个版本：单变量时，外层函数的导数乘内层函数的导数；有多条路径时，各条路径的贡献相加；向量情形下，外层的 Jacobian 乘内层的 Jacobian。
 
 ### 符号说明 {/* #notation */}
 
-<div class="cheat tbl"><table>
-<thead><tr><th>符号</th><th>含义</th></tr></thead>
-<tbody>
-<tr><td>$x$，$\mathbf{x}$，$X$</td><td>标量；向量（行向量，一个位置）；矩阵（$T$ 个位置堆成，$T \times d$）</td></tr>
-<tr><td>$T$，$d$，$V$，$N$</td><td>序列长度；模型宽度；词表大小；Decoder 层数</td></tr>
-<tr><td>$d_{ff}$，$n_h$，$n_{kv}$，$d_h$</td><td>FFN 中间宽度；query head 数；K/V head 数；每个 head 的宽度</td></tr>
-<tr><td>$\Delta x$，$\Delta\mathbf{x}$</td><td>输入的变化量（有限大小）；变化量很小时 $\Delta y \approx \dfrac{dy}{dx}\,\Delta x$</td></tr>
-<tr><td>$\dfrac{df}{dx}$，$\dfrac{\partial f}{\partial x}$</td><td>单变量导数；偏导数（其他输入固定）</td></tr>
-<tr><td>$\nabla f$，$\dfrac{\partial f}{\partial \mathbf{x}}$</td><td>梯度，$f$ 对每个输入的偏导数排成一行</td></tr>
-<tr><td>$J$，$\dfrac{\partial \mathbf{z}}{\partial \mathbf{x}}$</td><td>Jacobian，第 $j$ 行第 $i$ 列是 $\partial z_j / \partial x_i$（行对应输出，列对应输入）</td></tr>
-<tr><td>$G$</td><td>Loss 对某个运算输出的导数，与输出同形状</td></tr>
-<tr><td>$\otimes$</td><td>逐元素相乘（Hadamard product）</td></tr>
-<tr><td>$\mathrm{diag}(\mathbf{v})$</td><td>以 $\mathbf{v}$ 为对角线的方阵</td></tr>
-<tr><td>$I$，$\mathbf{y}_t$，$Y$</td><td>单位矩阵；目标 token 的 one-hot 向量；它们堆成的 $T \times V$ 矩阵</td></tr>
-<tr><td>$\sigma$，$\mathrm{Swish}$</td><td>$\sigma(z) = 1/(1+e^{-z})$；$\mathrm{Swish}(z) = z\,\sigma(z)$</td></tr>
-<tr><td>$\mathrm{Swish}'$，$f'$</td><td>只有一个输入的标量函数的导数，$\mathrm{Swish}'(z) = \dfrac{d\,\mathrm{Swish}(z)}{dz}$；作用在向量或矩阵上时逐元素计算，结果与输入同形状</td></tr>
-</tbody></table></div>
+<div class="cheat tbl">
+
+| 符号 | 含义 |
+|---|---|
+| $x$，$\mathbf{x}$，$X$ | 标量；向量（行向量，一个位置）；矩阵（$T$ 个位置堆成，$T \times d$） |
+| $T$，$d$，$V$，$N$ | 序列长度；模型宽度；词表大小；Decoder 层数 |
+| $d_{ff}$，$n_h$，$n_{kv}$，$d_h$ | FFN 中间宽度；query head 数；K/V head 数；每个 head 的宽度 |
+| $\Delta x$，$\Delta\mathbf{x}$ | 输入的变化量（有限大小）；变化量很小时 $\Delta y \approx \dfrac{dy}{dx}\,\Delta x$ |
+| $\dfrac{df}{dx}$，$\dfrac{\partial f}{\partial x}$ | 单变量导数；偏导数（其他输入固定） |
+| $\nabla f$，$\dfrac{\partial f}{\partial \mathbf{x}}$ | 梯度，$f$ 对每个输入的偏导数排成一行 |
+| $J$，$\dfrac{\partial \mathbf{z}}{\partial \mathbf{x}}$ | Jacobian，第 $j$ 行第 $i$ 列是 $\partial z_j / \partial x_i$（行对应输出，列对应输入） |
+| $G$ | Loss 对某个运算输出的导数，与输出同形状 |
+| $\otimes$ | 逐元素相乘（Hadamard product） |
+| $\mathrm{diag}(\mathbf{v})$ | 以 $\mathbf{v}$ 为对角线的方阵 |
+| $I$，$\mathbf{y}_t$，$Y$ | 单位矩阵；目标 token 的 one-hot 向量；它们堆成的 $T \times V$ 矩阵 |
+| $\sigma$，$\mathrm{Swish}$ | $\sigma(z) = 1/(1+e^{-z})$；$\mathrm{Swish}(z) = z\,\sigma(z)$ |
+| $\mathrm{Swish}'$，$f'$ | 只有一个输入的标量函数的导数，$\mathrm{Swish}'(z) = \dfrac{d\,\mathrm{Swish}(z)}{dz}$；作用在向量或矩阵上时逐元素计算，结果与输入同形状 |
+
+</div>
 
 ### 参考文献 {/* #references */}
 
