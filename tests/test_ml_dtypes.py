@@ -1,13 +1,14 @@
 """Check fmt.js against ml_dtypes / numpy: every code decodes identically (all codes for ≤16-bit formats,
 a random sample for float32), and float64→code rounding matches for representable values, midpoints ± 1ulp,
 overflow / underflow edges, specials and random probes.
-Run: python test_ml_dtypes.py   (needs numpy, ml_dtypes, node)"""
+Run: python tests/test_ml_dtypes.py   (needs numpy, ml_dtypes, node)"""
 import json, math, random, subprocess, sys, os
 import numpy as np, ml_dtypes as md
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+# fmt.js is an ES module in src/lib/
+LIB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "lib")
 NODE = r"""
-const F = require(process.argv[1] + "/fmt.js");
+const F = await import(require("url").pathToFileURL(process.argv[1] + "/fmt.js").href);
 const inp = JSON.parse(require("fs").readFileSync(0, "utf8"));
 const out = {};
 for (const f of F.FORMATS) {
@@ -54,7 +55,7 @@ for name, (dt, bits) in DTYPES.items():
     p += [random.uniform(-1, 1) * 2 ** random.uniform(-160, 135) for _ in range(3000)]
     inp[name] = {"codes": [int(c) for c in codes], "probes": [repr(x) for x in p]}
 
-res = json.loads(subprocess.run(["node", "-e", NODE, HERE], input=json.dumps(inp), capture_output=True, text=True, check=True).stdout)
+res = json.loads(subprocess.run(["node", "--input-type=commonjs", "-e", "(async () => {" + NODE + "})()", LIB], input=json.dumps(inp), capture_output=True, text=True, check=True).stdout)
 
 for name, (dt, bits) in DTYPES.items():
     codes = np.array(inp[name]["codes"], dtype=UINT[bits])
