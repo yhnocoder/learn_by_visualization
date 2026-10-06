@@ -1,0 +1,64 @@
+---
+// 激活函数的曲线图：左面板是输出 f(x)，右面板是导数 df(x)/dx，悬停时显示各曲线的数值。
+// 页面 frontmatter 需要 runtimeMath: true（图例、面板标题和标注里的公式在浏览器端渲染）。
+// 最简单的写法只给出函数和横轴范围，纵轴范围按曲线自动确定：
+//   <ActFnPlot fns={["gelu", "relu"]} range={[-3, 3]} />
+// fns 的每一项是 lib/fns.js 里 REGISTRY 的键（relu、relu2、gelu、geluTanh、quickGelu、silu、sigmoid、tanh、
+// softplus、normalCdf、situ、gptoss、swish），或者一个对象，可以改名字、颜色、线型：
+//   { fn: "relu", name: "ReLU（参考）", color: 2, dash: true, faint: true, on: false }
+//   color 是分类色序号（2 即 var(--s2)）或任意 CSS 颜色；dash 画虚线；faint 画淡色；on 为 false 时初始隐藏（配合 toggle）。
+// 带可调参数的函数（swish 的 β）自动生成滑块，并在图下方显示状态行。
+// 其他选项：
+//   yf、yd   两个面板的纵轴范围，省略时自动确定
+//   guides   "auto"：按第一个函数生成色带、参考线、关键点（见 lib/guides.js 的 curveGuides）；
+//            或 { f, d } 分别给出两个面板的标注；省略时不画标注
+//   toggle   用复选框代替图例，读者可以勾选要比较的曲线
+//   zoom     { min, step }：加“横轴范围”和“横轴中心”两个滑块，min 是范围的最小半宽
+//   label    无障碍名称的前缀，两个面板分别是“label 函数”“label 导数”
+import './plot.css';
+
+type FnSpec = string | { fn: string; name?: string; color?: number | string; dash?: boolean; faint?: boolean; on?: boolean; key?: string; value?: number };
+interface Props {
+  fns: FnSpec[];
+  range?: [number, number];
+  yf?: [number, number];
+  yd?: [number, number];
+  guides?: 'auto' | { f?: object; d?: object };
+  toggle?: boolean;
+  zoom?: { min: number; step?: number };
+  label?: string;
+}
+const { fns, range = [-4, 4], yf, yd, guides, toggle = false, zoom, label = '激活函数' } = Astro.props;
+const config = JSON.stringify({ fns, range, yf, yd, guides, toggle, zoom, label });
+---
+<div class="act-fn-plot" data-config={config}>
+  <div class="legend"></div>
+  <div class="controls"></div>
+  <div class="panels">
+    <div class="panel" data-panel="f"><h4></h4></div>
+    <div class="panel" data-panel="d"><h4></h4></div>
+  </div>
+  <div class="chart-status" aria-live="polite"></div>
+</div>
+
+<script>
+  import { prepareMath } from '../lib/labels.js';
+  import { initActFnPlot } from '../lib/act-fn-plot.js';
+  await Promise.all([prepareMath(), document.fonts.ready]);
+  document.querySelectorAll<HTMLElement>('.act-fn-plot').forEach(initActFnPlot);
+</script>
+
+<style>
+  .act-fn-plot :global(.legend i){width:18px; height:2px; background:var(--c); border-radius:2px}
+  .act-fn-plot :global(.legend i.dash){background:repeating-linear-gradient(90deg,var(--c) 0 5px,transparent 5px 8px)}
+  /* 细轨道、小圆点的滑块 */
+  .act-fn-plot :global(.controls input[type=range]){width:150px; height:14px; margin:0; background:transparent; -webkit-appearance:none; appearance:none; cursor:pointer}
+  .act-fn-plot :global(.controls input[type=range]::-webkit-slider-runnable-track){height:2px; background:var(--rule); border-radius:1px}
+  .act-fn-plot :global(.controls input[type=range]::-moz-range-track){height:2px; background:var(--rule); border-radius:1px}
+  .act-fn-plot :global(.controls input[type=range]::-webkit-slider-thumb){-webkit-appearance:none; width:10px; height:10px; margin-top:-4px; border-radius:50%; background:var(--accent); border:none}
+  .act-fn-plot :global(.controls input[type=range]::-moz-range-thumb){width:10px; height:10px; border-radius:50%; background:var(--accent); border:none}
+  .act-fn-plot :global(.controls input[type=checkbox]){accent-color:var(--c,var(--accent)); width:15px; height:15px}
+  .act-fn-plot :global(.controls .sw){display:inline-block; width:14px; height:3px; background:var(--c); border-radius:2px}
+  .chart-status{font-size:12px; color:var(--ink-2); margin:8px 0}
+  .chart-status:empty{display:none}
+</style>

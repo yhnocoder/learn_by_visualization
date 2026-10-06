@@ -1,0 +1,32 @@
+/* 本主题交互图组件（ActFnPlot、GluHeatmap、FfnGluDiagram）共用的样式。各组件在 frontmatter 里 import 这个文件，
+   用到组件的页面才会加载它。图里的元素由脚本生成，不带 Astro 的作用域属性，所以这里写普通的全局选择器，
+   并用组件根元素的类名限定范围。 */
+
+/* 两个并排的面板，窄屏时上下排列 */
+:is(.act-fn-plot, .ffn-glu) .panels{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+.ffn-glu .panels{grid-template-columns:1fr}
+@media (max-width:640px){ .act-fn-plot .panels{grid-template-columns:1fr} }
+:is(.act-fn-plot, .ffn-glu) .panel h4{margin:0 0 4px; font-size:13px; font-weight:500; color:var(--ink-2); font-family:var(--font-mono); letter-spacing:.02em}
+.ffn-glu .panel h4{font-family:inherit}
+
+.plotwrap{position:relative}
+.plotwrap > svg{width:100%; height:auto; display:block; touch-action:none}
+.plotwrap svg [tabindex]:focus{outline:2px solid var(--accent); outline-offset:3px}
+
+/* 坐标系 */
+.plotwrap line.grid{stroke:var(--grid); stroke-width:1}
+.plotwrap line.axis{stroke:var(--axis); stroke-width:1}
+.plotwrap line.ref{stroke-width:1.6; stroke-dasharray:1 5; stroke-linecap:round}
+.plotwrap line.vert{stroke:var(--ink-3); stroke-dasharray:4 4}
+.plotwrap line.cross{stroke:var(--ink-3); stroke-width:1; stroke-dasharray:3 3}
+.plotwrap text.tick{font:10px var(--font-mono); fill:var(--ink-3)}
+
+/* 标签（lib/labels.js 的 putLabel）：文字用正文字体；halo 在文字外加一圈底色描边，压在曲线上时仍可读 */
+:is(.act-fn-plot, .ffn-glu) text.lbl{font-family:var(--font-sans); font-weight:500; white-space:pre}
+:is(.act-fn-plot, .ffn-glu) svg.tex{overflow:visible}
+:is(.act-fn-plot, .ffn-glu) .halo text{stroke:var(--surface); stroke-width:3; paint-order:stroke}
+:is(.act-fn-plot, .ffn-glu) .halo svg.tex{filter:drop-shadow(0 0 1.2px var(--surface)) drop-shadow(0 0 1.2px var(--surface))}
+
+/* 悬停提示 */
+:is(.act-fn-plot, .glu-heatmap) .tip{position:absolute; pointer-events:none; background:var(--surface); border:1px solid var(--rule-2); box-shadow:var(--shadow); border-radius:6px; padding:6px 10px; font-size:12.5px; line-height:1.55; font-family:var(--font-mono); color:var(--ink); white-space:nowrap; z-index:5; font-variant-numeric:tabular-nums}
+:is(.act-fn-plot, .glu-heatmap) .tip b{font-weight:500; color:var(--ink-3)}
