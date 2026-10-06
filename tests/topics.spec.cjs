@@ -129,7 +129,7 @@ test('word2vec: one gradient step raises the probability of the context word', a
 test('Index: every card links to a topic that loads', async ({ page }, testInfo) => {
   await openTopic(page, testInfo, '/');
   const cards = page.locator('a.card');
-  await expect(cards).toHaveCount(5);
+  await expect(cards).toHaveCount(6);
   const hrefs = await cards.evaluateAll(links => links.map(link => link.getAttribute('href')));
   for (const href of hrefs) {
     const response = await page.request.get(href);
