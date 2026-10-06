@@ -1,0 +1,67 @@
+/* word2vec 页面独有的 token 与样式。通用的正文、表格、图和控件样式在 src/styles/base.css。 */
+
+:root{
+  /* 标题用霞鹜文楷（LXGW WenKai）；字体文件由 index.mdx 里的 <link> 从 jsdelivr 加载 */
+  --font-heading:"LXGW WenKai","KaiTi","STKaiti",serif;
+  /* 中心词、上下文词、负样本（噪声词）三种角色的颜色，用于各个图 */
+  --center:light-dark(#e34948,#e66767);
+  --center-soft:light-dark(#fbe3e2,#3d2626);
+  --ctx:light-dark(#2a78d6,#3987e5);
+  --ctx-soft:light-dark(#dbe8f8,#1f2e42);
+  --neg:light-dark(#c98500,#eda100);
+  --neg-soft:light-dark(#fbeed0,#3a3018);
+}
+
+/* 正文 */
+article mark{color:var(--lede-highlight); font-weight:500; background:linear-gradient(transparent 72%,var(--lede-highlight-soft) 72%); padding:0 .06em; -webkit-box-decoration-break:clone; box-decoration-break:clone}
+article p.sub{color:var(--ink-2); font-size:17px; margin-bottom:1.6em}
+article blockquote{margin:22px 0 28px; padding:20px 26px; border:0; border-radius:12px; background:var(--surface-2); font-family:var(--font-heading); font-size:20px; line-height:1.7; color:var(--ink); text-wrap:pretty}
+article blockquote p{margin:0}
+article blockquote cite{display:block; margin-top:8px; font-style:normal; font-size:13px; color:var(--ink-3)}
+
+/* 图里共用的元素 */
+.plotwrap > svg{width:100%; height:auto; display:block}
+.chart-status{font-size:12.5px; color:var(--ink-2); margin:8px 0 0; font-variant-numeric:tabular-nums}
+
+/* 第 3 节的形状图与第 6 节的负采样对比图：用 HTML 网格画矩阵 */
+.shapes-wrap{padding:10px 0 4px}
+.shapes{display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:16px 4px; margin:0 auto; padding:0 12px}
+.shapes-group{display:flex; align-items:center; justify-content:center; min-width:0}
+.shape-key{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px 16px; margin:14px 0 8px; font-size:13px; color:var(--ink-2)}
+@media (max-width:420px){ .shape-key{grid-template-columns:1fr} }
+.shapes .m{display:flex; flex-direction:column; align-items:center; gap:8px; position:relative}
+.shapes .m .lab{font-size:17px; line-height:1; min-height:22px; display:flex; align-items:flex-end}
+.shapes .m .dim{font-size:12px; color:var(--ink-3); white-space:nowrap}
+.shapes .m.context-matrix{margin-right:16px}
+.shapes .g{display:grid; gap:1px; background:var(--rule-2); border:1px solid var(--rule-2); border-radius:3px; overflow:hidden}
+.shapes .g i{display:block; width:16px; height:16px; background:var(--surface)}
+.shapes .g i.c{background:var(--center-soft); box-shadow:inset 0 0 0 1.5px var(--center)}
+.shapes .g i.o{background:var(--ctx-soft); box-shadow:inset 0 0 0 1.5px var(--ctx)}
+.shapes .g i.u{background:var(--ctx-soft)}
+.shapes .g i.k{background:var(--neg-soft); box-shadow:inset 0 0 0 1.5px var(--neg)}
+.shapes .gw{position:relative}
+.shapes .side{position:absolute; font-family:var(--font-mono); font-size:12px; font-weight:500; line-height:17px}
+.shapes .side.l{right:calc(100% + 6px); top:calc(3 * 17px + 1px); color:var(--center)}
+.shapes .side.r{left:calc(100% + 6px); top:calc(6 * 17px + 1px); color:var(--ctx)}
+.shapes .a{display:flex; flex-direction:column; align-items:center; gap:2px; padding:0 3px; align-self:center; color:var(--ink-2); font-size:12px; white-space:nowrap; margin-top:26px; font-family:var(--font-mono)}
+.shapes .a.wide{padding:0 4px}
+.shapes .a svg{width:24px; height:10px; overflow:visible}
+.shapes .a svg line{stroke:var(--ink-3); stroke-width:1.3}
+.shapes .a svg path{fill:var(--ink-3)}
+.shapes .a .t{min-height:18px}
+.ns-cmp{display:grid; grid-template-columns:1fr 1fr; gap:24px; padding:14px 0 4px}
+@media (max-width:560px){ .ns-cmp{grid-template-columns:1fr} }
+.ns-cmp .panel{display:flex; flex-direction:column; align-items:center; gap:10px}
+.ns-cmp .panel h4{margin:0; font-size:13.5px; font-weight:500; color:var(--ink-2)}
+.ns-cmp .panel .shapes{padding:0}
+.ns-cmp .rowlabels{display:grid; grid-auto-rows:17px; font-family:var(--font-mono); font-size:11px; line-height:17px; color:var(--ink-3); text-align:right; margin-right:6px}
+.ns-cmp .rowlabels b{font-weight:500}
+.ns-cmp .rowlabels b.o{color:var(--ctx)}
+.ns-cmp .rowlabels b.k{color:var(--neg)}
+.ns-cmp .sum{font-size:13px; color:var(--ink-2); text-align:center; font-variant-numeric:tabular-nums}
+.ns-key{display:flex; flex-wrap:wrap; gap:6px 18px; justify-content:center; font-size:12.5px; color:var(--ink-2); margin:6px 0 4px}
+.ns-key span{display:inline-flex; align-items:center; gap:6px}
+.ns-key i{display:inline-block; width:12px; height:12px; border-radius:2px; background:var(--surface); border:1px solid var(--rule-2)}
+.ns-key i.u{background:var(--ctx-soft)}
+.ns-key i.o{background:var(--ctx-soft); box-shadow:inset 0 0 0 1.5px var(--ctx)}
+.ns-key i.k{background:var(--neg-soft); box-shadow:inset 0 0 0 1.5px var(--neg)}

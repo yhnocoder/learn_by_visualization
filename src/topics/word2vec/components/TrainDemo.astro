@@ -1,0 +1,48 @@
+---
+// 第 8 节的二维训练图：控件、图例、SVG 平面和 epoch 进度条。脚本在 ../lib/train.js。
+---
+<div class="train-demo">
+  <div class="controls">
+    <label>目标函数 <select id="tr-mode"><option value="softmax">完整 softmax</option><option value="ns">负采样，k = 10</option></select></label>
+    <label><input type="checkbox" id="tr-shared"> 共享 U = V</label>
+    <label><input type="checkbox" id="tr-showU"> 同时显示 U</label>
+    <button class="btn primary" type="button" id="tr-run">开始</button>
+    <button class="btn" type="button" id="tr-one">跑 1 个 epoch</button>
+    <button class="btn" type="button" id="tr-reset">重置</button>
+  </div>
+  <div class="legend" id="tr-legend"></div>
+  <div class="plotwrap"><svg id="tr-svg" viewBox="0 0 640 400" role="img" aria-label="词向量在二维平面上的位置"></svg></div>
+  <div class="tr-progress-wrap">
+    <label for="tr-progress" id="tr-progress-label">epoch 0 / 60</label>
+    <input type="range" id="tr-progress" min="0" max="60" step="1" value="0" aria-labelledby="tr-progress-label">
+  </div>
+  <div class="chart-status" id="tr-status"></div>
+</div>
+<script>
+  import { initTrainDemo } from '../lib/train.js';
+  document.querySelectorAll('.train-demo').forEach(initTrainDemo);
+</script>
+<style is:global>
+  .train-demo .controls input[type=checkbox]{accent-color:var(--accent); width:15px; height:15px}
+  /* 图例用圆点，与图中的点一致 */
+  .train-demo .legend{gap:6px 16px; font-size:12.5px; margin:2px 0 8px}
+  .train-demo .legend span{gap:6px}
+  .train-demo .legend i{width:10px; height:10px; border-radius:50%}
+  .train-demo .legend i.ring{background:none; border:1.5px solid var(--ink-3)}
+  #tr-svg{background:var(--surface-2); border-radius:6px}
+  #tr-svg .grid{stroke:var(--rule); stroke-width:1}
+  #tr-svg .axis{stroke:var(--rule-2); stroke-width:1}
+  #tr-svg .pt{stroke:var(--surface); stroke-width:1.2}
+  #tr-svg .pu{fill:none; stroke-width:1.6}
+  #tr-svg .lab{font-family:var(--font-mono); font-size:10.5px; fill:var(--ink-2); pointer-events:none}
+  #tr-svg .lab.u{fill:var(--ink-3); font-style:italic}
+  .tr-progress-wrap{margin:16px 0 10px}
+  .tr-progress-wrap label{display:block; margin-bottom:6px; font-size:13px; font-variant-numeric:tabular-nums; color:var(--ink-2)}
+  #tr-progress{display:block; width:100%; height:24px; margin:0; appearance:none; background:transparent; cursor:pointer}
+  #tr-progress::-webkit-slider-runnable-track{height:7px; border-radius:4px; background:linear-gradient(to right,var(--ctx) var(--progress,0%),var(--rule) var(--progress,0%))}
+  #tr-progress::-webkit-slider-thumb{appearance:none; width:15px; height:15px; margin-top:-4px; border:2px solid var(--surface); border-radius:50%; background:var(--ctx); box-shadow:0 0 0 1px var(--ctx)}
+  #tr-progress::-moz-range-track{height:7px; border-radius:4px; background:var(--rule)}
+  #tr-progress::-moz-range-progress{height:7px; background:var(--ctx)}
+  #tr-progress::-moz-range-thumb{width:12px; height:12px; border:2px solid var(--surface); border-radius:50%; background:var(--ctx)}
+  #tr-progress:disabled{cursor:default; opacity:.65}
+</style>
