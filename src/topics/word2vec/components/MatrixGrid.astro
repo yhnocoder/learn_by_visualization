@@ -1,0 +1,22 @@
+---
+// 形状图里的一个矩阵：rows × cols 个方格，构建时生成。
+// hl 决定哪些格子着色：
+//   c      第 3 行（中心词 c）用中心词的颜色
+//   all-c  全部格子用中心词的颜色
+//   o      第 6 行（上下文词 o）用上下文词的颜色加边框
+//   all-u  第 6 行加边框，其余行用上下文词的浅色
+//   ns     第 6 行加边框，neg 列出的行（噪声词）用负样本的颜色
+// 行号从 0 开始，与旧页面的 data-hl 规则相同。
+interface Props { rows: number; cols: number; hl?: 'c' | 'all-c' | 'o' | 'all-u' | 'ns'; neg?: number[] }
+const { rows, cols, hl, neg = [] } = Astro.props;
+const C_ROW = 3, O_ROW = 6;
+function cellClass(r: number){
+  if((hl === 'c' && r === C_ROW) || hl === 'all-c') return 'c';
+  if(hl === 'o' && r === O_ROW) return 'o';
+  if(hl === 'all-u') return r === O_ROW ? 'o' : 'u';
+  if(hl === 'ns') return r === O_ROW ? 'o' : neg.includes(r) ? 'k' : undefined;
+  return undefined;
+}
+const cells = Array.from({ length: rows * cols }, (_, i) => cellClass(Math.floor(i / cols)));
+---
+<div class="g" style={`grid-template-columns:repeat(${cols}, 16px)`}>{cells.map(c => <i class={c} />)}</div>

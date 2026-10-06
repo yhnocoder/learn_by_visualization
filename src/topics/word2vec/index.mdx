@@ -1,0 +1,547 @@
+---
+title: word2vec
+pageTitle: word2vec - skip-gram
+description: 从分布假设出发，解释 Skip-gram 的设计，训练和预测。
+lede: 'word2vec 能把词转换成向量，让含义相近的词在向量空间中彼此接近。但<mark>训练数据只有文本</mark>，没有人告诉模型哪些词含义相近，<mark>它是怎么学会的？</mark><br>本文从这个问题出发，介绍 word2vec 的一种模型 Skip-gram：它如何利用词语周围的上下文构造<mark>预测任务</mark>，又如何通过一次次预测和参数更新，学到<mark>词的向量表示</mark>。我们会从一个具体例子开始，逐步理解模型的设计，以及<mark>负采样</mark>为什么能让训练更高效。'
+theme: blue
+runtimeMath: true
+---
+import Figure from '../../components/layout/Figure.astro';
+import Caption from '../../components/layout/Caption.astro';
+import MatrixGrid from './components/MatrixGrid.astro';
+import WindowDemo from './components/WindowDemo.astro';
+import SgdDemo from './components/SgdDemo.astro';
+import TrainDemo from './components/TrainDemo.astro';
+import './word2vec.css';
+
+{/* 标题字体霞鹜文楷：Base.astro 只在 rust 主题下加载它，这一页在这里单独加载 */}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/lxgwwenkai-regular.css" />
+
+## 为什么能从上下文学到词向量 {/* #s1 */}
+
+我们先从词义与上下文的关系说起。
+
+### 词义没有公式 {/* #meaning */}
+
+我们想要的性质是：<mark>意思相近的词，向量也相近</mark>。这个目标无法直接优化，因为"意思相近"没有定义。需要一个可以从语料里计算出来的替代量。
+
+语言学里有一个现成的替代量，<mark>叫分布假设（distributional hypothesis）</mark>：一个词的含义由它周围经常出现的词决定。Firth 在 1957 年的表述是：
+
+<blockquote><p>You shall know a word by the company it keeps.</p><cite>J. R. Firth, 1957</cite></blockquote>
+
+以 `banking` 为例，它在语料里的邻居通常是 `money`、`loan`、`crisis`、`regulation` 这类词；`finance` 的邻居和它高度重合；`apple` 的邻居则几乎不重合。分布假设把"意思相近"替换成了"邻居的分布相近"。
+
+于是学习目标变成一个可操作的版本：
+
+> 上下文分布相似的词，向量应该相似。
+
+这个目标里有一个隐含的要求：<mark>向量必须由上下文决定</mark>。只要向量是从上下文里算出来的，上下文相似的词就自然得到相似的向量。
+
+由此来看，word2vec 没有直接定义"词义"，也没有直接优化"相似的词向量要相近"。它设定了一个预测任务让模型完成，词向量是模型完成这个任务时学到的参数。
+
+### 计数与预测 {/* #routes toc="计数与预测两条路线" */}
+
+从上下文得到向量有两条路线。
+
+- <strong>计数。</strong>统计一张共现矩阵，也就是第 $i$ 行第 $j$ 列是词 $i$ 和词 $j$ 在窗口内一起出现的次数，再用 SVD 降维，取前 $d$ 个奇异向量作为词向量。本文不展开。
+- <strong>预测。</strong>训练一个模型，给它一个词（中心词），让它预测周围会出现哪些词。如果它预测得准，说明它内部对这个词的表示已经包含了"这个词通常和谁一起出现"的信息。word2vec 走的是这条路线。
+
+计数方法可以得到有用的词向量，但当词表和语料规模增大时，构建共现矩阵并进行分解会带来计算与存储压力。word2vec 提供了另一种训练方式：直接从文本中提取训练样本，逐步更新低维词向量。这使它更便于在<mark>大规模语料上训练</mark>，但不意味着计数方法的效果比它差。
+
+## Skip-gram：给一个中心词，预测窗口内的其他词 {/* #s2 */}
+
+<p class="sub">取语料中位置 $t$ 的词作为中心词，预测它前后各 $m$ 个位置上出现的词。</p>
+
+### 窗口与训练数据 {/* #window */}
+
+记语料为一个长度为 $T$ 的词序列 $w_1, w_2, \dots, w_T$，窗口大小为 $m$。对每一个位置 $t$，中心词是 $w_t$，上下文词是 $w_{t+j}$，其中 $j$ 取 $-m$ 到 $m$ 之间除 0 以外的整数。模型要给出的是条件概率
+
+$$
+P(w_{t+j} \mid w_t), \qquad -m \le j \le m,\; j \ne 0.
+$$
+
+在 word2vec 的 Skip-gram 模型中，每个中心词会分别与窗口内的上下文词组成训练样本（如 $w_t$ 和 $w_{t+2}$），因此模型既学习相邻词之间的关系，也学习中间隔着其他词的关系。CBOW（continuous bag-of-words）是同一个思路的反方向：给窗口内的词，预测中心词。本文只讲 Skip-gram。
+
+训练数据：每一个位置 $t$ 和每一个偏移 $j$ 产生一个样本 $(c, o)$，$c = w_t$ 是中心词，$o = w_{t+j}$ 是上下文词。整个语料被拆成一个样本列表，样本之间相互独立，模型看不到两个样本来自同一个窗口。窗口在语料两端被截断，位置 1 只有右侧上下文。一个长度为 $T$ 的语料产生的样本数略少于 $2mT$。
+
+PS: Skip-gram 的名字来自 n-gram。bigram 指两个连续词组成的组合，而 skip-gram 允许组合中的词不连续。
+
+### 演示：滑动窗口 {/* #fig-window */}
+
+<Figure id="fig-win">
+  <WindowDemo />
+  <Caption>位置 $t$ 的中心词用红色标出，窗口内的上下文词用蓝色标出，每条弧线对应一个要预测的条件概率，也对应一个训练样本 $(c, o)$。拖动 $t$ 让窗口沿语料移动，拖动 $m$ 改变窗口大小。点击任意一个词可以直接把它设为中心词。</Caption>
+</Figure>
+
+"滑动窗口"指的就是 $t$ 从 1 递增到 $T$。
+
+### 目标函数 {/* #objective */}
+
+上一小节把语料拆成了样本 $(c, o)$。目标函数把模型在全部样本上的表现合成一个数。从一个样本出发，分四步得到它。
+
+1. <strong>一个样本。</strong>模型给真实上下文词的概率是 $P(o \mid c;\, \theta)$，$\theta$ 是模型的全部参数，在[第 3 节](#s3)里就是 $\mathbf{V}$ 和 $\mathbf{U}$ 两个矩阵。这个概率越接近 1，模型在这个样本上表现越好。
+2. <strong>全部样本。</strong>样本之间相互独立，整个语料的概率是所有样本概率的乘积。这是 $\theta$ 的似然函数，训练要找让它最大的 $\theta$：
+
+   $$
+   L(\theta) = \prod_{t=1}^{T}\;\prod_{\substack{-m \le j \le m \\ j \ne 0}} P(w_{t+j} \mid w_t;\, \theta).
+   $$
+3. <strong>取对数。</strong>为了更方便计算和更好的数值稳定性，进行取对数操作。$\log$ 单调递增，确保 $L$ 最大的 $\theta$ 也让 $\log L$ 最大。连续小于 1 的概率相乘会下溢到 0，对数相加不会。
+4. <strong>取负号，除以 $T$。</strong>取负号把最大化改写成最小化，符合损失函数的习惯。除以 $T$ 是按位置取平均，让损失的数量级不随语料长度变化。这两步都不改变最优的 $\theta$。
+
+结果就是 Skip-gram 的损失函数：
+
+$$
+J(\theta) = -\frac{1}{T}\sum_{t=1}^{T}\;\sum_{\substack{-m \le j \le m \\ j \ne 0}} \log P(w_{t+j} \mid w_t;\, \theta).
+$$
+
+对照[滑动窗口演示](#fig-window)读这个式子：外层 $\sum_t$ 是窗口沿语料滑过每一个位置，内层 $\sum_j$ 是一个窗口里的每一条弧线，最里面的 $\log P(w_{t+j} \mid w_t;\, \theta)$ 是一条弧线对应的样本 $(c, o)$ 的得分。$J$ 越小，模型给真实上下文词的概率越大。
+
+式子本身还说明两件事：
+
+- 损失是所有样本的总和，样本的顺序不出现在式子里。训练时按什么顺序处理样本，影响的是优化路径，不是被优化的目标。
+- 每一项是一个条件概率的对数。要计算它，模型必须对词表中每一个词都给出一个概率。怎么给出，是[第 3 节](#s3)的内容。
+
+### 预测本身不是目的 {/* #pretext */}
+
+这个预测任务在实际中没有用处。没有人需要一个"给定 `banking`，猜它旁边是什么词"的模型，而且它的预测准确率一定很低，因为一个词的上下文本来就有很多种可能。自监督学习的文献把这类任务称为 pretext task：任务的标签直接来自数据本身，不需要人工标注；设定它的目的是让模型在完成任务的过程中学到有用的表示。
+
+因此评价 Skip-gram 的标准从来不是它的预测准确率，而是训练结束后取出来的参数矩阵是否满足这个目标：[<mark>上下文分布相似的词，向量应该相似</mark>](#meaning)。这一点在读论文时会反复用到：论文里报告的实验全部是对词向量的评估（类比任务、相似度任务），没有一个是对预测任务本身的评估。
+
+## 模型：前向过程 {/* #s3 */}
+
+<p class="sub">对每一个样本 $(c, o)$，模型计算 $P(o \mid c)$。</p>
+
+### 前向过程 {/* #forward */}
+
+记词表大小为 $|V|$，向量维度为 $d$。模型只有两个参数矩阵：
+
+- $\mathbf{V} \in \mathbb{R}^{|V| \times d}$，第 $w$ 行记作 $v_w$，是词 $w$ 作为中心词时的向量。
+- $\mathbf{U} \in \mathbb{R}^{|V| \times d}$，第 $w$ 行记作 $u_w$，是词 $w$ 作为上下文词时的向量。
+
+给定中心词 $c$，计算分四步：
+
+1. 把 $c$ 写成 one-hot 向量 $x \in \mathbb{R}^{|V|}$，只有第 $c$ 位是 1。
+2. $v_c = \mathbf{V}^{\top} x$。因为 $x$ 是 one-hot，这一步等于取出 $\mathbf{V}$ 的第 $c$ 行，实现上是一次查表。
+3. $s = \mathbf{U} v_c \in \mathbb{R}^{|V|}$。第 $w$ 个分量 $s_w = u_w \cdot v_c$ 是"词 $w$ 出现在 $c$ 旁边"的分数，词表里每一个词都有一个分数。
+4. 对 $s$ 做 softmax，得到词表上的概率分布。取出第 $o$ 位，就是我们要的条件概率：
+
+$$
+P(o \mid c) = \frac{\exp(u_o \cdot v_c)}{\sum_{w=1}^{|V|} \exp(u_w \cdot v_c)}.
+$$
+
+<Figure id="fig-shapes">
+  <div class="shapes-wrap"><div class="shapes" role="img" aria-label="Skip-gram 前向过程的形状图">
+    <div class="shapes-group">
+      <div class="m"><div class="lab">$x$</div><div class="gw"><MatrixGrid rows={9} cols={1} hl="c" /><span class="side l">$c$</span></div><div class="dim">$|V| \times 1$</div></div>
+      <div class="a"><span class="t"></span><svg viewBox="0 0 44 10"><line x1="0" y1="5" x2="38" y2="5"/><path d="M36,1 L44,5 L36,9 z"/></svg></div>
+      <div class="m"><div class="lab">$\mathbf{V}$</div><MatrixGrid rows={9} cols={3} hl="c" /><div class="dim">$|V| \times d$</div></div>
+      <div class="a wide"><span class="t">取第$c$行</span><svg viewBox="0 0 44 10"><line x1="0" y1="5" x2="38" y2="5"/><path d="M36,1 L44,5 L36,9 z"/></svg></div>
+      <div class="m"><div class="lab">$v_c$</div><MatrixGrid rows={1} cols={3} hl="all-c" /><div class="dim">$1 \times d$</div></div>
+    </div>
+    <div class="shapes-group">
+      <div class="a"><span class="t"></span><svg viewBox="0 0 44 10"><line x1="0" y1="5" x2="38" y2="5"/><path d="M36,1 L44,5 L36,9 z"/></svg></div>
+      <div class="m context-matrix"><div class="lab">$\mathbf{U}$</div><div class="gw"><MatrixGrid rows={9} cols={3} hl="all-u" /><span class="side r">$u_o$</span></div><div class="dim">$|V| \times d$</div></div>
+      <div class="a wide"><span class="t">$|V|$ 个点积</span><svg viewBox="0 0 44 10"><line x1="0" y1="5" x2="38" y2="5"/><path d="M36,1 L44,5 L36,9 z"/></svg></div>
+      <div class="m"><div class="lab">$s$</div><MatrixGrid rows={9} cols={1} hl="o" /><div class="dim">$|V| \times 1$</div></div>
+      <div class="a wide"><span class="t">softmax</span><svg viewBox="0 0 44 10"><line x1="0" y1="5" x2="38" y2="5"/><path d="M36,1 L44,5 L36,9 z"/></svg></div>
+      <div class="m"><div class="lab">$P(\cdot \mid c)$</div><div class="gw"><MatrixGrid rows={9} cols={1} hl="o" /><span class="side r">$o$</span></div><div class="dim">$|V| \times 1$</div></div>
+    </div>
+  </div></div>
+  <div class="shape-key">
+    <span>$\mathbf{V}$：中心词向量矩阵</span><span>$\mathbf{U}$：上下文词向量矩阵</span>
+    <span>$v_c$：中心词 $c$ 的向量</span><span>$u_o$：上下文词 $o$ 的向量</span>
+  </div>
+  <Caption>图中 $|V| = 9$，$d = 3$，实际 $|V|$ 在几万到几百万，$d$ 在 100 到 300。右侧蓝框对应 $s_o$ 与 $P(o \mid c)$。</Caption>
+</Figure>
+
+两个矩阵之间没有非线性激活，没有 bias。从 one-hot 到分数是两次线性变换，整个模型是一个线性打分器加 softmax。这也是它在大语料上能跑得快的原因之一。
+
+### 对应到大模型中，V 是 Embedding，U 是输出头 {/* #head toc="V 是 Embedding，U 是输出头" */}
+
+前向过程的每一步，在大模型里都有对应的部件：
+
+<div class="tbl"><table>
+  <thead><tr><th>Skip-gram</th><th>大模型</th><th>形状</th></tr></thead>
+  <tbody>
+    <tr><td>$v_c = \mathbf{V}^{\top} x$，按行查表</td><td>embedding 层，`nn.Embedding`</td><td>$|V| \times d$</td></tr>
+    <tr><td>没有任何计算</td><td>若干层 Transformer</td><td>$d \to d$</td></tr>
+    <tr><td>$s = \mathbf{U} v_c$</td><td>LM head，`Linear(d, |V|, bias=False)`</td><td>$|V| \times d$</td></tr>
+    <tr><td>softmax，得到上下文词的分布</td><td>softmax，得到下一个词的分布</td><td>$|V|$</td></tr>
+  </tbody>
+</table></div>
+
+<strong>$\mathbf{V}$ 是 embedding 层。</strong>one-hot 向量乘 $\mathbf{V}^{\top}$ 等于取出 $\mathbf{V}$ 的一行，`nn.Embedding` 做的就是这件事，只是省掉了那次乘法。大模型的 token embedding 矩阵形状同样是 $|V| \times d$，Hugging Face 把它叫 input embeddings。
+
+<strong>$\mathbf{U}$ 是输出头。</strong>一个标准分类器的尾部是：隐藏层向量 $h \in \mathbb{R}^{d}$，过一个线性层 $\mathrm{Linear}(d, K)$ 得到 $K$ 个分数，再过 softmax。这个线性层就是输出头，PyTorch 把它的权重存成 $K \times d$。对到 Skip-gram 上，$h$ 是 $v_c$，$K$ 是 $|V|$，权重矩阵就是 $\mathbf{U}$。所以 $u_w \cdot v_c$ 这个"点积打分"不是一个特殊设计，它是一个不带 bias 的全连接层在逐类别地计算。大模型的 LM head 也是 $\mathrm{Linear}(d, |V|)$ 加 softmax，Hugging Face 把它叫 output embeddings，`get_output_embeddings()` 返回的就是这个矩阵。这个命名和本文把 $\mathbf{U}$ 读成"每个词一个上下文向量"是同一个意思：输出头的每一行也是一个词向量。
+
+两者的差别有两处。一是中间层：Skip-gram 的 embedding 层直接接输出头，中间什么都没有；大模型在中间有很多层 Transformer，所以送进输出头的 $h$ 不再是一次查表的结果。二是预测目标：Skip-gram 预测窗口内任意位置的词，语言模型预测下一个词。这两处差别都不改变 $\mathbf{V}$ 和 $\mathbf{U}$ 的角色。
+
+要不要把 $\mathbf{V}$ 和 $\mathbf{U}$ 设为同一个矩阵，在大模型里叫 weight tying，[第 4 节](#tied)会讲。
+
+### 为什么用点积而不是 cosine 相似度 {/* #dot toc="点积 or 余弦相似度" */}
+
+cosine 相似度等于点积除以两个向量的模长，所以"用点积还是用 cosine"的区别只在于模长要不要参与打分。训练时用点积，有三个原因。
+
+- <strong>cosine 的取值范围是 $[-1, 1]$。</strong>放进 softmax 之后，$\exp(1)$ 和 $\exp(-1)$ 只差 $e^2 \approx 7.4$ 倍，模型无法表达"某个上下文词的概率远高于其他词"这种分布。点积的取值没有上界，分布可以任意尖锐。
+- <strong>模长是一个可以利用的自由度。</strong>训练会自行决定每个词向量的模长，高频词、上下文分布集中的词可以有更大的模长。cosine 把这个信息去掉了。
+- <strong>梯度简单。</strong>点积对 $v_c$ 的导数就是 $u_o$，cosine 的导数要多出归一化项。
+
+推荐系统里的双塔模型用 cosine，但不是裸的 cosine，而是 cosine 除以一个温度 $\tau$（常取 0.05 到 0.1），取值范围变成 $[-20, 20]$ 量级，尖锐分布的问题就不存在了。它选择归一化是因为在推荐场景里模长会学到热门度，热门 item 和谁的点积都大，这是要避免的。word2vec 没有这个顾虑，所以取最简单的形式。两种做法本质都是点积，区别是要不要让模长参与，以及由谁控制分数的尺度。
+
+训练结束之后评估两个词向量的相似度时，通常用 cosine。这时要比较的是方向，不希望频率带来的模长差异干扰结果。训练时的打分函数和评估时的度量是两个不同的需求。
+
+## 为什么每个词有两个向量 {/* #s4 */}
+
+<p class="sub">Skip-gram 给每个词两个向量 $v_w$ 和 $u_w$，一个当中心词用，一个当上下文词用。</p>
+
+### 两个矩阵从哪里来 {/* #two-matrices */}
+
+回到[前向过程](#forward)：one-hot 乘 $\mathbf{V}$ 得到隐藏层 $v_c$，$v_c$ 乘 $\mathbf{U}$ 得到分数 $s$。$\mathbf{V}$ 的每一行按输入词索引，$\mathbf{U}$ 的每一行按输出词索引，两个矩阵的行恰好是同一个维度 $d$，所以每个词就同时在两个矩阵里各有一行。"每个词两个向量"是对这两个矩阵的一种读法。
+
+### 为什么不共享 {/* #share */}
+
+真正需要回答的问题是：既然两个矩阵形状相同，为什么不强制 $\mathbf{U} = \mathbf{V}$，让每个词只有一个向量。看一个例子：
+
+- `eat` 的旁边经常出现 `food`、`apple`、`dinner`。
+- `eat` 和 `drink` 的上下文高度重合，但它们几乎不出现在彼此旁边。
+
+这是两种不同的关系。语言学上前者叫组合关系（syntagmatic），两个词在同一段文本里一起出现；后者叫聚合关系（paradigmatic），两个词可以在同一个位置上互相替换。[上下文分布相似的词，向量相似](#s1)说的是后者。
+
+Skip-gram 直接打分的是前者。$u_o \cdot v_c$ 大，表示"$o$ 出现在 $c$ 旁边"的概率大。如果只有一套向量，两个要求同时落在 $\mathbf{V}$ 上：
+
+- 组合关系要求 $v_{\text{food}} \cdot v_{\text{eat}}$ 大，也就是 `food` 在空间里靠近 `eat`；
+- 聚合关系要求 $v_{\text{drink}}$ 靠近 $v_{\text{eat}}$。
+
+于是 `food`、`eat`、`drink` 被同一个几何量约束到一起，两种关系混在一个点积里。由此无法区分两个向量点积大是因为常常一起出现还是因为可以在同一位置进行替换。
+
+分成两个矩阵之后，两种关系由不同的机制承担：
+
+- 组合关系由点积直接表达：$u_{\text{food}} \cdot v_{\text{eat}}$ 大意味着两个词常常一起出现。
+- 聚合关系是训练的二阶结果：`eat` 和 `drink` 的上下文相同，所以 $v_{\text{eat}}$ 和 $v_{\text{drink}}$ 在训练中被同一批 $u$ 向量沿相同方向更新，最终位置相近。它们之间的点积<mark>从来没有被直接优化过</mark>。
+
+这就是[相似性不是训练目标里的一项](#s1)的具体含义。训练过程中 $\mathbf{V}$ 的行只会因为 $\mathbf{U}$ 的行而改变，$\mathbf{U}$ 的行只会因为 $\mathbf{V}$ 的行而改变，同一个矩阵内部的两行从未被直接比较。[二维训练演示](#fig-train)会把这个过程画出来。
+
+### 自身项 {/* #self-term */}
+
+还有一个技术上的原因。softmax 的分母对词表里每一个词求和，其中包括 $w = c$ 这一项。共享向量时这一项是 $\exp(v_c \cdot v_c) = \exp(\|v_c\|^2)$，恒为正且随模长增大，模型会系统性地给"一个词出现在自己旁边"分配较高的概率，而语料里这种情况很少发生。分成两个矩阵之后，这一项是 $\exp(u_c \cdot v_c)$，是一个可以被训练压低的自由量。
+
+### 在 Transformer 里 {/* #tied */}
+
+"要不要让输入 embedding 和输出头共享参数"这个问题在 Transformer 语言模型里再次出现，叫 tied embeddings 或 weight tying：把 embedding 矩阵和 LM head 的权重设为同一个矩阵，参数量减少 $|V| \times d$。不同模型的选择不同。它的取舍和本节讨论的是同一件事：共享节省参数并且让两个空间对齐，不共享让"作为输入"和"作为输出"两种角色各自有自由度。读到这类模型的配置时，可以回到本节的例子想一遍。
+
+## 训练：loss、梯度、一步更新 {/* #s5 */}
+
+<p class="sub">一个样本的 loss 是什么，对哪些参数有梯度，一步更新改变了什么。</p>
+
+### cross entropy 与 label {/* #ce */}
+
+Skip-gram 是一个 $|V|$ 类的分类器，训练它用的就是普通的 cross entropy。对样本 $(c, o)$，模型的输出是词表上的分布 $p = \mathrm{softmax}(\mathbf{U} v_c)$，label 是 $o$ 的 one-hot 向量 $y$，只有第 $o$ 位是 1。cross entropy 是
+
+$$
+-\sum_{w=1}^{|V|} y_w \log p_w = -\log p_o = -\log P(o \mid c).
+$$
+
+求和里只有 $w = o$ 一项非零，所以 cross entropy 化简成一个对数。[Skip-gram 的目标函数](#objective)里的 $\log P(w_{t+j} \mid w_t)$ 不是"只有 pred 没有 label"，label 在下标里。
+
+### 梯度 {/* #grad */}
+
+上一段已经得到：对于样本 $(c, o)$，损失是模型给真实上下文词 $o$ 分配的概率的负对数。将前向过程中的 softmax 概率代入，再利用 $\log(a/b)=\log a-\log b$，可以逐步展开。下面的 $[\operatorname{softmax}(\mathbf{U}v_c)]_o$ 表示 softmax 输出中第 $o$ 个分量，即模型给真实上下文词 $o$ 分配的概率：
+
+$$
+\begin{aligned}
+\ell(c,o)
+&= -\log P(o\mid c) \\
+&= -\log\left([\operatorname{softmax}(\mathbf{U}v_c)]_o\right) \\
+&= -\log\frac{\exp(u_o\cdot v_c)}{\sum_{w=1}^{|V|}\exp(u_w\cdot v_c)} \\
+&= -\log\exp(u_o\cdot v_c)+\log\sum_{w=1}^{|V|}\exp(u_w\cdot v_c) \\
+&= -u_o\cdot v_c+\log\sum_{w=1}^{|V|}\exp(u_w\cdot v_c).
+\end{aligned}
+$$
+
+下面推导完整 softmax 的梯度，且 $\mathbf{V}$ 与 $\mathbf{U}$ 不共享参数。求导时把词的编号 $c$、$o$ 当作固定值，向量均按列向量处理。
+
+<strong>第一步：先对每个词的分数求导。</strong>记 $s_w = u_w^{\top}v_c$，并用 $Z$ 表示 softmax 的分母：
+
+$$
+Z = \sum_{j=1}^{|V|} e^{s_j}, \qquad p_w = \frac{e^{s_w}}{Z}, \qquad \ell = -s_o + \log Z.
+$$
+
+这里 $w$ 表示当前正在求导的那一个词。$-s_o$ 对 $s_w$ 的导数只有在 $w=o$ 时才是 $-1$；对 $\log Z$ 使用链式法则：
+
+$$
+\begin{aligned}
+\frac{\partial \ell}{\partial s_w}
+&= -\mathbb{1}[w=o] + \frac{1}{Z}\frac{\partial Z}{\partial s_w} \\
+&= -\mathbb{1}[w=o] + \frac{e^{s_w}}{Z} \\
+&= p_w-y_w.
+\end{aligned}
+$$
+
+其中 $y_w=\mathbb{1}[w=o]$ 表示真实标签：真实上下文词对应的位置为 1，其他位置为 0。因此，每个分数的梯度都是<mark>预测概率减去真实标签</mark>。
+
+写成向量形式：
+
+$$
+s=
+\begin{bmatrix}s_1\\ \vdots\\s_{|V|}\end{bmatrix},
+\qquad
+\nabla_s\ell=
+\begin{bmatrix}
+\frac{\partial\ell}{\partial s_1}\\
+\vdots\\
+\frac{\partial\ell}{\partial s_{|V|}}
+\end{bmatrix}
+=p-y.
+$$
+
+<strong>第二步：对中心词向量 $v_c$ 求导。</strong>先把点积按分量展开，$k$ 表示向量的第 $k$ 个分量：
+
+$$
+s_w=u_w^{\top}v_c=\sum_{k=1}^{d}u_{w,k}v_{c,k}.
+$$
+
+对其中一个分量 $v_{c,k}$ 求导时，$u_w$ 保持不变，求和中只有第 $k$ 项依赖这个分量，因此：
+
+$$
+\frac{\partial s_w}{\partial v_{c,k}}=u_{w,k}, \qquad
+\frac{\partial s_w}{\partial v_c}
+=\begin{bmatrix}u_{w,1}\\ \vdots\\ u_{w,d}\end{bmatrix}=u_w.
+$$
+
+也就是说，把各个分量的偏导数组成列向量，就得到 $u_w$。由于每个分数 $s_w$ 都依赖同一个 $v_c$，接下来使用链式法则，累加所有分数的贡献：
+
+$$
+\begin{aligned}
+\frac{\partial \ell}{\partial v_c}
+&= \sum_{w=1}^{|V|}\frac{\partial \ell}{\partial s_w}\frac{\partial s_w}{\partial v_c} \\
+&= \sum_{w=1}^{|V|}(p_w-y_w)u_w \\
+&= \sum_{w=1}^{|V|}p_wu_w-u_o
+\end{aligned}
+$$
+
+最后一步利用了 $y$ 的 one-hot 性质：$\sum_w y_wu_w=u_o$。本次前向计算只取出了 $\mathbf{V}$ 的第 $c$ 行，所以其他输入向量 $v_i$（$i\ne c$）的梯度为零。
+
+把 $p_w$ 代回 softmax 的形式
+
+$$
+\begin{aligned}
+\frac{\partial \ell}{\partial v_c}
+&= \sum_{w=1}^{|V|}p_wu_w-u_o \\
+&= \sum_{w=1}^{|V|}[\operatorname{softmax}(\mathbf{U}v_c)]_wu_w-u_o \\
+&= \sum_{w=1}^{|V|}\frac{e^{u_w^\top v_c}}{\sum_{j=1}^{|V|} e^{u_j^\top v_c}}u_w-u_o
+\end{aligned}
+$$
+
+<strong>第三步：对上下文向量 $u_w$ 求导。</strong>$u_w$ 只直接出现在分数 $s_w=u_w^{\top}v_c$ 中，且 $\partial s_w/\partial u_w=v_c$，因此：
+
+$$
+\begin{aligned}
+\frac{\partial \ell}{\partial u_w}
+&= \frac{\partial \ell}{\partial s_w}\frac{\partial s_w}{\partial u_w} \\
+&= (p_w-y_w)v_c \\
+&= \begin{cases}
+(p_o-1)v_c, & w=o, \\
+p_wv_c, & w\ne o.
+\end{cases}
+\end{aligned}
+$$
+
+虽然 $u_w$ 只直接参与一个分数的计算，但这个分数会通过 softmax 的分母影响所有输出概率。
+
+<strong>第四步：用梯度更新参数。</strong>设学习率为 $\eta$，用更新前的参数计算上面所有梯度，再执行：
+
+$$
+\begin{aligned}
+v_c^{\mathrm{new}} &= v_c-\eta\left(\sum_{w=1}^{|V|}p_wu_w-u_o\right), \\
+u_w^{\mathrm{new}} &= u_w-\eta(p_w-y_w)v_c, \qquad w=1,\ldots,|V|.
+\end{aligned}
+$$
+
+两个式子右侧都使用更新前的向量，需要一起更新，不能先更新 $v_c$，再用新的 $v_c$ 代替已经算好的输出向量梯度。由这些公式可以看出：
+
+- $v_c$ 的梯度是<mark>模型当前预测的上下文向量的期望"减去"真实的上下文向量</mark>。梯度下降让 <mark>$v_c$ 沿 $u_o$ 的方向增加</mark>，沿期望方向减少。当模型的预测分布集中在 $o$ 上时，两项抵消，梯度接近零。
+- 完整 softmax 的梯度计算涉及 $\mathbf{U}$ 的每一行。对 $w = o$，系数是 $P(o \mid c) - 1$，为负，$u_o$ 沿 $v_c$ 的方向增加；对其他每一个 $w$，系数是 $P(w \mid c)$，为正，$u_w$ 沿 $v_c$ 的反方向减少，减少的幅度正比于模型当前给 $w$ 的概率。在分数有限时，$P(w \mid c)$ 对任何 $w$ 都大于零，因此通常每一行都会更新。本节的完整 softmax 计算需要遍历全部 $|V|$ 个输出向量，而不是只处理真实上下文词对应的一行，这就是它的主要开销。
+
+把第二点放回[滑动窗口的例子](#fig-window)：样本是 (banking, crises)，但 `into` 的上下文向量 $u_{\text{into}}$ 也被更新了，因为模型给 $P(\text{into} \mid \text{banking})$ 分配了非零概率，而这个样本说明这个位置上出现的不是 into。
+
+### 演示：一步更新 {/* #fig-step */}
+
+<Figure id="fig-sgd">
+  <SgdDemo />
+  <Caption>更新同时应用于 V 的中心词行和 U 的全部行。</Caption>
+</Figure>
+
+### 完整流程 {/* #loop */}
+
+1. 随机初始化 $\mathbf{V}$ 和 $\mathbf{U}$。
+2. 按[窗口内配对的规则](#window)把语料变成样本 $(c, o)$ 的序列。
+3. 取一个样本，前向计算 $P(\cdot \mid c)$，按上面的公式算梯度，更新 $v_c$ 和 $\mathbf{U}$ 的各行。
+4. 回到第 3 步，直到语料遍历完，这是一个 epoch。跑若干个 epoch，学习率随进度线性下降。
+5. 取 $\mathbf{V}$ 作为词向量。
+
+### 样本顺序 {/* #order */}
+
+样本是按语料顺序产生的，靠前的文本先更新参数。实现里没有打乱：C 代码按文件偏移把语料切给多个线程，每个线程在自己的区间内顺序处理；gensim 把语料切成固定大小的批次放进队列，多个线程从队列取，同样不打乱。这会不会造成系统性偏差？
+
+- 目标函数是所有样本 loss 的总和，顺序不出现在里面。顺序影响的是随机梯度下降走过的路径，不是它要逼近的目标。
+- 每个词在语料里出现很多次，分散在各处。早期的更新对最终位置的贡献被后来的大量更新稀释。
+- 语料遍历多个 epoch，学习率逐渐下降。前面的文本先被处理这件事在每个 epoch 都发生一次，但后面的 epoch 步长更小，最终位置由整个语料共同决定。
+
+真正会造成问题的是学习率下降太快，导致靠后的样本几乎不更新参数。这是超参数的问题，不是顺序的问题。
+
+## 负采样：把多分类改成二分类 {/* #s6 */}
+
+<p class="sub">完整 softmax 的每一个样本都要读写 $\mathbf{U}$ 的全部 $|V|$ 行。负采样换了一个目标函数，让每个样本只碰 $k + 1$ 行。</p>
+
+### 开销在哪里 {/* #cost */}
+
+回到[梯度](#grad)：$\partial \ell / \partial v_c = \sum_w p_w u_w - u_o$，求和遍历词表；$\partial \ell / \partial u_w = (p_w - y_w) v_c$ 对每一个 $w$ 都非零。所以一个样本要读一遍 $\mathbf{U}$ 来算 $p$，再写一遍 $\mathbf{U}$ 来更新，代价是 $|V| \times d$ 次乘加的两倍。$|V|$ 取 $10^5$ 到 $10^6$，$d$ 取 300，语料有 $10^9$ 量级的样本，总量到 $10^{17}$ 次运算，无法接受。
+
+开销全部来自 softmax 的分母。分子 $\exp(u_o \cdot v_c)$ 只需要一次点积，是分母要求模型对词表里每一个词都给出分数。要降开销，就要去掉这个分母。
+
+### 换一个任务 {/* #binary */}
+
+原来的任务是多分类：给定 $c$，从词表里选出 $o$。负采样把它换成二分类：给定一对词 $(c, w)$，判断 $w$ 是不是 $c$ 的真实上下文。
+
+- 正样本：语料里真实出现的 $(c, o)$，label 为 1。
+- 负样本：从噪声分布 $P_n$ 里随机抽 $k$ 个词 $w_1, \dots, w_k$，和 $c$ 配成 $(c, w_i)$，label 为 0。
+
+打分仍然是点积，但归一化不再用 softmax，而是用 sigmoid 把单个点积映射到 $(0, 1)$：
+
+$$
+P(\text{真实} \mid c, w) = \sigma(u_w \cdot v_c) = \frac{1}{1 + \exp(-u_w \cdot v_c)}.
+$$
+
+sigmoid 只看这一对词的分数，不需要其他词参与，分母消失了。一个样本 $(c, o)$ 带上它的 $k$ 个负样本，loss 是 $k + 1$ 个二分类 cross entropy 之和：
+
+$$
+\ell_{\text{NS}}(c, o) = -\log \sigma(u_o \cdot v_c) - \sum_{i=1}^{k} \log \sigma(-u_{w_i} \cdot v_c).
+$$
+
+第二项用了 $1 - \sigma(x) = \sigma(-x)$：负样本的 label 是 0，它的 cross entropy 是 $-\log(1 - \sigma(u_{w_i} \cdot v_c))$。
+
+这不是对完整 softmax 的近似，是一个新的目标函数，训练出来的模型不再是一个词表上的概率分布。论文自己也这样说明：它由 noise contrastive estimation 简化而来，去掉了保证概率归一化的项，因为要的是词向量而不是语言模型。[第 1 节](#routes)提到的 Levy 和 Goldberg 的结论，对应的正是这个目标函数。
+
+<Figure id="fig-ns-cmp">
+  <div class="ns-cmp">
+    <div class="panel">
+      <h4>完整 softmax</h4>
+      <div class="shapes">
+        <div class="rowlabels"><span></span><span></span><span></span><span></span><span></span><span></span><b class="o">o</b><span></span><span></span></div>
+        <div class="m"><MatrixGrid rows={9} cols={3} hl="all-u" /></div>
+      </div>
+      <div class="sum">系数 $p_w - y_w$，$|V|$ 行全部更新</div>
+    </div>
+    <div class="panel">
+      <h4>负采样，$k = 4$</h4>
+      <div class="shapes">
+        <div class="rowlabels"><b class="k">w₁</b><span></span><span></span><b class="k">w₂</b><span></span><b class="k">w₃</b><b class="o">o</b><span></span><b class="k">w₄</b></div>
+        <div class="m"><MatrixGrid rows={9} cols={3} hl="ns" neg={[0, 3, 5, 8]} /></div>
+      </div>
+      <div class="sum">系数 $\sigma(u_w \cdot v_c) - y_w$，$1 + k$ 行更新</div>
+    </div>
+  </div>
+  <div class="ns-key"><span><i class="o"></i>真实上下文词 $o$，label 1</span><span><i class="k"></i>抽到的噪声词，label 0</span><span><i class="u"></i>有梯度的其他行</span><span><i></i>本步不变的行</span></div>
+  <Caption>同一个样本 $(c, o)$ 下两种目标函数各修改 $\mathbf{U}$ 的哪些行。完整 softmax 里每一行的系数 $p_w$ 都非零，$|V|$ 行全部更新；负采样只有 $o$ 和抽出的 $k$ 个噪声词有梯度，其余行不读不写。</Caption>
+</Figure>
+
+### 梯度：和完整 softmax 对照 {/* #ns-grad */}
+
+记 $\sigma_w = \sigma(u_w \cdot v_c)$，$y_o = 1$，$y_{w_i} = 0$。对 $\ell_{\text{NS}}$ 求导，形式和[第 5 节](#grad)完全一样，只是概率从 softmax 换成了 sigmoid，求和的范围从整个词表换成了 $k + 1$ 个词：
+
+$$
+\frac{\partial \ell_{\text{NS}}}{\partial u_w} = (\sigma_w - y_w)\, v_c, \quad w \in \{o, w_1, \dots, w_k\}; \qquad \frac{\partial \ell_{\text{NS}}}{\partial v_c} = \sum_{w \in \{o, w_1, \dots, w_k\}} (\sigma_w - y_w)\, u_w .
+$$
+
+三点对照：
+
+- 系数仍然是"预测概率减真实标签"。$u_o$ 的系数 $\sigma_o - 1$ 为负，$u_o$ 沿 $v_c$ 的方向增加；噪声词的系数 $\sigma_{w_i}$ 为正，$u_{w_i}$ 沿 $v_c$ 的反方向减少。
+- $\mathbf{U}$ 里其余 $|V| - k - 1$ 行的梯度是零，这一步既不读也不写它们。一个样本的开销从 $|V| \times d$ 降到 $(k + 1) \times d$。
+- $v_c$ 的梯度里，"模型预测的上下文向量的期望"被 $k$ 个随机词的加权和取代。这个替代量的方差比完整 softmax 大，所以负采样通常需要更多样本才能达到同样的效果，[二维训练演示](#fig-train)里负采样要跑更多 epoch 就是这个原因。
+
+### 噪声分布与 $k$ {/* #noise toc="噪声分布与 k" */}
+
+负样本从哪里抽，影响哪些 $u_w$ 会被更新。最直接的选择是按词频抽，即 unigram 分布。论文用的是 unigram 分布的 $3/4$ 次方再归一化：
+
+$$
+P_n(w) = \frac{\mathrm{count}(w)^{3/4}}{\sum_{w'} \mathrm{count}(w')^{3/4}}.
+$$
+
+这个指数把分布压平了一些。三个词频率为 0.9、0.09、0.01 时，取 $3/4$ 次方并归一化后是 0.83、0.15、0.03，最低频的词被抽中的概率变成原来的三倍。效果是低频词作为负样本出现的机会增加，它们的 $u_w$ 才有足够的更新次数。$3/4$ 是论文的经验值，论文报告它比 unigram 和均匀分布都好，没有给出推导。
+
+$k$ 的取值也是经验值：论文建议小语料取 5 到 20，大语料取 2 到 5。$k$ 越大，每个样本的开销越大，但梯度的方差越小。
+
+### 另外两个技巧 {/* #other-tricks */}
+
+负采样是论文里降低开销的主要手段，另外两个技巧本文不展开，读论文时知道它们在解决什么问题即可。
+
+- <strong>hierarchical softmax。</strong>另一条降开销的路：把词表组织成一棵二叉树，一次 $|V|$ 类的归一化变成从根到叶子的 $\log_2 |V|$ 次二分类。它保留了概率分布的性质，负采样没有。两者是替代关系，通常只用其中一个。
+- <strong>高频词降采样。</strong>数据侧的技巧：`the`、`a` 这类词出现次数极多但提供的信息很少，训练前按一个与频率相关的概率丢弃它们的部分出现。样本数减少，窗口内剩下的词之间距离变近。
+
+## 预测：训练结束后怎么用词向量 {/* #s7 */}
+
+<p class="sub">训练时的"预测"是给定 $c$ 算 $P(\cdot \mid c)$。训练结束后这个计算不再运行，用的是参数矩阵本身。</p>
+
+### 丢掉的和留下的 {/* #discard */}
+
+训练结束时手里有两个矩阵。留下 $\mathbf{V}$，每一行是一个词的向量；$\mathbf{U}$ 和 softmax 一起被丢掉。[第 2 节](#pretext)说预测任务本身没有用处，这里是它的具体体现：没有人会拿训练好的模型去算 $P(\text{crises} \mid \text{banking})$，所有后续使用都只查 $\mathbf{V}$。
+
+查 $\mathbf{V}$ 只需要词的编号，一次索引，没有任何计算。词向量在下游任务里的典型用法就是这一步：把文本里的每个词换成它的向量，交给后面的模型。
+
+### 最近邻 {/* #neighbors */}
+
+直接对 $\mathbf{V}$ 做的第一件事是找一个词的最近邻。度量用 cosine 相似度：
+
+$$
+\cos(v_a, v_b) = \frac{v_a \cdot v_b}{\|v_a\|\,\|v_b\|}.
+$$
+
+这里用 cosine 而不是点积，和[第 3 节](#dot)说的一致：训练时模长是模型可以利用的自由度，评估时要比较的是方向，不希望频率带来的模长差异影响排序。实践中通常先把每一行归一化，最近邻就变成一次矩阵乘法加排序。
+
+最近邻找到的是[聚合关系](#share)：和查询词上下文分布相似的词，比如 `eat` 的最近邻是 `drink`、`ate`，不是 `food`。要找组合关系，也就是"经常出现在旁边的词"，要看 $u_w \cdot v_c$，那需要 $\mathbf{U}$，而 $\mathbf{U}$ 已经被丢掉了。
+
+### 类比 {/* #analogy */}
+
+论文最出名的结果是 $v_{\text{king}} - v_{\text{man}} + v_{\text{woman}}$ 离 $v_{\text{queen}}$ 最近。做法是算出目标向量，再在 $\mathbf{V}$ 里按 cosine 找最近邻，排除三个查询词本身：
+
+$$
+\arg\max_{w \notin \{a, b, c\}} \cos\big(v_w,\; v_b - v_a + v_c\big).
+$$
+
+这个性质不是训练目标里的一项，是训练出来的向量空间碰巧具有的结构。一个粗略的解释：打分是线性的点积，如果某种语义关系（比如性别）对应上下文分布的一种固定变化，它在向量空间里就对应一个大致固定的方向。论文用一组类比题作为评估集，这也是它衡量词向量质量的主要方式之一。
+
+### 做不到的事 {/* #limits */}
+
+- <strong>词表外的词。</strong>$\mathbf{V}$ 的行数在训练前就定了，训练时没见过的词没有向量。拼写变体、新词、罕见词都会落在词表外。这是后续 fastText 用子词信息要解决的问题。
+- <strong>一词多义。</strong>一个词只有一行，`bank` 的向量是它所有用法的混合。要区分用法需要看具体上下文，这是上下文相关表示（ELMo、BERT）解决的问题。
+- <strong>句子和文档。</strong>$\mathbf{V}$ 只有词。把一句话的词向量取平均是常见的做法，但平均丢掉了词序。
+
+## 完整训练：向量在平面上的移动 {/* #s8 */}
+
+<p class="sub">前面几节的论断，包括"上下文相同的词向量相近"、"共现的词不一定相近"、"共享矩阵会把两种关系混在一起"，都可以在一个小语料上直接看到。这一节在浏览器里跑完整的训练，$d = 2$，每个词的向量就是平面上的一个点。</p>
+
+语料按“主语 + 动词 + 宾语”的规则随机生成，共 300 句，包含图中的 23 个词：
+
+- 主语：`i, you, we, they, he, she`。
+- 表示“吃”的动词：`eat, ate, eats`；对应的宾语从 `bread, rice, apple, cake, soup` 中选择。
+- 表示“喝”的动词：`drink, drank, drinks`；对应的宾语从 `tea, coffee, water, milk, juice` 中选择。
+
+例如，规则可以生成 `they eat bread` 和 `we drink water`。这里只控制词的类别，不检查主谓一致等语法规则。窗口大小为 1，因此第一句产生的训练词对是 `(they, eat)`、`(eat, they)`、`(eat, bread)` 和 `(bread, eat)`。
+
+同组词按相同的规则生成上下文：例如，`bread` 和 `rice` 的相邻词都从 `eat, ate, eats` 中选择，但它们不会出现在同一句里。由于只随机生成 300 句，各词实际的上下文频率不一定完全相同。另一方面，`eat` 与 `bread` 可以相邻出现，但两者的上下文分布不同：`eat` 的上下文包含主语和食物，`bread` 的上下文只有表示“吃”的动词。
+
+### 演示：二维训练 {/* #fig-train */}
+
+<Figure id="fig-tr">
+  <TrainDemo />
+  <Caption>每个点是 $\mathbf{V}$ 的一行，颜色表示词所属的组（与训练无关，只是为了方便理解）。完整 softmax 跑 60 个 epoch，学习率从 0.05 线性下降；负采样跑 150 个 epoch，学习率从 0.1 线性下降，$k = 10$。参数用固定种子初始化，每次重置得到相同的起点。</Caption>
+</Figure>
+
+### 看什么 {/* #observe */}
+
+- <strong>同组的词聚成一簇。</strong>训练结束后，6 个主语、3 个"吃"、3 个"喝"、5 种食物、5 种饮料各自聚在一起。它们从未共现，靠近是因为上下文相同，这是[相同上下文通过参数更新使词向量相近](#share)的结果。
+- <strong>共现的词不靠近。</strong>eat 和 bread 在语料里总是相邻，但在 $\mathbf{V}$ 里相距很远。勾选"同时显示 U"可以看到 $u_{\text{bread}}$ 和 $v_{\text{eat}}$ 的方向关系：点积大靠的是 $\mathbf{U}$ 和 $\mathbf{V}$ 之间的位置关系，不是 $\mathbf{V}$ 内部的。
+- <strong>共享矩阵改变几何。</strong>勾选"共享 U = V"后重新训练，每个动词簇挨着它的宾语簇，主语簇夹在两个动词簇之间，也就是共现的词变成了邻居。状态栏里的距离可以直接对比：不共享时 eat–bread 的距离大于 eat–drink，共享后反过来，同时 bread–rice 这类同组距离也接近零，整个图被压成沿共现关系排列的一条带。最终 loss 也比不共享时高。这体现了[共享矩阵会用同一个点积同时约束共现关系与上下文相似关系](#share)。
+- <strong>负采样得到的结构不同。</strong>切换到负采样，簇仍然会形成，但需要更多 epoch，簇之间的相对位置和 softmax 版本不同。两种目标函数对向量的要求不同：完整 softmax 要求 $u_o \cdot v_c$ 相对于词表里全部 $u_w \cdot v_c$ 都大，[负采样](#binary)只要求它相对于 $k$ 个随机词大。
+
+两点限制。$d = 2$ 只是为了能画出来，实际使用的 100 到 300 维空间里，簇的结构更丰富，不会像这里一样只有五团。语料是人造的，规则完全规整，真实语料里一个词的上下文分布要宽得多，簇的边界也模糊得多。
