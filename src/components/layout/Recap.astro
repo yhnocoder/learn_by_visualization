@@ -1,0 +1,16 @@
+---
+// 前文笔记侧边栏：按正文的阅读位置，显示已经读过的小节的笔记。脚本和样式在 src/scripts/recap.js。
+// 里面写 <li> 条目：
+//   <Recap>
+//     <li class="recap-part"><a href="#chapter">章标题</a></li>
+//     <li><a href="#section">小节标题<div class="recap-note">笔记，可以含公式、图片、SVG</div></a></li>
+//   </Recap>
+// 视口宽度不超过 drawerBelow（px）时，侧边栏变成从左侧滑出的抽屉。
+interface Props { label?: string; drawerBelow?: number; id?: string }
+const { label = '前文笔记', drawerBelow = 1240, id } = Astro.props;
+---
+<nav class="recap" id={id} aria-label={label} data-drawer-below={drawerBelow}><ol><slot /></ol></nav>
+
+<script>
+  import '../../scripts/recap.js';
+</script>

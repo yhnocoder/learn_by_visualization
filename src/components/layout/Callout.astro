@@ -1,0 +1,16 @@
+---
+// 正文里的注释块（浅底色、圆角）。label 是块顶部的小标题，例如“补充”“注意”。
+interface Props { label?: string; tone?: 'neutral' | 'warn' | 'ok' | 'bad' }
+const { label, tone = 'neutral' } = Astro.props;
+---
+<div class:list={['callout', tone]}>
+  {label && <span class="k">{label}</span>}
+  <slot />
+</div>
+
+<style>
+  .callout{background:var(--surface-2); padding:18px 24px; margin:22px 0 28px; border-radius:12px; font-size:15.5px; line-height:1.8}
+  .callout :global(p:last-child){margin-bottom:0}
+  .k{display:block; font-size:13px; color:var(--ink-3); margin-bottom:6px}
+  .warn{background:var(--warn-soft)} .ok{background:var(--ok-soft)} .bad{background:var(--bad-soft)}
+</style>

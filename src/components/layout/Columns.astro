@@ -1,0 +1,19 @@
+---
+// 并排的多栏，每一栏用 <Column> 包起来。ratio 是各栏宽度之比，例如 "1:1"、"2:1"、"1:1:1"。
+// 视口宽度小于 700px 时各栏改为上下排列。
+//   <Columns ratio="1:1">
+//     <Column>左栏：公式推导</Column>
+//     <Column>右栏：数值例子</Column>
+//   </Columns>
+interface Props { ratio?: string; gap?: string; align?: 'start' | 'center' | 'end' | 'stretch' }
+const { ratio = '1:1', gap = '28px', align = 'start' } = Astro.props;
+const template = ratio.split(':').map(n => `minmax(0,${Number(n)}fr)`).join(' ');
+---
+<div class="columns" style={`--cols:${template}; --gap:${gap}; --align:${align}`}>
+  <slot />
+</div>
+
+<style>
+  .columns{display:grid; grid-template-columns:var(--cols); gap:var(--gap); align-items:var(--align); margin:22px 0 28px}
+  @media (max-width:699px){ .columns{grid-template-columns:minmax(0,1fr)} }
+</style>

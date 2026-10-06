@@ -1,5 +1,6 @@
 const { defineConfig, devices } = require('@playwright/test');
 
+// 测试运行在构建产物 dist/ 上：npm test 先执行 astro build，再由 astro preview 提供页面。
 module.exports = defineConfig({
   testDir: './tests',
   fullyParallel: true,
@@ -16,7 +17,7 @@ module.exports = defineConfig({
     { name: 'mobile', use: { ...devices['Pixel 7'] } },
   ],
   webServer: {
-    command: 'npx --no-install http-server . -a 127.0.0.1 -p 4173 -c-1 --silent',
+    command: 'npx --no-install astro preview --host 127.0.0.1 --port 4173',
     url: 'http://127.0.0.1:4173/',
     reuseExistingServer: true,
   },

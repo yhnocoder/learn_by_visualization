@@ -1,0 +1,59 @@
+---
+// 从前往后读的长文：标题区、左侧目录、正文、右侧边注栏。目录由 rehypeSections 插件从 h2、h3 生成。
+import Base from './Base.astro';
+import '../styles/essay.css';
+
+interface TocItem { depth: number; id: string; html: string }
+interface Props {
+  title: string;
+  pageTitle?: string;
+  description?: string;
+  eyebrow?: string;
+  lede?: string;
+  theme?: string;
+  runtimeMath?: boolean;
+  numbered?: boolean;
+  toc?: boolean;
+  tocItems?: TocItem[];
+}
+const { title, pageTitle, description, eyebrow, lede, theme, runtimeMath, numbered = true, toc = true, tocItems = [] } = Astro.props;
+
+// 把扁平的条目整理成两级：h2 下面挂它后面的 h3
+const tree: (TocItem & { children: TocItem[] })[] = [];
+for (const item of tocItems) {
+  if (item.depth === 2 || !tree.length) tree.push({ ...item, children: [] });
+  else tree.at(-1)!.children.push(item);
+}
+const showToc = toc && tree.length > 0;
+---
+<Base title={pageTitle ?? title} description={description} theme={theme} runtimeMath={runtimeMath} bodyClass="essay-body">
+  <slot name="head" slot="head" />
+  <div class:list={['essay', { 'no-toc': !showToc, numbered }]}>
+    <header class="mast">
+      {eyebrow && <p class="eyebrow">{eyebrow}</p>}
+      <h1>{title}</h1>
+      {lede && <p class="lede" set:html={lede} />}
+    </header>
+    {showToc && (
+      <nav class="toc" aria-label="目录">
+        <p class="t">目录</p>
+        <button class="toc-toggle" type="button" aria-expanded="true" aria-controls="toc-list">目录</button>
+        <ol id="toc-list">
+          {tree.map(h2 => (
+            <li>
+              <a href={`#${h2.id}`} set:html={h2.html} />
+              {h2.children.length > 0 && <ol>{h2.children.map(h3 => <li><a href={`#${h3.id}`} set:html={h3.html} /></li>)}</ol>}
+            </li>
+          ))}
+        </ol>
+      </nav>
+    )}
+    <article>
+      <slot />
+    </article>
+  </div>
+  <script>
+    import '../scripts/toc.js';
+    import '../scripts/fold.js';
+  </script>
+</Base>

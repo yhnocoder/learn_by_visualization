@@ -1,0 +1,8 @@
+---
+// 让任意内容比正文栏更宽：Essay 版式里向右伸进边注栏，Paper 版式里横跨两栏。窄屏时与正文同宽。
+---
+<div class="wide-block"><slot /></div>
+
+<style>
+  .wide-block{margin-right:calc(-1 * var(--wide-extend, 0px)); column-span:all; clear:both}
+</style>

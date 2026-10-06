@@ -1,0 +1,34 @@
+/* Recap 组件（前文笔记侧边栏）的样式，见 src/scripts/recap.js。 */
+@property --recap-edge{syntax:'<number>';inherits:true;initial-value:0}
+.recap,.recap-fab,.recap-backdrop{--recap-ink:var(--ink,#1b1d1f);--recap-ink-2:var(--ink-2,#51585e);--recap-ink-3:var(--ink-3,#80878d);--recap-accent:var(--accent,#985b57);--recap-rule:var(--rule-2,#c7ccc6);--recap-surface:var(--surface,#fff)}
+.recap{position:sticky;top:0;align-self:start;height:100vh;height:100dvh;display:flex;flex-direction:column;padding-top:28px;font-size:13.5px;line-height:1.6;color:var(--recap-ink-2);transition:opacity .25s,visibility .25s}
+.recap.is-collapsed{opacity:0;visibility:hidden}
+.recap-head{padding:0 0 10px 14px;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11.5px;letter-spacing:.14em;color:var(--recap-ink-3)}
+.recap-foot{padding:12px 0 24px}
+.recap-foot button{font:inherit;font-size:13px;line-height:1;color:var(--recap-ink-3);background:none;border:1px solid transparent;padding:8px 12px 8px 14px;cursor:pointer}
+.recap-foot button:hover{color:var(--recap-ink)}
+.recap-list{position:relative;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;
+  -webkit-mask-image:linear-gradient(rgb(0 0 0/var(--recap-edge)),#000 var(--recap-fade-top,0px),#000 64%,rgb(0 0 0/var(--recap-edge)));
+  mask-image:linear-gradient(rgb(0 0 0/var(--recap-edge)),#000 var(--recap-fade-top,0px),#000 64%,rgb(0 0 0/var(--recap-edge)));transition:--recap-edge .3s}
+.recap-list:is(:hover,:focus-within){--recap-edge:1;scrollbar-width:thin}
+.recap ol{list-style:none;margin:0;padding:0 0 calc(50vh - 80px);padding-bottom:calc(50dvh - 80px);border-left:1px solid var(--recap-rule)}
+.recap li>a{color:inherit;text-decoration:none;border:0}
+.recap-part>a{display:block;padding:22px 8px 6px 14px;font-size:14.5px;font-weight:600;color:var(--recap-ink-2)}
+.recap-part.is-ahead>a{color:var(--recap-ink-3);opacity:.7}
+.recap li:not(.recap-part)>a{display:grid;grid-template-rows:auto 0fr;margin-left:-1px;padding:5px 8px 5px 14px;border-left:2px solid transparent;color:var(--recap-ink-2);transition:opacity .25s}
+.recap li:not(.recap-part):not(.is-read):not(.is-current)>a{color:var(--recap-ink-3);opacity:.7}
+.recap li:is(.is-read,.is-current)>a{font-weight:500}
+.recap li.is-current>a{color:var(--recap-accent);border-left-color:var(--recap-accent)}
+.recap li>a:hover{color:var(--recap-accent)}
+.recap-note{min-height:0;overflow:hidden;opacity:0;font-weight:400;font-size:12.5px;line-height:1.7;color:var(--recap-ink-2);transition:opacity .3s}
+.recap li.is-read>a{grid-template-rows:auto 1fr}
+.recap li.is-read .recap-note{opacity:1;padding:2px 0 6px}
+.recap-note>:is(img,svg,video){display:block;max-width:100%;height:auto;margin:4px 0}
+.recap.is-drawer{position:fixed;top:0;bottom:0;left:0;z-index:70;align-self:normal;height:auto;width:min(85vw,340px);padding:20px 12px 0 8px;background:var(--recap-surface);box-shadow:0 0 32px rgb(0 0 0/.25);transform:translateX(-100%);visibility:hidden;transition:transform .25s,visibility .25s}
+.recap.is-drawer.is-open{transform:none;visibility:visible}
+.recap.is-drawer .recap-list{--recap-edge:1}
+.recap-backdrop{position:fixed;inset:0;z-index:65;background:rgb(0 0 0/.35)}
+.recap-fab{position:fixed;left:0;bottom:24px;z-index:60;display:flex;align-items:center;gap:6px;padding:8px 12px 8px 10px;font:inherit;font-size:13px;line-height:1;color:var(--recap-ink-2);background:var(--recap-surface);border:1px solid var(--recap-rule);border-left:0;border-radius:0 8px 8px 0;box-shadow:0 2px 10px rgb(0 0 0/.12);cursor:pointer}
+.recap-fab:hover{color:var(--recap-ink)}
+:is(.recap-fab,.recap-backdrop)[hidden]{display:none}
+@media (prefers-reduced-motion:reduce){.recap,.recap *{transition:none!important}}

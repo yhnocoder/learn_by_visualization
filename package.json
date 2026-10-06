@@ -1,12 +1,23 @@
 {
-  "name": "interactive-htmls",
+  "name": "learn-by-visualization",
   "private": true,
   "scripts": {
-    "test": "playwright test",
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview --host 127.0.0.1 --port 4173",
+    "test": "astro build && playwright test",
     "test:report": "playwright show-report"
   },
   "devDependencies": {
+    "@astrojs/markdown-remark": "^7.3.1",
+    "@astrojs/mdx": "^8.0.2",
     "@playwright/test": "1.63.0",
-    "http-server": "14.1.1"
-  }
+    "astro": "^7.3.5",
+    "github-slugger": "^2.0.0",
+    "hast-util-to-html": "^9.0.5",
+    "rehype-mathjax": "^7.1.0",
+    "remark-math": "^6.0.0",
+    "unist-util-visit": "^5.1.0"
+  },
+  "type": "module"
 }

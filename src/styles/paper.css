@@ -1,0 +1,28 @@
+/* Paper 版式：仿 arXiv 论文的排版。标题和作者居中，摘要单独成段，正文双栏，章节编号 1、1.1。
+   网页上整篇双栏时，读者读完左栏要滚回顶部读右栏；这里按章节分别分栏，每一章的两栏各自结束，
+   滚动的距离不超过一章。视口宽度小于 1100px 时改为单栏。 */
+body.paper-body{padding:0 var(--gutter) 96px; font-size:15.5px; line-height:1.7}
+.paper{max-width:1100px; margin:0 auto; --wide-extend:0px}
+.paper-head{text-align:center; padding:56px 0 28px; border-bottom:1px solid var(--rule-2); margin-bottom:28px}
+.paper-head h1{font-size:clamp(26px,3.6vw,36px); line-height:1.3; margin:0 0 14px; font-weight:700}
+.paper-head .authors{font-size:15px; color:var(--ink-2); margin:0 0 6px}
+.paper-head .eyebrow{font-family:var(--font-mono); font-size:12px; letter-spacing:.12em; color:var(--ink-3); margin:0}
+.abstract{max-width:720px; margin:0 auto 36px; font-size:14.5px; line-height:1.7}
+.abstract h2{font-size:14px; text-align:center; margin:0 0 8px; letter-spacing:.08em}
+.abstract p{text-align:justify}
+
+.paper article{counter-reset:sec}
+.paper article > section{counter-reset:sub; margin-bottom:36px}
+.paper article h2{font-size:19px; margin:24px 0 10px; column-span:all}
+.paper article > section > h2::before{counter-increment:sec; content:counter(sec) "\2003"; font-family:var(--font-mono); font-size:16px; color:var(--ink-3)}
+.paper article h3{font-size:16px; margin:18px 0 6px; break-after:avoid}
+.paper article > section h3::before{counter-increment:sub; content:counter(sec) "." counter(sub) "\2003"; font-family:var(--font-mono); font-size:14px; color:var(--ink-3)}
+.paper article p{text-align:justify; hyphens:auto}
+.paper article figure, .paper article .tbl, .paper article pre{break-inside:avoid}
+.paper article mjx-container[display="true"]{break-inside:avoid}
+
+@media (min-width:1100px){
+  .paper article > section{columns:2; column-gap:36px; column-rule:1px solid var(--rule)}
+  /* 横跨两栏的元素：章节标题、Wide、带 wide 的图 */
+  .paper article :is(.wide, .wide-block){column-span:all; margin-block:18px 22px}
+}

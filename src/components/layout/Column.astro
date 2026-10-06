@@ -1,0 +1,10 @@
+---
+// <Columns> 里的一栏。
+---
+<div class="column"><slot /></div>
+
+<style>
+  .column{min-width:0}
+  .column > :global(:first-child){margin-top:0}
+  .column > :global(:last-child){margin-bottom:0}
+</style>

@@ -1,0 +1,22 @@
+/* 接近论文印刷稿的样式：白底黑字，正文和标题都用衬线字体，强调色是深蓝。Paper 布局默认使用这个主题。 */
+/* tokens 层在前、theme 层在后，主题无论比 tokens.css 先加载还是后加载都能覆盖它。 */
+@layer tokens, theme;
+@layer theme{
+:root{
+  --ground:light-dark(#ffffff,#141516);
+  --surface:light-dark(#ffffff,#1b1c1e);
+  --surface-2:light-dark(#f4f4f2,#232427);
+  --ink:light-dark(#111111,#e8e8e6);
+  --ink-2:light-dark(#3a3a3a,#bdbdba);
+  --ink-3:light-dark(#6b6b6b,#8c8c89);
+  --rule:light-dark(#d9d9d6,#2e2f31);
+  --rule-2:light-dark(#bdbdb9,#3c3d40);
+  --accent:light-dark(#1f3f7a,#9bb6e8);
+  --accent-soft:light-dark(#e6ebf5,#1e2738);
+  --lede-highlight:light-dark(#1f3f7a,#9bb6e8);
+  --lede-highlight-soft:light-dark(#e6ebf5,#1e2738);
+  --shadow:none;
+  --font-sans:"Noto Serif SC","Songti SC","Times New Roman",serif;
+  --font-heading:"Noto Serif SC","Songti SC","Times New Roman",serif;
+}
+}

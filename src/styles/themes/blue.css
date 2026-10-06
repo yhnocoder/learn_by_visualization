@@ -1,0 +1,11 @@
+/* 蓝色强调色，标题用 Noto Serif SC。 */
+/* tokens 层在前、theme 层在后，主题无论比 tokens.css 先加载还是后加载都能覆盖它。 */
+@layer tokens, theme;
+@layer theme{
+:root{
+  --accent:light-dark(#2f5d8a,#8ab6e3);
+  --accent-soft:light-dark(#e3ecf5,#1f2c3a);
+  --lede-highlight:light-dark(#99501f,#e5ac79);
+  --lede-highlight-soft:light-dark(#f3e3d3,#3b2d22);
+}
+}

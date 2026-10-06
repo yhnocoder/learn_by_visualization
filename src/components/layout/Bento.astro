@@ -1,0 +1,15 @@
+---
+// 卡片网格容器。每张卡片用 <Card span="2x1"> 写，span 是“列数x行数”。
+// columns 是宽屏时的列数；视口变窄时列数依次减少，卡片的列跨度不超过当前列数。
+interface Props { columns?: number; rowHeight?: string }
+const { columns = 4, rowHeight = '180px' } = Astro.props;
+---
+<div class="bento" style={`--bento-cols:${columns}; --bento-row:${rowHeight}`}>
+  <slot />
+</div>
+
+<style>
+  .bento{display:grid; grid-template-columns:repeat(var(--bento-cols),minmax(0,1fr)); grid-auto-rows:minmax(var(--bento-row),auto); grid-auto-flow:dense; gap:16px; margin:24px 0 32px}
+  @media (max-width:1099px){ .bento{--bento-cols:2 !important} }
+  @media (max-width:699px){ .bento{--bento-cols:1 !important} }
+</style>

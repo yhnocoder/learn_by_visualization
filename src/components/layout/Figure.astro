@@ -1,0 +1,40 @@
+---
+// 图的外框。图题用 <Caption> 写在最后，图题里可以写 $...$ 公式。
+//   <Figure id="fig-silu" title="SiLU 的输出与导数" float="right" width="40%">
+//     <SiluPlot />
+//     <Caption>拖动 β ……</Caption>
+//   </Figure>
+// float：left 或 right 时图浮动，正文绕排；窄屏时取消浮动。width 只在浮动时生效。
+// wide：向右伸进边注栏（Essay 版式）或横跨两栏（Paper 版式）。
+// plain：去掉边框、底色和阴影，用于图片、视频等本身已经有边界的内容。
+interface Props {
+  id?: string;
+  title?: string;
+  float?: 'left' | 'right';
+  width?: string;
+  wide?: boolean;
+  plain?: boolean;
+  class?: string;
+}
+const { id, title, float, width = '45%', wide = false, plain = false, class: className } = Astro.props;
+---
+<figure
+  id={id}
+  class:list={['fig', className, { plain, wide, [`float-${float}`]: float }]}
+  style={float ? `--float-width:${width}` : undefined}
+>
+  {title && <h4>{title}</h4>}
+  <slot />
+</figure>
+
+<style>
+  .float-left, .float-right{width:var(--float-width); margin-top:6px}
+  .float-right{float:right; margin-left:28px}
+  .float-left{float:left; margin-right:28px}
+  .wide{margin-right:calc(-1 * var(--wide-extend, 0px))}
+  @media (max-width:699px){
+    .float-left, .float-right{float:none; width:auto; margin-inline:0}
+  }
+  /* 浮动的图后面换章节时不再绕排 */
+  :global(article section){display:flow-root}
+</style>

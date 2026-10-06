@@ -1,0 +1,12 @@
+/* 红褐色强调色，标题用霞鹜文楷（LXGW WenKai）。 */
+/* tokens 层在前、theme 层在后，主题无论比 tokens.css 先加载还是后加载都能覆盖它。 */
+@layer tokens, theme;
+@layer theme{
+:root{
+  --accent:light-dark(#985b57,#d8a39c);
+  --accent-soft:light-dark(#f1e7c8,#49402b);
+  --lede-highlight:light-dark(#985b57,#d8a39c);
+  --lede-highlight-soft:light-dark(#f1e7c8,#49402b);
+  --font-heading:"LXGW WenKai","KaiTi","STKaiti","SimSun",serif;
+}
+}

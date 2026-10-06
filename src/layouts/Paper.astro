@@ -1,0 +1,39 @@
+---
+// 论文式双栏版式。frontmatter 里的 authors、abstract 显示在标题下方；章节自动编号。
+import Base from './Base.astro';
+import '../styles/paper.css';
+
+interface Props {
+  title: string;
+  pageTitle?: string;
+  description?: string;
+  eyebrow?: string;
+  authors?: string[];
+  abstract?: string;
+  theme?: string;
+  runtimeMath?: boolean;
+}
+const { title, pageTitle, description, eyebrow, authors, abstract, theme = 'print', runtimeMath } = Astro.props;
+---
+<Base title={pageTitle ?? title} description={description} theme={theme} runtimeMath={runtimeMath} bodyClass="paper-body">
+  <slot name="head" slot="head" />
+  <div class="paper">
+    <header class="paper-head">
+      <h1>{title}</h1>
+      {authors && <p class="authors">{authors.join('，')}</p>}
+      {eyebrow && <p class="eyebrow">{eyebrow}</p>}
+    </header>
+    {abstract && (
+      <div class="abstract">
+        <h2>摘要</h2>
+        <p set:html={abstract} />
+      </div>
+    )}
+    <article>
+      <slot />
+    </article>
+  </div>
+  <script>
+    import '../scripts/fold.js';
+  </script>
+</Base>

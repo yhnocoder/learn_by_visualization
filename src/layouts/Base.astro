@@ -1,0 +1,53 @@
+---
+// 所有页面的外壳：<head>、字体、token、主题与浏览器端 MathJax。版式（Essay、Paper、Bento）都包在它外面。
+import '../styles/tokens.css';
+import '../styles/base.css';
+
+interface Props {
+  title: string;
+  description?: string;
+  /** src/styles/themes/ 下的文件名 */
+  theme?: string;
+  /** 加载浏览器端 MathJax，供图里的 tex()、label() 使用 */
+  runtimeMath?: boolean;
+  /** 加在 <body> 上的类名，版式用它限定自己的样式 */
+  bodyClass?: string;
+}
+
+const { title, description, theme = 'blue', runtimeMath = false, bodyClass } = Astro.props;
+const themes = import.meta.glob<string>('../styles/themes/*.css', { query: '?raw', import: 'default', eager: true });
+const themeCss = themes[`../styles/themes/${theme}.css`];
+if (themeCss === undefined) throw new Error(`没有名为 ${theme} 的主题，可选：${Object.keys(themes).map(k => k.match(/(\w+)\.css$/)![1]).join('、')}`);
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+<!doctype html>
+<html lang="zh-CN" data-theme-name={theme}>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{title}</title>
+  {description && <meta name="description" content={description} />}
+  <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+  {theme === 'rust' && <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/lxgwwenkai-regular.css" />}
+  <style is:inline set:html={themeCss}></style>
+  {runtimeMath && (
+    <>
+      <script is:inline>
+        window.MathJax = {
+          tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$']] },
+          svg: { fontCache: 'global' },
+          // 正文公式已在构建时渲染，浏览器端只排版脚本插入的内容（见 src/lib/math.js 的 typeset）
+          startup: { typeset: false },
+        };
+      </script>
+      <script is:inline src={`${base}vendor/mathjax/3.2.2/tex-svg.js`}></script>
+    </>
+  )}
+  <slot name="head" />
+</head>
+<body class={bodyClass}>
+  <slot />
+</body>
+</html>

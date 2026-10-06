@@ -1,0 +1,50 @@
+/* 所有主题共用的 token。颜色用 light-dark() 同时给出亮色和暗色的值，
+   由 color-scheme 决定取哪一个：默认跟随系统，<html data-theme="light|dark"> 可以强制指定。
+   主题文件（themes/*.css）只覆盖强调色和字体。
+   脚本需要读取颜色的数值时，用 src/lib/tokens.js 的 readColor()，不要直接读 getPropertyValue()，
+   因为那样读到的是 light-dark(...) 这段原文。 */
+@layer tokens, theme;
+@layer tokens{
+:root{
+  color-scheme:light dark;
+  --ground:light-dark(#f5f6f4,#111413);
+  --surface:light-dark(#ffffff,#1a1e1c);
+  --surface-2:light-dark(#eef0ec,#222724);
+  --ink:light-dark(#161a1d,#e9ece7);
+  --ink-2:light-dark(#4f575e,#b4bab5);
+  --ink-3:light-dark(#7d858c,#848b86);
+  --rule:light-dark(#dde1dc,#2c312e);
+  --rule-2:light-dark(#c7ccc6,#3a403c);
+  --grid:light-dark(#e6e8e3,#262b28);
+  --axis:light-dark(#b9bfb8,#4a504c);
+  /* 数据系列的分类色 */
+  --s1:light-dark(#2a78d6,#3987e5);
+  --s2:light-dark(#eb6834,#d95926);
+  --s3:light-dark(#1baf7a,#199e70);
+  --s4:light-dark(#eda100,#c98500);
+  --s5:light-dark(#e87ba4,#d55181);
+  --s6:light-dark(#008300,#008300);
+  --s7:light-dark(#4a3aa7,#9085e9);
+  --s8:light-dark(#e34948,#e66767);
+  /* 发散色阶：负值、零、正值 */
+  --div-neg:light-dark(#2a78d6,#3987e5);
+  --div-mid:light-dark(#f0efec,#383835);
+  --div-pos:light-dark(#e34948,#e66767);
+  /* 状态色 */
+  --bad:light-dark(#e34948,#e66767); --bad-soft:light-dark(#fbe7e6,#3a2323);
+  --ok:light-dark(#1baf7a,#199e70); --ok-soft:light-dark(#e3f5ee,#1d3129);
+  --warn:light-dark(#eda100,#c98500); --warn-soft:light-dark(#fbf1da,#3a3019);
+  --code-bg:light-dark(#eef0ec,#222724);
+  --shadow:0 1px 2px light-dark(rgba(22,26,29,.06),rgba(0,0,0,.4)), 0 6px 20px light-dark(rgba(22,26,29,.05),rgba(0,0,0,.3));
+  /* 字体 */
+  --font-sans:"Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-heading:"Noto Serif SC","Songti SC","SimSun",serif;
+  --font-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  /* 正文宽度与右侧边栏宽度，布局组件 Wide 和 MarginNote 使用 */
+  --measure:820px;
+  --margin-col:260px;
+  --gutter:20px;
+}
+:root[data-theme="light"]{color-scheme:light}
+:root[data-theme="dark"]{color-scheme:dark}
+}

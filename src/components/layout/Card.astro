@@ -1,0 +1,21 @@
+---
+// Bento 网格里的一张卡片。span 是“列数x行数”，例如 "2x1" 占两列一行。
+// title 是卡片顶部的小标题；accent 为 true 时卡片用强调色的浅底色。
+interface Props { span?: string; title?: string; accent?: boolean; id?: string }
+const { span = '1x1', title, accent = false, id } = Astro.props;
+const [c, r] = span.split('x').map(Number);
+---
+<section class:list={['card', { accent }]} id={id} style={`--c:${c}; --r:${r}`}>
+  {title && <h3 class="card-title">{title}</h3>}
+  <div class="card-body"><slot /></div>
+</section>
+
+<style>
+  .card{grid-column:span min(var(--c), var(--bento-cols)); grid-row:span var(--r); background:var(--surface); border:1px solid var(--rule); border-radius:14px; padding:18px 20px; box-shadow:var(--shadow); min-width:0; display:flex; flex-direction:column; overflow:hidden; margin:0}
+  .accent{background:var(--accent-soft); border-color:transparent}
+  .card-title{font-size:15px; margin:0 0 10px; font-family:var(--font-sans); font-weight:600; color:var(--ink)}
+  .card-body{flex:1; min-height:0; font-size:15px; line-height:1.75}
+  .card-body > :global(:first-child){margin-top:0}
+  .card-body > :global(:last-child){margin-bottom:0}
+  .card-body :global(figure){margin:0}
+</style>

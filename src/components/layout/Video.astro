@@ -1,0 +1,24 @@
+---
+// 视频。src 是 public/ 下的路径（不带开头的 /）或完整 URL；需要自动循环播放的演示动画用 loop。
+interface Props { src: string; poster?: string; loop?: boolean; width?: number; height?: number; label?: string }
+const { src, poster, loop = false, width, height, label } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const url = (u?: string) => (u && !/^(https?:)?\/\//.test(u) ? base + u.replace(/^\//, '') : u);
+---
+<video
+  src={url(src)}
+  poster={url(poster)}
+  width={width}
+  height={height}
+  aria-label={label}
+  controls={!loop}
+  autoplay={loop}
+  loop={loop}
+  muted={loop}
+  playsinline
+  preload="metadata"
+></video>
+
+<style>
+  video{display:block; width:100%; height:auto; border-radius:8px; background:var(--surface-2)}
+</style>
