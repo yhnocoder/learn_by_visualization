@@ -1,0 +1,61 @@
+/* 矩阵微积分译文页面独有的样式，取自迁移前页面的样式表。base.css 和 essay.css 已有的通用样式不在这里重复。 */
+
+/* 标题区：原文出处一行写在 lede 里，显示在标题上方，字号比导语小 */
+.mast{display:flex; flex-direction:column; padding-bottom:28px}
+.mast h1{margin-bottom:14px}
+.mast .lede{order:-1; font-size:13px; color:var(--ink-2); margin:0 0 14px; line-height:1.85}
+
+/* 章节之间用分隔线隔开，不使用 section 的下边距 */
+article section{margin-bottom:0}
+article h2{border-top:1px solid var(--rule-2); padding-top:36px; margin:64px 0 22px}
+article h3{margin-top:42px; margin-bottom:18px}
+article h4{font-size:18px; margin:32px 0 16px}
+article h4{scroll-margin-top:24px}
+article p{margin:0 0 1.25em}
+article{overflow-wrap:break-word}
+article a{overflow-wrap:anywhere}
+/* 迁移前的页面把 <i> 显示为正体 */
+article i,.mast .lede i{font-style:normal}
+article mark{color:var(--accent); font-weight:600; background:linear-gradient(transparent 72%,var(--accent-soft) 72%); padding:0 .06em; box-decoration-break:clone; -webkit-box-decoration-break:clone}
+article li{margin:.2em 0 10px}
+article ol{padding-left:1.6em}
+/* 列表项里有公式或段落时 Markdown 把第一行包进 <p>；迁移前第一行是不带 <p> 的文字，没有段后距 */
+article li > p:first-child{margin-bottom:0}
+
+/* 行间公式 */
+article mjx-container[display="true"]{margin:8px 0 1.3em!important; padding:6px 0}
+
+/* 原文的插图 */
+article img{max-width:none}
+article img.original-diagram{display:block; max-width:min(100%,420px); max-height:320px; width:auto; height:auto; object-fit:contain; margin:26px auto; padding:0}
+article center{overflow-x:auto; max-width:100%}
+
+/* 原文的表格 */
+.table-scroll{overflow-x:auto; margin:24px 0; border:1px solid var(--rule); border-radius:8px; background:var(--surface)}
+article td,article th{padding:14px; min-width:120px; vertical-align:middle}
+
+/* Jacobian 维度示意表：用方框表示标量、列向量、行向量和矩阵的形状 */
+.shape-table-wrap{overflow-x:auto; margin:24px 0}
+.shape-table{width:max-content; margin:auto; background:none; font-size:16px; line-height:1.2}
+.shape-table td{padding:5px 7px; white-space:nowrap; text-align:center; min-width:0; border:0; vertical-align:bottom}
+.shape-table td:first-child{border-right:1px solid var(--ink-2); padding-inline:12px}
+.shape-table tr:nth-last-child(2) td{border-top:1px solid var(--ink-2)}
+.shape-table tr:nth-last-child(-n+2) td{vertical-align:top}
+.shape-label{font-family:"Times New Roman",serif; font-size:18px; color:var(--ink); margin-bottom:3px; line-height:1.1}
+.math-shape{display:inline-flex; align-items:center; justify-content:center; vertical-align:top; border:1px solid var(--ink-2); width:28px; height:28px; margin:0 2px; font-size:16px; line-height:1}
+.math-shape.column{height:60px}
+.math-shape.row{width:60px}
+.math-shape.matrix{width:60px; height:60px}
+
+@media (max-width:600px){
+  body.essay-body{padding-inline:16px; font-size:16px}
+  .mast{padding-top:32px}
+  .mast h1{font-size:34px}
+  article h2{font-size:27px}
+  article h3{font-size:22px}
+  article img.original-diagram{max-height:260px}
+}
+@media print{
+  .table-scroll{overflow:visible; break-inside:avoid}
+  h2,h3,h4{break-after:avoid}
+}
