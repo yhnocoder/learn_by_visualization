@@ -1,0 +1,87 @@
+---
+// 首页：按分类列出主题卡片。卡片在构建时生成，预览动画由 src/components/home/previews.js 在浏览器端运行。
+import Base from '../layouts/Base.astro';
+import { categories, topics } from '../data/topics';
+import '../components/home/home.css';
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const isStatus = (g: string) => /^(v\d+|draft)$/.test(g);
+const groups = categories
+  .map(c => ({ c, items: topics.filter(x => x.cat === c.id) }))
+  .filter(g => g.items.length);
+---
+<Base title="Learn by Visualization" description="用可交互的页面解释大模型训练、推理与深度学习中的具体机制。" theme="blue" bodyClass="home-body">
+  <div class="wrap">
+    <header>
+      <h1>Learn by Visualization</h1>
+      <p class="sub">用可交互的页面解释大模型训练、推理与深度学习中的具体机制。</p>
+    </header>
+    <nav class="chips" id="chips" aria-label="分类">
+      {groups.map(({ c, items }) => <a class="ch" href={`#cat-${c.id}`} style={`--c:${c.color}`}><i></i>{c.name}<b>{items.length}</b></a>)}
+      <span class="sp"></span>
+      <span class="cols" id="cols">列数 {[3, 4, 5].map(n => <button data-n={n}>{n}</button>)}</span>
+    </nav>
+    <main id="grid">
+      {groups.map(({ c, items }) => (
+        <section id={`cat-${c.id}`} style={`--c:${c.color}`}>
+          <div class="sh"><h2>{c.name}</h2><p>{c.desc}</p><b>{items.length}</b></div>
+          <div class="grid">
+            {items.map(x => {
+              const status = x.tags.find(isStatus);
+              return (
+                <a class="card" href={base + x.href} data-id={x.id} style={`--c:${c.color}`}>
+                  <div class="pv">
+                    {status === 'draft' && <span class="st draft" title="早期版本，内容尚未完成">draft</span>}
+                    {status && status !== 'draft' && <span class="st v" title={`已完成，版本 ${status}`}>{status}</span>}
+                  </div>
+                  <div class="body">
+                    <h2>{x.title}</h2>
+                    <p class="s">{x.summary}</p>
+                    <div class="tags">{x.tags.filter(g => !isStatus(g)).map(g => <span class="tag">{g}</span>)}</div>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+    </main>
+  </div>
+
+  <script>
+    import { previews } from '../components/home/previews.js';
+
+    // 预览：插入初始内容并画出静态画面；悬停或聚焦时运行，离开时停止。
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document.querySelectorAll<HTMLAnchorElement>('a.card').forEach(card => {
+      const make = previews[card.dataset.id as keyof typeof previews];
+      if (!make) return;
+      const p = make(), el = card.querySelector<HTMLElement>('.pv')!;
+      el.insertAdjacentHTML('beforeend', p.html);
+      p.init(el);
+      if (reduced) return;
+      const on = () => p.start(el), off = () => p.stop(el);
+      card.addEventListener('pointerenter', on); card.addEventListener('pointerleave', off);
+      card.addEventListener('focus', on); card.addEventListener('blur', off);
+    });
+
+    // 分类导航：滚动时高亮当前段落
+    const links = [...document.querySelectorAll<HTMLAnchorElement>('#chips a.ch')];
+    const io = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) links.forEach(l => l.classList.toggle('on', l.getAttribute('href') === '#' + e.target.id)); });
+    }, { rootMargin: '-15% 0px -70% 0px' });
+    document.querySelectorAll('#grid section').forEach(sec => io.observe(sec));
+
+    // 列数设置：3 到 5 列，记在 localStorage
+    const colsEl = document.getElementById('cols')!;
+    function setCols(n: number, save: boolean) {
+      document.documentElement.style.setProperty('--cols', String(n));
+      document.documentElement.dataset.cols = String(n);
+      colsEl.querySelectorAll<HTMLButtonElement>('button').forEach(b => b.classList.toggle('on', +b.dataset.n! === n));
+      if (save) try { localStorage.setItem('nav-cols', String(n)); } catch {}
+    }
+    let saved = 3; try { saved = +(localStorage.getItem('nav-cols') ?? 3) || 3; } catch {}
+    setCols(Math.min(5, Math.max(3, saved)), false);
+    colsEl.addEventListener('click', e => { const b = (e.target as Element).closest('button'); if (b) setCols(+b.dataset.n!, true); });
+  </script>
+</Base>

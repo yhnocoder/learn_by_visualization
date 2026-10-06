@@ -1,0 +1,55 @@
+/* 首页样式。颜色与字体来自 src/styles/tokens.css 和 blue 主题；--k 是 4、5 列时卡片内文字的缩放比例。 */
+:root{--k:1}
+body.home-body{line-height:1.6}
+.home-body a{color:inherit;text-decoration:none;border:0}
+.wrap{max-width:1240px;margin:0 auto;padding:0 20px}
+header{padding:56px 0 24px}
+h1{font-family:var(--font-heading);font-size:40px;margin:0 0 6px;letter-spacing:.01em}
+.sub{margin:0;color:var(--ink-2);max-width:60ch;font-size:15px}
+/* 分类导航：固定在顶部，随滚动高亮当前段落 */
+.chips{position:sticky;top:0;z-index:2;background:color-mix(in srgb,var(--ground) 88%,transparent);backdrop-filter:blur(8px);padding:12px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--rule)}
+.chips a.ch{font-size:13px;padding:5px 12px 5px 10px;border-radius:999px;border:1px solid var(--rule);background:var(--surface);color:var(--ink-2);display:flex;gap:7px;align-items:center}
+.chips a.ch i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.chips a.ch b{font-family:var(--font-mono);font-weight:400;font-size:11px;color:var(--ink-3)}
+.chips a.ch.on{border-color:var(--c);color:var(--ink);background:var(--surface-2)}
+.chips .sp{flex:1}
+.cols{display:flex;align-items:center;gap:2px;font-family:var(--font-mono);font-size:12px;color:var(--ink-3)}
+.cols button{font:inherit;width:26px;height:26px;border-radius:6px;border:1px solid transparent;background:none;color:var(--ink-3);cursor:pointer}
+.cols button.on{border-color:var(--rule);background:var(--surface);color:var(--ink)}
+@media(max-width:999px){.cols{display:none}}
+/* 分类段落 */
+section{padding:36px 0 8px;scroll-margin-top:56px}
+section+section{border-top:1px solid var(--rule)}
+.sh{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:18px;padding-left:14px;border-left:4px solid var(--c)}
+.sh h2{font-size:24px}
+.sh p{margin:0;color:var(--ink-2);font-size:14px}
+.sh b{font-family:var(--font-mono);font-weight:400;font-size:12px;color:var(--ink-3);margin-left:auto}
+main{padding-bottom:80px}
+/* 卡片网格：宽屏按设置的列数，窄屏按最小宽度自动填充；4、5 列时按 --k 缩小卡片内文字 */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px}
+@media(min-width:1000px){.grid{grid-template-columns:repeat(var(--cols,3),1fr)}:root[data-cols="4"]{--k:.88}:root[data-cols="5"]{--k:.8}}
+.card{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--rule);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);transition:transform .15s,border-color .15s;position:relative}
+.card:hover,.card:focus-visible{transform:translateY(-2px);border-color:var(--c);outline:none}
+.pv{aspect-ratio:16/9;background:var(--surface-2);position:relative;overflow:hidden;font-family:var(--font-mono)}
+.pv svg{width:100%;height:100%;display:block}
+.pv .lbl{position:absolute;right:10px;bottom:8px;font-size:calc(11px*var(--k));color:var(--ink-3)}
+.body{padding:calc(14px*var(--k)) calc(16px*var(--k)) calc(16px*var(--k));display:flex;flex-direction:column;gap:calc(6px*var(--k));flex:1}
+h2{font-family:var(--font-heading);font-size:calc(18px*var(--k));margin:0;line-height:1.35}
+.s{font-size:calc(13.5px*var(--k));color:var(--ink-2);margin:0;flex:1}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.tag{font-family:var(--font-mono);font-size:calc(11px*var(--k));color:var(--ink-3);background:var(--surface-2);padding:1px 7px;border-radius:4px}
+/* 状态标记：tags 里的 v1 表示已完成的版本，draft 表示早期版本 */
+.st{position:absolute;left:10px;top:8px;z-index:1;font-family:var(--font-mono);font-size:calc(11px*var(--k));padding:1px 8px;border-radius:999px;border:1px solid}
+.st.v{color:light-dark(#1b7a52,#7fd8a8);background:light-dark(#e3f4eb,#17352a);border-color:light-dark(#9fd6b8,#2c5f45)}
+.st.draft{color:light-dark(#9a5a00,#f0c068);background:light-dark(#fbefd4,#3a2c12);border-color:light-dark(#e8c37a,#6b5020)}
+/* 预览：浮点位串 */
+.bits{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:4px}
+.bit{width:calc(26px*var(--k));height:calc(38px*var(--k));border-radius:5px;display:grid;place-items:center;font-size:calc(16px*var(--k));font-weight:500;color:#fff;transition:opacity .2s}
+.bit.b-s{background:#e83e5d}.bit.b-e{background:#41ba63}.bit.b-m{background:#577ec7}
+.bit[data-v="0"]{opacity:.35}
+/* 预览：BPE 符号 */
+.syms{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:5px;flex-wrap:wrap;padding:0 14px}
+.sym{padding:calc(5px*var(--k)) calc(9px*var(--k));border-radius:6px;background:var(--surface);border:1px solid var(--rule);font-size:calc(14px*var(--k));transition:background .25s,border-color .25s}
+.sym.new{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.sym.eow{color:var(--ink-3)}
+@media(prefers-reduced-motion:reduce){.card{transition:none}}
