@@ -60,11 +60,36 @@ function render(tex, display){
   let entry = formulas.get(key);
   if(!entry){
     const hast = toHast(doc.convert(tex, { display }));
-    entry = { html: toHtml(hast), glyphs: collectGlyphs(hast, new Set()) };
+    entry = { id: entries.length, html: toHtml(hast), glyphs: collectGlyphs(hast, new Set()) };
     formulas.set(key, entry);
+    entries.push(entry);
   }
   return entry;
 }
+const entries = [];
+
+// 页面末尾的样式表和这一页用到的字形定义
+function cacheHtml(glyphs){
+  if(!styleSheet){
+    const sheet = toHast(output.styleSheet(doc));
+    delete sheet.properties.id;
+    styleSheet = toHtml(sheet);
+  }
+  const defs = toHast(output.fontCache.getCache());
+  defs.children = defs.children.filter(c => glyphs.has(c.properties?.id));
+  return styleSheet + toHtml(h('svg', { id: 'MJX-SVG-build-cache', style: 'display:none', 'aria-hidden': 'true' }, [defs]));
+}
+
+// 行间公式的 <pre> 带有 source-lines.mjs 加的源码位置，转到 <mjx-container> 上，页面内编辑才能点开它
+function withSource(html, attrs){
+  return attrs ? html.replace('<mjx-container', `<mjx-container${attrs}`) : html;
+}
+
+// 开发服务器里，公式在 MDX 里只留一个占位标签 <mjx-pending data-id>，页面返回给浏览器之前
+// 再由 expandMath 换成 SVG（见 inline-edit-server.mjs 里的中间件）。
+// 700 个公式的 SVG 有约 1.5 MB，放进 MDX 编译出的模块后，开发服务器每次保存都要转换、执行这么大的模块；
+// 占位标签让模块只有原来的五分之一大小。构建（astro build）时直接写入 SVG。
+const deferred = process.env.NODE_ENV !== 'production';
 
 export default function rehypeMathSvg(){
   return (tree, file) => {
@@ -86,10 +111,9 @@ export default function rehypeMathSvg(){
       }catch(cause){
         file.fail(`公式无法渲染：${tex}`, { place: node.position, cause });
       }
-      // 行间公式的 <pre> 带有 source-lines.mjs 加的源码位置，转到 <mjx-container> 上，页面内编辑才能点开它
-      let html = entry.html;
       const { dataSource, dataSourceRange } = scope.properties;
-      if(dataSourceRange) html = html.replace('<mjx-container', `<mjx-container data-source="${dataSource}" data-source-range="${dataSourceRange}"`);
+      const attrs = dataSourceRange ? ` data-source="${dataSource}" data-source-range="${dataSourceRange}"` : '';
+      const html = deferred ? `<mjx-pending data-id="${entry.id}"${attrs}></mjx-pending>` : withSource(entry.html, attrs);
       parent.children[parent.children.indexOf(scope)] = rawHtml(html, inline);
       for(const id of entry.glyphs) glyphs.add(id);
       found = true;
@@ -97,14 +121,37 @@ export default function rehypeMathSvg(){
     });
 
     if(!found) return;
-    if(!styleSheet){
-      const sheet = toHast(output.styleSheet(doc));
-      delete sheet.properties.id;
-      styleSheet = toHtml(sheet);
-    }
-    const defs = toHast(output.fontCache.getCache());
-    defs.children = defs.children.filter(c => glyphs.has(c.properties?.id));
-    const cache = h('svg', { id: 'MJX-SVG-build-cache', style: 'display:none', 'aria-hidden': 'true' }, [defs]);
-    tree.children.push(rawHtml(styleSheet + toHtml(cache), false));
+    tree.children.push(rawHtml(deferred ? '<mjx-pending-cache></mjx-pending-cache>' : cacheHtml(glyphs), false));
   };
+}
+
+const PENDING = /<mjx-pending data-id="(\d+)"([^>]*)><\/mjx-pending>/g;
+
+function replacePending(html, glyphs){
+  return html.replace(PENDING, (_, id, attrs) => {
+    const entry = entries[Number(id)];
+    for(const glyph of entry.glyphs) glyphs.add(glyph);
+    return withSource(entry.html, attrs);
+  });
+}
+
+/** 把开发服务器输出的整页 HTML 里的公式占位标签换成 SVG，并在 <mjx-pending-cache> 处写入这一页用到的字形定义。
+ *  页面里没有占位标签时原样返回。 */
+export function expandMath(html){
+  if(!html.includes('<mjx-pending')) return html;
+  const glyphs = new Set();
+  html = replacePending(html, glyphs);
+  // 一页可以包含多个 MDX 模块（例如论文版式引用正文页），字形定义只写一次
+  let first = true;
+  return html.replaceAll('<mjx-pending-cache></mjx-pending-cache>', () => first ? (first = false, cacheHtml(glyphs)) : '');
+}
+
+/** 页面内编辑的预览用：把一段 HTML 里的占位标签换成 SVG，字形定义单独返回（不带 id 和样式表，页面里已经有样式表）。 */
+export function expandMathFragment(html){
+  const glyphs = new Set();
+  html = replacePending(html, glyphs).replaceAll('<mjx-pending-cache></mjx-pending-cache>', '');
+  if(!glyphs.size) return { html, glyphs: '' };
+  const defs = toHast(output.fontCache.getCache());
+  defs.children = defs.children.filter(c => glyphs.has(c.properties?.id));
+  return { html, glyphs: toHtml(h('svg', { style: 'display:none', 'aria-hidden': 'true' }, [defs])) };
 }

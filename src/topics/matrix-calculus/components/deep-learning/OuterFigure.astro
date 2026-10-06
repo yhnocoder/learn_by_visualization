@@ -1,7 +1,7 @@
 ---
 // 权重梯度的两张图。variant 为 outer 时是一个位置的外积 x^T · ∂L/∂z（figOuter）；
 // 为 sum 时是 T = 3 个位置的外积之和 X^T G（figSum）。矩阵的格子和说明由 lib/outer.js 生成。
-import { md, tex } from '../../lib/tex-build.js';
+import { md, tex } from '../../../../lib/tex-build.js';
 interface Props { variant: 'outer' | 'sum' }
 const { variant } = Astro.props;
 // 每个位置的输入 x_t 和 Loss 对输出的导数 ∂L/∂z_t，按行排列

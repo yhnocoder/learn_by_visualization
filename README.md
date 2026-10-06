@@ -51,6 +51,7 @@ src/
     base.css                    正文、表格、图、控件的样式
   plugins/headings.mjs          标题 id、章节 <section>、目录的生成
   plugins/mathjax.mjs           构建时把正文公式渲染成 SVG（同一页的公式共用一份字形定义；渲染结果按公式缓存）
+  plugins/math-dev-server.mjs   开发时在页面返回浏览器之前写入公式 SVG（开发时 MDX 模块里只放公式的占位标签）
   plugins/raw-location.mjs      减少 Astro 的 MDX 流程里 rehype-raw 的耗时
   plugins/source-lines.mjs      开发时给正文元素标上源码位置
   plugins/inline-edit-server.mjs  开发时页面内编辑的服务端接口

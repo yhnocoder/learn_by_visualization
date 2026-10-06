@@ -18,7 +18,7 @@ import remarkMath from 'remark-math';
 import remarkRehype from 'remark-rehype';
 import rehypeRaw from 'rehype-raw';
 import rehypeStringify from 'rehype-stringify';
-import rehypeMathSvg from './mathjax.mjs';
+import rehypeMathSvg, { expandMathFragment } from './mathjax.mjs';
 
 // 公式插件输出的是带 data.html 的 MDX 节点（见 mathjax.mjs），这里换成 raw 节点，由 rehype-stringify 原样输出
 function rehypeMathToRaw(){
@@ -41,15 +41,7 @@ const preview = unified()
 async function renderPreview(text){
   // MDX 注释（标题末尾的 {/* #id */}）在 Markdown 里没有意义，预览时去掉
   const markdown = text.replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
-  const tree = preview.runSync(preview.parse(markdown));
-  // 公式插件在末尾加了一段样式和字形定义。字形定义单独返回，浏览器端把它放进页面里一个隐藏的容器
-  let glyphs = '';
-  const last = tree.children.at(-1);
-  if(last?.type === 'raw' && last.value.includes('MJX-SVG-build-cache')){
-    glyphs = last.value.replace('id="MJX-SVG-build-cache"', '');
-    tree.children.pop();
-  }
-  return { html: preview.stringify(tree), glyphs };
+  return expandMathFragment(String(await preview.process(markdown)));
 }
 
 function readBody(req){
@@ -122,20 +114,10 @@ async function renderMdxPreview(server, full, text){
   const [{ render }, mod] = await Promise.all([runner.import(RENDERER), runner.import(id)]);
   // 预览里的元素不应带源码位置：这些位置指向不存在的预览文件。
   // 组件的 <script> 也去掉：页面已经加载过这些脚本，再插入不会执行；交互图在保存、页面刷新后才初始化
-  let html = (await render(mod.default))
+  const html = (await render(mod.default))
     .replace(/ data-source(-range)?="[^"]*"/g, '')
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '');
-  let glyphs = '';
-  const at = html.indexOf('<svg id="MJX-SVG-build-cache"');
-  if(at >= 0){
-    // 公式插件在末尾加的样式和字形定义：字形定义单独返回，样式页面里已经有了
-    // （公式插件把两者连在一起输出，<style> 紧挨在 <svg> 前面）
-    const styleAt = html.lastIndexOf('<style', at);
-    const end = styleAt >= 0 && html.slice(styleAt, at).endsWith('</style>') ? styleAt : at;
-    glyphs = html.slice(at).replace('id="MJX-SVG-build-cache"', '');
-    html = html.slice(0, end);
-  }
-  return { html, glyphs };
+  return expandMathFragment(html);
 }
 
 export default function inlineEdit(){

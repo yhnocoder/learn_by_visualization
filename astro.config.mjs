@@ -8,6 +8,7 @@ import { remarkHeadingId, rehypeSections, rehypeCollectToc } from './src/plugins
 import rehypeSourceLines from './src/plugins/source-lines.mjs';
 import { remarkHideSource, rehypeRestoreSource } from './src/plugins/raw-location.mjs';
 import inlineEdit from './src/plugins/inline-edit-server.mjs';
+import mathDevServer from './src/plugins/math-dev-server.mjs';
 
 // 部署到 GitHub Pages 的项目页时，站点位于 /learn_by_visualization/ 下，由部署流程通过 BASE_PATH 传入。
 // 本地开发和测试时 BASE_PATH 为空，站点位于根路径。
@@ -24,7 +25,7 @@ export default defineConfig({
     },
   },
   trailingSlash: 'ignore',
-  integrations: [mdx(), inlineEdit()],
+  integrations: [mdx(), mathDevServer(), inlineEdit()],
   markdown: {
     processor: unified({
       // 正文里的 $...$ 和 $$...$$ 在构建时由 MathJax 渲染成 SVG，浏览器端不需要再排版正文公式。
