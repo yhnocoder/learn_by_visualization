@@ -1,0 +1,33 @@
+/* Markdown 页面编辑器的样式。正文元素沿用页面本身的样式，这里只补编辑器特有的部分。 */
+.md-editor .ProseMirror { outline: none; white-space: pre-wrap; word-wrap: break-word; }
+.md-editor .ProseMirror-selectednode { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+.md-math { cursor: pointer; border-radius: 3px; }
+.md-math:hover { background: var(--surface-2); }
+.md-math-block { display: block; margin: 1em 0; text-align: center; }
+.md-math-active { outline: 2px solid var(--accent); outline-offset: 2px; }
+.md-math-empty { color: var(--ink-3); font: 13px var(--font-sans); }
+
+.md-math-popup {
+  position: absolute; z-index: 1000; display: flex; flex-direction: column; gap: 4px;
+  padding: 6px; border-radius: 6px; border: 1px solid var(--rule); background: var(--surface);
+  box-shadow: 0 4px 16px rgb(0 0 0 / .15); font: 12px var(--font-sans); color: var(--ink-3);
+}
+.md-math-popup textarea {
+  width: min(560px, 80vw); box-sizing: border-box; resize: vertical; padding: 6px 8px;
+  font: 13px/1.5 var(--font-mono); color: var(--ink); background: var(--surface-2);
+  border: 1px solid var(--rule); border-radius: 4px;
+}
+
+.md-widget { margin: 26px 0 30px; }
+.md-widget > [role=figure] { margin: 0; }
+/* 编辑区域的 white-space 是 pre-wrap，图内部恢复正常的空白处理 */
+.md-widget .widget-ui { white-space: normal; }
+.md-widget-panel {
+  display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin-bottom: 6px;
+  font: 12px var(--font-sans); color: var(--ink-3); user-select: none;
+}
+.md-widget-name { font-family: var(--font-mono); color: var(--accent); }
+.md-widget-panel label { display: inline-flex; gap: 6px; align-items: center; }
+.md-widget-panel input { width: 72px; font: 12px var(--font-mono); padding: 2px 4px; border: 1px solid var(--rule); border-radius: 4px; background: var(--surface); color: var(--ink); }
+.md-widget-error { color: #c33; }

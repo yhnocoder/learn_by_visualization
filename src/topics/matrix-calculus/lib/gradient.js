@@ -24,11 +24,13 @@ function branch(c,sgn){
 }
 function fmt(v){return (Math.abs(v)<5e-4?0:v).toFixed(3);}
 
-export function initGradient(fig){
+/** 初始化一张梯度图。x0、y0 是初始位置。 */
+export function initGradient(fig, { x0: initX = 1.2, y0: initY = 0.8 } = {}){
   const q=s=>fig.querySelector(`[data-grad="${s}"]`);
   const fld=q('field'), sx=q('sx'), sy=q('sy'), inX=q('x'), inY=q('y');
   const p=fig.id+'-';   // 这张图里 marker、clipPath、渐变的 id 前缀
-  let x0=1.2, y0=0.8;
+  let x0=initX, y0=initY;
+  inX.value=x0; inY.value=y0;
 
   const img=el('image',{x:FL,y:FT,width:FW-FL-FR_,height:FW-FT-FB,preserveAspectRatio:'none',style:'opacity:.55'});
   const defsF=el('defs',{});

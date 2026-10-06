@@ -1,23 +1,47 @@
 ---
 // 每个 src/topics/**/*.mdx 生成一个页面，按 frontmatter 的 format 选择版式。
+// src/topics/**/*.md（Markdown 加指令块，见 src/lib/markdown-page.js）同样生成页面，正文用 essay 版式。
 import { getCollection, render } from 'astro:content';
 import Essay from '../../layouts/Essay.astro';
 import Paper from '../../layouts/Paper.astro';
 import BentoPage from '../../layouts/BentoPage.astro';
+import MarkdownEditor from '../../components/dev/MarkdownEditor.astro';
+import { loadMarkdownPages, renderMarkdownPage } from '../../lib/markdown-page.js';
 
 export async function getStaticPaths() {
   const entries = await getCollection('topics');
-  return entries.map(entry => ({ params: { slug: entry.id }, props: { entry } }));
+  const pages = loadMarkdownPages();
+  return [
+    ...entries.map(entry => ({ params: { slug: entry.id }, props: { entry } })),
+    ...pages.map(page => ({ params: { slug: page.id }, props: { page } })),
+  ];
 }
 
-const { entry } = Astro.props;
-const { Content, remarkPluginFrontmatter } = await render(entry);
-const data = entry.data;
+const { entry, page } = Astro.props;
+let Content, toc = [], html = '';
+if (entry) {
+  const rendered = await render(entry);
+  Content = rendered.Content;
+  toc = rendered.remarkPluginFrontmatter.toc ?? [];
+} else {
+  ({ html, toc } = await renderMarkdownPage(page.body, page.filePath));
+}
+const data = (entry ?? page).data;
 ---
-{data.format === 'paper' ? (
+{page ? (
+  <Essay {...data} tocItems={toc}>
+    <div class="md-body" data-md-file={import.meta.env.DEV ? page.filePath : undefined} set:html={html} />
+    {import.meta.env.DEV && <MarkdownEditor />}
+  </Essay>
+) : data.format === 'paper' ? (
   <Paper {...data}><Content /></Paper>
 ) : data.format === 'bento' ? (
   <BentoPage {...data}><Content /></BentoPage>
 ) : (
-  <Essay {...data} tocItems={remarkPluginFrontmatter.toc ?? []}><Content /></Essay>
+  <Essay {...data} tocItems={toc}><Content /></Essay>
 )}
+
+<script>
+  import { loadElements } from '../../elements/registry.js';
+  loadElements();
+</script>

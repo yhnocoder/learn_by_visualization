@@ -40,9 +40,9 @@ tr:last-child td{border-bottom:0}
 td.m{font-family:var(--font-mono); font-size:13px; white-space:nowrap; font-variant-numeric:tabular-nums}
 td.r,th.r{text-align:right}
 
-/* 图：Figure 组件输出 <figure class="fig">，图题在 figcaption 里 */
-figure{margin:26px 0 30px}
-figure.fig{background:var(--surface); border:1px solid var(--rule); border-radius:10px; padding:18px 18px 12px; box-shadow:var(--shadow)}
+/* 图：Figure 组件输出 <figure class="fig">，图题在 figcaption 里。Markdown 页面的交互图是带 role="figure" 的 custom element */
+figure, [role=figure]{margin:26px 0 30px}
+:is(figure, [role=figure]).fig{background:var(--surface); border:1px solid var(--rule); border-radius:10px; padding:18px 18px 12px; box-shadow:var(--shadow)}
 figure.fig.plain{background:none; border:0; padding:0; box-shadow:none}
 figure h4{margin:0 0 10px; font-size:15px; font-weight:600; color:var(--ink); font-family:var(--font-sans)}
 figcaption{font-size:14px; color:var(--ink-2); line-height:1.7; margin-top:12px; padding-top:10px; border-top:1px solid var(--rule)}

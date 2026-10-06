@@ -22,6 +22,25 @@
 
 实现在 `src/plugins/source-lines.mjs`（给正文元素标上源码位置）、`src/plugins/inline-edit-server.mjs`（读取、预览、保存的接口）和 `src/components/dev/`。
 
+## Markdown 页面与所见即所得编辑器（原型）
+
+`src/topics/` 下的 `.md` 文件也生成页面，地址规则与 `.mdx` 相同。目前只有一个原型页面：`src/topics/matrix-calculus/partials.md`（`/topics/matrix-calculus/partials/`），内容取自深度学习矩阵微积分一页的“标量对向量”一节。
+
+内容格式是 Markdown 加公式（`$...$`、`$$...$$`）加指令块（remark-directive 语法），不允许在段落里写 HTML：
+
+- `:mark[文字]`：文字标记。
+- `:::gradient-figure{x0="1.2" y0="0.8"}` … `:::`：交互图。名字带连字符的容器指令输出同名的 custom element，指令里的内容是图题。元素在 `src/elements/registry.js` 登记，读者或作者可能调整的数值写在元素类的 `static properties` 里。
+
+`npm run dev` 打开 Markdown 页面时，右下角有“编辑”按钮。点开后正文直接在页面上编辑：
+
+- 文字直接输入，排版与发布后的页面相同，输入时不重新编译。
+- 点击公式，在下方修改 LaTeX，公式随输入重新渲染。输入 `$a^2$` 生成行内公式，在空段落里输入 `$$` 加空格生成行间公式。
+- 交互图在编辑器里正常运行；图上方的属性面板修改属性，图随之重画；图题和正文一样编辑。
+- Ctrl/Cmd+Shift+H 加上或去掉文字标记。
+- 停止输入后自动写回 `.md` 文件，Ctrl/Cmd+S 立即保存。保存不会刷新页面；在编辑器之外修改 `.md` 文件后需要手动刷新。
+
+实现在 `src/editor/`（编辑器，基于 Milkdown）、`src/plugins/markdown-edit-server.mjs`（读取、保存的接口）、`src/lib/markdown-page.js`（读取和渲染 Markdown 页面）和 `src/plugins/directives.mjs`（指令块）。
+
 ## 目录结构
 
 ```

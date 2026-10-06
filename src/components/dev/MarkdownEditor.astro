@@ -1,0 +1,59 @@
+---
+// Markdown 页面（src/topics/**/*.md）的编辑开关，只在 astro dev 里渲染。点“编辑”后，正文换成所见即所得编辑器
+// （src/editor/editor.js），再点一次退出编辑并刷新页面。编辑状态在刷新后保留。
+---
+<div class="md-edit-bar">
+  <span class="md-edit-status" hidden></span>
+  <button type="button" class="md-edit-toggle" aria-pressed="false">编辑</button>
+</div>
+
+<style is:inline>
+  .md-edit-bar {
+    position: fixed; right: 16px; bottom: 16px; z-index: 1000; display: flex; gap: 10px; align-items: center;
+    font: 600 13px/1 var(--font-sans);
+  }
+  .md-edit-bar button {
+    font: inherit; padding: 9px 14px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--rule); background: var(--surface); color: var(--ink); box-shadow: 0 2px 10px rgb(0 0 0 / .12);
+  }
+  .md-edit-bar button[aria-pressed="true"] { background: var(--accent); border-color: transparent; color: #fff; }
+  .md-edit-status { font-weight: 400; color: var(--ink-3); background: var(--surface); padding: 6px 8px; border-radius: 4px; }
+  .md-edit-status.error { color: #c33; }
+</style>
+
+<script>
+  const toggle = document.querySelector<HTMLButtonElement>('.md-edit-toggle')!;
+  const status = document.querySelector<HTMLElement>('.md-edit-status')!;
+  const body = document.querySelector<HTMLElement>('.md-body[data-md-file]')!;
+  let session: { flush(): Promise<unknown> } | null = null;
+
+  const setStatus = (text: string, error = false) => {
+    status.hidden = false;
+    status.textContent = text;
+    status.classList.toggle('error', error);
+  };
+
+  async function start(){
+    toggle.setAttribute('aria-pressed', 'true');
+    toggle.textContent = '退出编辑';
+    try{ sessionStorage.setItem('md-edit-on', '1'); }catch{}
+    setStatus('正在载入编辑器……');
+    try{
+      // 用开发服务器上的绝对路径加载，构建时打包工具不会把编辑器打包进页面
+      const { startEditor } = await import(/* @vite-ignore */ `${import.meta.env.BASE_URL}src/editor/editor.js`);
+      session = await startEditor(body, body.dataset.mdFile!, setStatus);
+    }catch(error){
+      setStatus(`编辑器载入失败：${(error as Error).message}`, true);
+      console.error(error);
+    }
+  }
+
+  async function stop(){
+    try{ sessionStorage.removeItem('md-edit-on'); }catch{}
+    await session?.flush();
+    location.reload();
+  }
+
+  toggle.addEventListener('click', () => (toggle.getAttribute('aria-pressed') === 'true' ? stop() : start()));
+  try{ if(sessionStorage.getItem('md-edit-on')) start(); }catch{}
+</script>
