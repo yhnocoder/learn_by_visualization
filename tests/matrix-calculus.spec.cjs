@@ -8,7 +8,8 @@ test('Matrix calculus translation preserves original assets and renders on all s
   await page.evaluate(async () => { await Promise.all([...document.images].map(img => img.decode())); });
   await expect(page.locator('article img')).toHaveCount(4);
   await expect(page.locator('article img[src$=".svg"]')).toHaveCount(0);
-  await page.evaluate(() => MathJax.startup.promise);
+  // 公式在构建时渲染成 SVG，页面不加载浏览器端 MathJax
+  await expect(page.locator('article mjx-container svg').first()).toBeVisible();
   await expect(page.locator('[data-mml-node="merror"], mjx-merror')).toHaveCount(0);
   expect(await page.locator('mjx-container').count()).toBeGreaterThan(700);
   await expect(page.locator('article table')).toHaveCount(5);
