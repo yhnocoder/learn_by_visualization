@@ -1,0 +1,98 @@
+/* 《深度学习中的矩阵微积分》一页的样式。只属于一张图的样式写在 components/deep-learning/ 的组件里，
+   这里是版式的调整、正文元素的样式，以及几张图共用的样式（计算图、矩阵格子、函数切换按钮）。 */
+
+/* ---------- 版式：左侧是前文笔记侧边栏（Recap），不是目录 ----------
+   Essay 版式在 toc: false 时只有正文栏和右侧边注栏，没有给左侧侧边栏留位置；Recap 组件又写在正文里，
+   不是版式网格的直接子元素。这里在视口宽于 1240px 时把网格改为“侧边栏 280px + 正文 820px”，
+   正文所在的 article 作为定位参照，.recap-rail 用绝对定位放在正文左侧、与正文等高，
+   侧边栏在 .recap-rail 里按 sticky 定位。侧边栏收起时把它的宽度让给正文。
+   视口不超过 1240px 时侧边栏是从左侧滑出的抽屉（position: fixed），这里的规则都不生效。 */
+@media (min-width:1241px){
+  .essay:has(nav.recap){grid-template-columns:280px minmax(0,820px); max-width:1156px; column-gap:56px; --wide-extend:0px}
+  .essay:has(nav.recap) > article{grid-column:2; position:relative}
+  .essay:has(nav.recap.is-collapsed){grid-template-columns:0 minmax(0,1156px); column-gap:0}
+  .recap-rail{position:absolute; top:0; bottom:0; right:calc(100% + 56px); width:280px}
+}
+
+/* 标题区：导语下面一行说明与 Parr 和 Howard 原文的关系 */
+.essay:has(nav.recap) .mast{padding-bottom:43px}
+.essay:has(nav.recap) .mast .lede{max-width:52em}
+.mast .lede .watermark{display:block; margin-top:26px; font-size:13px; line-height:1.85; color:var(--ink-2)}
+
+/* ---------- 正文 ---------- */
+article section:first-of-type h2{border-top:0; padding-top:0; margin-top:0}
+article h2{border-top:1px solid var(--rule-2); padding-top:36px; margin:64px 0 22px}
+article h3{margin-top:42px; margin-bottom:16px}
+article :is(h2,h3){clear:both}
+article p{margin:0 0 1.25em}
+article ol.pts{padding-left:1.4em; margin:0 0 1.25em}
+article ol.pts li{margin-bottom:.4em}
+mjx-container[display="true"]{margin:.5em 0 1em !important; padding:4px 0}
+mark{color:var(--accent); font-weight:500; background:linear-gradient(transparent 72%,var(--accent-soft) 72%); padding:0 .06em; -webkit-box-decoration-break:clone; box-decoration-break:clone}
+article blockquote{margin:22px 0 28px; padding:20px 26px; border:0; border-radius:12px; background:var(--surface-2); font-family:var(--font-heading); font-size:18px; line-height:1.7; color:var(--ink); text-wrap:pretty}
+article blockquote p{margin:0}
+article blockquote p + p{margin-top:8px; font-size:13px; color:var(--ink-3)}
+
+/* 导数形状表：输入和输出分别是标量、向量、矩阵时导数的形状 */
+.shape{overflow-x:auto; margin:22px 0 28px; border:1px solid var(--rule); border-radius:10px; background:var(--surface)}
+.shape table{font-size:14px; table-layout:fixed; min-width:800px}
+.shape th,.shape td{vertical-align:middle; text-align:center; padding:12px 10px; min-width:0}
+.shape th.corner{text-align:left; color:var(--ink-3); font-weight:400; font-size:12px; line-height:1.5}
+.shape th.row{background:var(--surface-2); white-space:nowrap; vertical-align:middle; font-family:inherit; font-size:14px; color:var(--ink); letter-spacing:0; text-align:left}
+.shape thead th:not(.corner){font-size:14px; color:var(--ink); letter-spacing:0}
+.shape td.no{background:color-mix(in srgb,var(--surface-2) 60%,transparent); color:var(--ink-2)}
+.shape td.want{box-shadow:inset 0 0 0 2px var(--accent)}
+.shape td mjx-container[display="true"]{margin:0 !important; font-size:92%}
+
+/* 标量求导规则表、速查表、符号说明、参考文献 */
+.rules{overflow-x:auto; margin:14px 0 10px; border:1px solid var(--rule); border-radius:10px; background:var(--surface)}
+.rules table{font-size:14.5px}
+.rules th,.rules td{padding:10px 12px; vertical-align:middle}
+.rules td:first-child{white-space:nowrap; font-weight:500}
+.cheat table{font-size:14px}
+.cheat td,.cheat th{vertical-align:middle; padding:10px 12px}
+.cheat td:first-child{white-space:nowrap; font-weight:500}
+.refs{font-size:14px; color:var(--ink-2); line-height:1.75}
+.refs ol{padding-left:1.6em; margin:0}
+.refs li{margin:0 0 6px}
+.refs li::marker{color:var(--ink-3)}
+
+/* ---------- 图里由 tex() 生成的公式 ----------
+   tex() 把公式作为嵌套的 <svg class="tex"> 放进图里，用 width、height 属性给出大小。
+   graph.css 的 .model-wrap svg 与 base.css 的 .plot svg 设定了 width:100%，也作用到这些嵌套的 <svg> 上；
+   Chromium 对嵌套 <svg> 采用 CSS 的 width，公式因此被放大到整张图的宽度。
+   revert-layer 撤销作者样式里的这几个属性，嵌套 <svg> 回到 width、height 属性给出的大小。 */
+:is(.model-wrap,.plot) svg svg.tex{width:revert-layer; height:revert-layer; min-width:revert-layer; max-width:revert-layer}
+
+/* ---------- 计算图（ModelGraph、BlockGraph、TailGraph、Backprop 共用） ---------- */
+figure.model-fig{overflow-x:auto}
+.model-wrap{min-width:600px}
+.fold .model-wrap{min-width:0}
+.model-wrap rect.hlrect{fill:var(--accent); fill-opacity:.12; stroke:var(--accent); stroke-width:1.5}
+
+/* ---------- 函数与分量对的切换按钮（TangentFigure、RopeFigure 共用） ---------- */
+:is(.tan,.rope) .fn{display:flex; gap:6px; flex-wrap:wrap}
+:is(.tan,.rope) .fn button{font:inherit; font-size:13px; padding:4px 12px; border:1px solid var(--rule-2); border-radius:99px; background:var(--surface); color:var(--ink-2); cursor:pointer}
+:is(.tan,.rope) .fn button[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:var(--surface)}
+:is(.tan,.rope) .fn button mjx-container{font-size:13px}
+
+/* ---------- 矩阵格子与说明框（JacobianFigure、OuterFigure 共用） ---------- */
+.jac{clear:both}
+.jac .eq{display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:8px 14px; margin:6px 0 14px; font-size:15px}
+.jac .eq .op{font-size:18px; color:var(--ink-2)}
+.jac .mat{position:relative; display:inline-grid; gap:3px; padding:5px 8px; border-left:1.5px solid var(--ink-2); border-right:1.5px solid var(--ink-2)}
+.jac .mat::before,.jac .mat::after{content:""; position:absolute; top:0; bottom:0; width:6px; border-top:1.5px solid var(--ink-2); border-bottom:1.5px solid var(--ink-2)}
+.jac .mat::before{left:0}
+.jac .mat::after{right:0}
+.jac .mat .c{min-width:64px; padding:6px 8px; border-radius:5px; text-align:center; font-family:var(--font-mono); font-size:14px; font-variant-numeric:tabular-nums; background:var(--surface-2); transition:background .15s,box-shadow .15s}
+.jac .mat .c small{display:block; font-size:11px; color:var(--ink-3); font-family:inherit; margin-top:1px}
+.jac .mat .c.on{background:var(--accent-soft); box-shadow:inset 0 0 0 1.5px var(--accent)}
+.jac .mat.x .c{--accent:var(--s3); color:var(--s3)}
+.jac .mat.z .c{--accent:var(--s5); color:var(--s5)}
+.jac .mat.x .c small,.jac .mat.z .c small{color:inherit; opacity:.75}
+.jac .mat .c b{font-weight:500}
+.jac .mat.x .c b,.jac .mat.z .c b{color:var(--ink)}
+.jac .name{font-size:15px; margin-right:2px}
+.jac .say{min-height:3.2em; font-size:14.5px; padding:10px 14px; background:var(--surface-2); border-radius:8px; line-height:1.7; margin-top:10px}
+.jac .say b{font-family:var(--font-mono); font-weight:500; font-variant-numeric:tabular-nums}
+@media (max-width:720px){ .jac .mat .c{min-width:54px; padding:5px 6px; font-size:13px} }

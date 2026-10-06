@@ -1,0 +1,48 @@
+---
+// 权重梯度的两张图。variant 为 outer 时是一个位置的外积 x^T · ∂L/∂z（figOuter）；
+// 为 sum 时是 T = 3 个位置的外积之和 X^T G（figSum）。矩阵的格子和说明由 lib/outer.js 生成。
+import { md, tex } from '../../lib/tex-build.js';
+interface Props { variant: 'outer' | 'sum' }
+const { variant } = Astro.props;
+// 每个位置的输入 x_t 和 Loss 对输出的导数 ∂L/∂z_t，按行排列
+const data = variant === 'outer'
+  ? { X: [[1, -0.5]], G: [[1, 0, -1]] }
+  : { X: [[1, -0.5], [0.5, 2], [-1, 1]], G: [[1, 0, -1], [0, 1, 0.5], [0.5, -1, 0]] };
+---
+{variant === 'outer' ? (
+  <figure class="fig jac dl-outer" id="figOuter" data-x={JSON.stringify(data.X)} data-g={JSON.stringify(data.G)}>
+    <div class="eq">
+      <span class="name" set:html={tex('\\mathbf{x}^{T}')} /><div class="mat x" data-m="x"></div>
+      <span class="op">·</span><span class="name" set:html={tex('\\dfrac{\\partial L}{\\partial \\mathbf{z}}')} /><div class="mat z" data-m="g"></div>
+      <span class="op">=</span><span class="name" set:html={tex('\\dfrac{\\partial L}{\\partial W}')} /><div class="mat" data-m="o0"></div>
+    </div>
+    <div class="say">指针停在任意一格上显示该格的计算。</div>
+  </figure>
+) : (
+  <figure class="fig jac sum dl-outer" id="figSum" data-x={JSON.stringify(data.X)} data-g={JSON.stringify(data.G)}>
+    <div class="eq">
+      <span class="name" set:html={tex('X')} /><div class="mat x" data-m="x"></div>
+      <span class="name" set:html={tex('G')} /><div class="mat z" data-m="g"></div>
+    </div>
+    <div class="eq">
+      <div class="blk"><span class="cap">位置 1</span><div class="mat" data-m="o0"></div></div><span class="op">+</span>
+      <div class="blk"><span class="cap">位置 2</span><div class="mat" data-m="o1"></div></div><span class="op">+</span>
+      <div class="blk"><span class="cap">位置 3</span><div class="mat" data-m="o2"></div></div><span class="op">=</span>
+      <div class="blk"><span class="cap" set:html={tex('X^{T}G')} /><div class="mat" data-m="s"></div></div>
+    </div>
+    <div class="say" set:html={md('每个位置贡献一个外积 $\\mathbf{x}_t^{T}\\,\\dfrac{\\partial L}{\\partial \\mathbf{z}_t}$，三个外积相加得到 $X^{T}G$。指针停在任意一格上显示该格的计算。')} />
+  </figure>
+)}
+
+<script>
+  import { runtimeMathReady } from '../../lib/runtime-math.js';
+  import { initOuter } from '../../lib/outer.js';
+  await runtimeMathReady();
+  document.querySelectorAll<HTMLElement>('figure.dl-outer').forEach(fig => initOuter(fig, JSON.parse(fig.dataset.x!), JSON.parse(fig.dataset.g!)));
+</script>
+
+<style is:global>
+  .jac .blk{display:flex; flex-direction:column; align-items:center; gap:4px}
+  .jac .blk .cap{font-size:13px; color:var(--ink-2)}
+  .jac.sum .mat .c{min-width:44px; padding:4px 6px; font-size:13px}
+</style>

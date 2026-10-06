@@ -1,0 +1,26 @@
+---
+// 模型最后一段在一个位置上的计算（LM head、softmax、cross-entropy），浮动在正文左侧。
+// variant 为 loss 时高亮 logits 到 Loss；为 head 时高亮 LM head 的输入到 logits，并在左侧标出 ∂ℓ/∂z。
+interface Props { id: string; variant: 'loss' | 'head'; label: string }
+const { id, variant, label } = Astro.props;
+---
+<figure class="fig model-fig local">
+  <div class="model-wrap"><svg id={id} class="dl-tail" data-variant={variant} viewBox="0 0 330 380" role="img" aria-label={label}></svg></div>
+</figure>
+
+<script>
+  import { runtimeMathReady } from '../../lib/runtime-math.js';
+  import { buildTail } from '../../lib/model.js';
+  await runtimeMathReady();
+  document.querySelectorAll<SVGSVGElement>('svg.dl-tail').forEach(svg => {
+    if(svg.dataset.variant === 'loss') buildTail(svg, 'z', 'loss');
+    else buildTail(svg, 'x', 'z', { from: 'softmax', to: 'loss', label: '$\\dfrac{\\partial \\ell}{\\partial \\mathbf{z}} = \\mathbf{p} - \\mathbf{y}$' });
+  });
+</script>
+
+<style is:global>
+  figure.local{float:left; width:370px; margin:6px 28px 16px 0; padding:10px}
+  figure.local .model-wrap{min-width:0}
+  /* 窄屏时取消浮动；宽度不超过正文栏，否则 370px 的图会超出右侧页边距 */
+  @media (max-width:720px){ figure.local{float:none; margin:20px auto; max-width:100%; box-sizing:border-box} }
+</style>

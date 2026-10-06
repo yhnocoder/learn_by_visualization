@@ -1,0 +1,27 @@
+---
+// 链式法则的路径图，kind 见 lib/paths.js。图由脚本在浏览器端画出。
+interface Props { id: string; kind: 'chain' | 'paths' | 'vecPaths' | 'headPaths'; label: string }
+const { id, kind, label } = Astro.props;
+const height = kind === 'chain' ? 104 : 200;
+---
+<figure class="fig paths">
+  <svg id={id} class="dl-paths" data-kind={kind} viewBox={`0 0 520 ${height}`} role="img" aria-label={label}></svg>
+</figure>
+
+<script>
+  import { runtimeMathReady } from '../../lib/runtime-math.js';
+  import { drawPaths } from '../../lib/paths.js';
+  await runtimeMathReady();
+  document.querySelectorAll<SVGSVGElement>('svg.dl-paths').forEach(drawPaths);
+</script>
+
+<style is:global>
+  .paths > svg{width:100%; max-width:520px; height:auto; display:block; margin:0 auto}
+  .paths > svg > text{font:13px var(--font-sans); fill:var(--ink); white-space:pre}
+  .paths > svg > rect{fill:var(--surface-2); stroke:var(--rule-2); rx:6}
+  .paths > svg > path{fill:none; stroke:var(--ink-2); stroke-width:1.3}
+  .paths > svg > path.b{stroke:var(--s1)}
+  .paths > svg > path.f{opacity:.35}
+  .paths > svg > rect.bg{fill:var(--surface); stroke:none}
+  .paths svg.tex{overflow:visible; color:var(--ink)}
+</style>

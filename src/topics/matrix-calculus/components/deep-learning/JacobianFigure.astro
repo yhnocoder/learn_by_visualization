@@ -1,0 +1,55 @@
+---
+// 矩阵乘法 z = x·W（n = 2，m = 3）与它的 Jacobian。滑块改变 x，指针停在一格上显示该格的含义。脚本在 lib/jacobian.js。
+// 矩阵的样式（.jac .mat）在 deep-learning.css，与权重梯度的两张图共用。
+import { md, tex } from '../../lib/tex-build.js';
+const W = [[1, -2, 0.5], [0.5, 1, -1]];
+---
+<figure class="fig jac" id="figJac" data-jacobian>
+  <div class="controls">
+    {[1, 2].map(i => (
+      <label class="x"><Fragment set:html={tex(`x_${i}`)} /> <input type="range" id={`jx${i}`} data-jac={`x${i}`} min="-2" max="2" step="0.01" value={i === 1 ? '1' : '-0.5'} /> <span class="v" id={`jx${i}v`} data-jac={`x${i}v`}>{i === 1 ? '1.00' : '-0.50'}</span></label>
+    ))}
+  </div>
+  <div class="eq" id="jeq">
+    <span class="name" set:html={tex('\\mathbf{x}')} />
+    <div class="mat x" style="grid-template-columns:repeat(2,auto)">
+      {[1, 2].map(i => <div class="c" data-x={i}><b id={`jx${i}c`} data-jac={`x${i}c`}>0</b><small set:html={tex(`x_${i}`)} /></div>)}
+    </div>
+    <span class="op">·</span><span class="name" set:html={tex('W')} />
+    <div class="mat w" style="grid-template-columns:repeat(3,auto)">
+      {W.map((row, i) => row.map((v, j) => <div class="c" data-i={i + 1} data-j={j + 1}><b>{v}</b><small set:html={tex(`W_{${i + 1}${j + 1}}`)} /></div>))}
+    </div>
+    <span class="op">=</span><span class="name" set:html={tex('\\mathbf{z}')} />
+    <div class="mat z" style="grid-template-columns:repeat(3,auto)">
+      {[1, 2, 3].map(j => <div class="c" data-z={j}><b id={`jz${j}`} data-jac={`z${j}`}>0</b><small set:html={tex(`z_${j}`)} /></div>)}
+    </div>
+  </div>
+  <div class="side">
+    <div>
+      <div class="h" set:html={md('$\\mathbf{z}$ 对 $\\mathbf{x}$ 的 Jacobian，$3 \\times 2$：第 $j$ 行第 $i$ 列是 $\\partial z_j / \\partial x_i = W_{ij}$。第 $i$ 列是 $x_i$ 变化时三个输出各自的变化率，即 $W$ 的第 $i$ 行。整个矩阵是 $W^{T}$，不随 $\\mathbf{x}$ 变。')} />
+      <div class="row">
+        <span class="name" set:html={md('$J = \\dfrac{\\partial \\mathbf{z}}{\\partial \\mathbf{x}}$ =')} />
+        <div class="mat dx" style="grid-template-columns:repeat(2,auto)">
+          {[1, 2, 3].map(j => [1, 2].map(i => <div class="c" data-di={i} data-j={j}><b>{W[i - 1][j - 1]}</b></div>))}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="say" id="jsay" data-jac="say" set:html={md('移动滑块改变 $\\mathbf{x}$，指针停在任意一格上显示该格的含义。')} />
+</figure>
+
+<script>
+  import { runtimeMathReady } from '../../lib/runtime-math.js';
+  import { initJacobian } from '../../lib/jacobian.js';
+  await runtimeMathReady();
+  document.querySelectorAll<HTMLElement>('figure[data-jacobian]').forEach(initJacobian);
+</script>
+
+<style is:global>
+  .jac .side{margin-top:4px}
+  .jac .side .h{font-size:13.5px; color:var(--ink-2); margin-bottom:6px; line-height:1.7}
+  .jac .side .row{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px}
+  .jac .side .mat .c{min-width:56px; padding:4px 6px}
+  .jac .controls label.x{--accent:var(--s3)}
+  .jac .controls input[type=range]{accent-color:var(--accent); width:150px}
+</style>

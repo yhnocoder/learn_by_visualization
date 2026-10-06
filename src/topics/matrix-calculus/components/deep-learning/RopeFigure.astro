@@ -1,0 +1,63 @@
+---
+// RoPE 中一对分量的旋转：选择分量对，设置 query 的位置 t 和 key 的位置 s，比较旋转前后的点积。脚本在 lib/rope.js。
+import { md, tex } from '../../lib/tex-build.js';
+// 读数：说明文字（含公式）、显示数值的元素的 data-rope 键与 id、初始值、颜色类
+const readout = [
+  ['这一对的 $\\theta_k$', 'th', 'ropeTh', '1', ''],
+  ['query 转过的角度 $t\\theta_k$', 'aq', 'ropeAq', '3.000', 'q'],
+  ['key 转过的角度 $s\\theta_k$', 'ak', 'ropeAk', '1.000', 'k'],
+  ['位置差 $t - s$', 'd', 'ropeD', '2', ''],
+  ['旋转前的点积 $\\mathbf{q}\\mathbf{k}^{T}$', 'dot0', 'ropeDot0', '0.430', ''],
+  ['旋转后的点积 $(\\mathbf{q}R_t)(\\mathbf{k}R_s)^{T}$', 'dot', 'ropeDot', '0.000', ''],
+];
+---
+<figure class="fig rope" id="figRope">
+  <div class="controls">
+    <span class="fn" role="group" aria-label="选择分量对">
+      {[0, 1, 2, 3].map(k => <button type="button" data-k={k} aria-pressed={String(k === 0)}>第 {k + 1} 对</button>)}
+    </span>
+  </div>
+  <div class="controls">
+    <label><Fragment set:html={tex('t')} /> <input type="range" id="ropeT" data-rope="t" min="0" max="20" step="1" value="3" /> <span class="v" id="ropeTv" data-rope="tv">3</span></label>
+    <label><Fragment set:html={tex('s')} /> <input type="range" id="ropeS" data-rope="s" min="0" max="20" step="1" value="1" /> <span class="v" id="ropeSv" data-rope="sv">1</span></label>
+    <button type="button" class="btn" id="ropeUp" data-rope="up" set:html={md('$t$ 和 $s$ 同时加 1')} />
+    <button type="button" class="btn" id="ropeDown" data-rope="down">同时减 1</button>
+    <button type="button" class="btn" id="ropeReset" data-rope="reset">重置</button>
+  </div>
+  <div class="stage">
+    <div class="plot"><svg id="ropeSvg" data-rope="svg" viewBox="0 0 320 320" role="img" aria-label="一对分量的 query 和 key 向量，旋转前后的位置"></svg></div>
+    <div class="readout">
+      {readout.map(([text, key, id, value, cls]) => (
+        <>
+          <span class={cls || undefined} set:html={md(text)} />
+          <b class={cls || undefined} id={id} data-rope={key}>{value}</b>
+        </>
+      ))}
+    </div>
+  </div>
+</figure>
+
+<script>
+  import { runtimeMathReady } from '../../lib/runtime-math.js';
+  import { initRope } from '../../lib/rope.js';
+  await runtimeMathReady();
+  document.querySelectorAll<HTMLElement>('figure.rope').forEach(initRope);
+</script>
+
+<style is:global>
+  .rope .stage{display:grid; grid-template-columns:320px 1fr; gap:10px 22px; align-items:center}
+  .rope .plot svg{cursor:default}
+  .rope .plot circle.grid{fill:none; stroke:var(--grid); stroke-width:1}
+  .rope .plot line.axis{stroke:var(--axis); stroke-width:1}
+  .rope .plot line.o{stroke-width:1.5; stroke-dasharray:4 3; opacity:.6}
+  .rope .plot line.r{stroke-width:2.2}
+  .rope .plot path.trail{fill:none; stroke-width:1.2; stroke-dasharray:2 3}
+  .rope .plot path.ang{fill:none; stroke:var(--ink-3); stroke-width:1.2}
+  .rope .plot svg.tex{overflow:visible}
+  .rope .readout{display:grid; grid-template-columns:auto auto; gap:6px 16px; font-size:14px; padding:10px 14px; background:var(--surface-2); border-radius:8px; align-items:center; justify-content:start}
+  .rope .readout b{font-family:var(--font-mono); font-weight:500; font-variant-numeric:tabular-nums}
+  .rope .readout .q{color:var(--s1)}
+  .rope .readout .k{color:var(--s2)}
+  .rope .controls input[type=range]{accent-color:var(--accent); width:130px}
+  @media (max-width:720px){ .rope .stage{grid-template-columns:1fr} }
+</style>
