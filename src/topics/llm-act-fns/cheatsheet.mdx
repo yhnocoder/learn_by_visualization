@@ -1,0 +1,107 @@
+---
+title: 激活函数速查
+pageTitle: 激活函数速查（卡片版式）
+description: 大模型里常用激活函数的定义、导数、值域和典型位置，每张卡片附可交互的曲线。
+eyebrow: LLM Architecture Notes · 速查
+lede: 内容取自<a href="../">《大模型里的激活函数》</a>的函数速查表。每张卡片的左图是函数的输出，右图是导数。
+format: bento
+theme: blue
+runtimeMath: true
+---
+{/* 这一页是 Bento 版式的样例：卡片里的曲线图复用正文页的 ActFnPlot 组件，文字取自正文页的函数速查表。 */}
+import Bento from '../../components/layout/Bento.astro';
+import Card from '../../components/layout/Card.astro';
+import ActFnPlot from './components/ActFnPlot.astro';
+
+## 总览
+
+<Bento columns={4}>
+  <Card span="4x1" title="勾选曲线进行比较">
+    <ActFnPlot fns={["relu", "gelu", "silu", "sigmoid", "tanh", "softplus"]} toggle label="激活函数总览" />
+  </Card>
+</Bento>
+
+## 逐个函数
+
+<Bento columns={4}>
+  <Card span="2x1" title="Sigmoid">
+
+    $f(x)=\sigma(x)=\frac{1}{1+e^{-x}}$
+
+    $\frac{df(x)}{dx}=\sigma(x)(1-\sigma(x))$
+
+    值域：$(0,1)$；典型位置：各类 gate、MoE 路由
+
+    <ActFnPlot fns={["sigmoid"]} label="Sigmoid" />
+  </Card>
+  <Card span="2x1" title="Tanh">
+
+    $f(x)=\tanh(x)$
+
+    $\frac{df(x)}{dx}=1-\tanh^2(x)$
+
+    值域：$(-1,1)$；典型位置：soft-capping $c\tanh(x/c)$
+
+    <ActFnPlot fns={["tanh"]} label="Tanh" />
+  </Card>
+  <Card span="2x1" title="ReLU">
+
+    $f(x)=\max(0,x)$
+
+    $\frac{df(x)}{dx}=\mathbb{1}[x>0]$
+
+    值域：$[0,\infty)$；典型位置：稀疏推理
+
+    <ActFnPlot fns={["relu"]} label="ReLU" />
+  </Card>
+  <Card span="2x1" title="Squared ReLU">
+
+    $f(x)=\max(0,x)^2$
+
+    $\frac{df(x)}{dx}=2\max(0,x)$
+
+    值域：$[0,\infty)$；典型位置：Nemotron FFN
+
+    <ActFnPlot fns={["relu2"]} label="Squared ReLU" />
+  </Card>
+  <Card span="2x1" title="GELU">
+
+    $f(x)=x\,\Phi(x)$
+
+    $\frac{df(x)}{dx}=\Phi(x)+x\,p(x)$
+
+    值域：$[-0.17,\infty)$；典型位置：GeGLU 的 gate
+
+    <ActFnPlot fns={["gelu"]} label="GELU" />
+  </Card>
+  <Card span="2x1" title="SiLU">
+
+    $f(x)=x\,\sigma(x)$
+
+    $\frac{df(x)}{dx}=\sigma(x)(1+x(1-\sigma(x)))$
+
+    值域：$[-0.28,\infty)$；典型位置：SwiGLU 的 gate
+
+    <ActFnPlot fns={["silu"]} label="SiLU" />
+  </Card>
+  <Card span="2x1" title="Softplus">
+
+    $f(x)=\log(1+e^x)$
+
+    $\frac{df(x)}{dx}=\sigma(x)$
+
+    值域：$(0,\infty)$；典型位置：Mamba 步长、参数约束
+
+    <ActFnPlot fns={["softplus"]} label="Softplus" />
+  </Card>
+  <Card span="2x1" title="SiTU gate">
+
+    $f(x)=\beta_1\tanh(x/\beta_1)\,\sigma(x)$
+
+    $\frac{df(x)}{dx}=(1-\tanh^2)\sigma+\beta_1\tanh\cdot\sigma(1-\sigma)$
+
+    值域：$\approx[-0.27,\,\beta_1)$，$\beta_1=4$；典型位置：Kimi K3 FFN
+
+    <ActFnPlot fns={["situ"]} label="SiTU gate" />
+  </Card>
+</Bento>
