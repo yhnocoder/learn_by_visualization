@@ -1,0 +1,27 @@
+---
+// 模型里一个模块的内部计算图：kind 为 ffn 时是 SwiGLU FFN，为 attn 时是 GQA attention 的一个 head。
+// 两张图都在折叠块里，图由 lib/model.js 在浏览器端画出。
+interface Props { kind: 'ffn' | 'attn' }
+const { kind } = Astro.props;
+const spec = {
+  ffn: { id: 'ffnSvg', viewBox: '0 0 396 480', label: 'SwiGLU FFN 的内部计算：两路 Linear，一路经过 Swish，逐元素相乘后再经过一次 Linear' },
+  attn: { id: 'attnSvg', viewBox: '0 0 546 1000', label: 'GQA attention 一个 head 的内部计算：Q、K、V 三路 Linear，Q 和 K 经过 RMSNorm 和 RoPE，计算分数、softmax、乘 V，拼接后经过输出 Linear' },
+}[kind];
+---
+<figure class={`fig model-fig ${kind}`}>
+  <div class="model-wrap"><svg id={spec.id} class="dl-block" data-kind={kind} viewBox={spec.viewBox} role="img" aria-label={spec.label}></svg></div>
+</figure>
+
+<script>
+  import { runtimeMathReady } from '../../lib/runtime-math.js';
+  import { buildFfn, buildAttn } from '../../lib/model.js';
+  await runtimeMathReady();
+  document.querySelectorAll<SVGSVGElement>('svg.dl-block').forEach(svg => (svg.dataset.kind === 'ffn' ? buildFfn : buildAttn)(svg));
+</script>
+
+<style is:global>
+  #ffnSvg{max-width:430px; min-width:360px; margin:0 auto}
+  figure.ffn{max-width:468px; margin-inline:auto}
+  #attnSvg{max-width:590px; min-width:500px; margin:0 auto}
+  figure.attn{max-width:628px; margin-inline:auto}
+</style>

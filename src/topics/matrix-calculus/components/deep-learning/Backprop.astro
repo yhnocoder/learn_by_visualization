@@ -1,0 +1,32 @@
+---
+// 反向传播的逐步说明：上一步、下一步按钮，完整模型的计算图（高亮当前位置），以及各步的说明。
+// 各步写在默认插槽里，每一步是 <div class="step" data-marks="节点名 …">，节点名见 lib/model.js 的 mark。
+---
+<figure class="fig bp" id="figBp">
+  <div class="nav">
+    <button class="btn" id="bpPrev" data-bp="prev" type="button">上一步</button>
+    <button class="btn primary" id="bpNext" data-bp="next" type="button">下一步</button>
+    <span class="cnt" id="bpCnt" data-bp="count"></span>
+  </div>
+  <div class="model-wrap"><svg id="bpSvg" viewBox="0 0 760 800" role="img" aria-label="反向传播逐步经过的位置"></svg></div>
+  <div id="bpSteps"><slot /></div>
+</figure>
+
+<script>
+  import { runtimeMathReady } from '../../lib/runtime-math.js';
+  import { initBackprop } from '../../lib/model.js';
+  await runtimeMathReady();
+  document.querySelectorAll<HTMLElement>('figure.bp').forEach(initBackprop);
+</script>
+
+<style is:global>
+  .bp .model-wrap{overflow-x:auto; min-width:0}
+  .bp .model-wrap svg{min-width:600px}
+  .bp .nav{display:flex; align-items:center; gap:12px; margin:4px 0 10px}
+  .bp .nav .cnt{font-family:var(--font-mono); font-size:13px; color:var(--ink-2); min-width:5em}
+  .bp .step{padding:12px 16px; background:var(--surface-2); border-radius:8px; font-size:14.5px; line-height:1.8; min-height:7em}
+  .bp .step p{margin:0 0 .5em}
+  .bp .step p:last-child{margin:0}
+  .bp .step .t{color:var(--accent); font-weight:500}
+  .bp .step mjx-container[display="true"]{margin:.3em 0 .5em !important; overflow-x:auto; overflow-y:hidden; max-width:100%}
+</style>

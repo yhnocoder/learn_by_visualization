@@ -1,0 +1,15 @@
+---
+// 完整模型的计算图：主线把 N 层 Decoder 合并为一个方框，右侧展开一层内部。图由 lib/model.js 在浏览器端画出。
+interface Props { id: string; label: string }
+const { id, label } = Astro.props;
+---
+<figure class="fig model-fig">
+  <div class="model-wrap"><svg id={id} class="dl-model" viewBox="0 0 760 800" role="img" aria-label={label}></svg></div>
+</figure>
+
+<script>
+  import { runtimeMathReady } from '../../lib/runtime-math.js';
+  import { buildModelCollapsed } from '../../lib/model.js';
+  await runtimeMathReady();
+  document.querySelectorAll<SVGSVGElement>('svg.dl-model').forEach(svg => buildModelCollapsed(svg));
+</script>

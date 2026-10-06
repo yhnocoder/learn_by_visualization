@@ -1,0 +1,1292 @@
+---
+title: 深度学习中的矩阵微积分
+description: 从一个完整的 Transformer 语言模型出发，给出训练时反向传播用到的求导规则，以及每条规则在模型里出现的位置。
+eyebrow: Deep Learning · Matrix Calculus
+lede: '从一个完整的 Transformer 语言模型出发，梳理训练时反向传播用到的求导规则。<span class="watermark">规则本身与 Terence Parr 和 Jeremy Howard 的 <a href="../">《深度学习所需的矩阵微积分》</a>一致。本文更换了贯穿全文的例子，并按模型的计算顺序重新组织。</span>'
+theme: rust
+runtimeMath: true
+numbered: false
+toc: false
+---
+import './deep-learning.css';
+import Recap from '../../components/layout/Recap.astro';
+import Fold from '../../components/layout/Fold.astro';
+import Caption from '../../components/layout/Caption.astro';
+import ModelGraph from './components/deep-learning/ModelGraph.astro';
+import BlockGraph from './components/deep-learning/BlockGraph.astro';
+import TailGraph from './components/deep-learning/TailGraph.astro';
+import Backprop from './components/deep-learning/Backprop.astro';
+import PathDiagram from './components/deep-learning/PathDiagram.astro';
+import GqaFigure from './components/deep-learning/GqaFigure.astro';
+import RopeFigure from './components/deep-learning/RopeFigure.astro';
+import TangentFigure from './components/deep-learning/TangentFigure.astro';
+import GradientFigure from './components/deep-learning/GradientFigure.astro';
+import JacobianFigure from './components/deep-learning/JacobianFigure.astro';
+import OuterFigure from './components/deep-learning/OuterFigure.astro';
+
+<div class="recap-rail">
+<Recap label="Recap">
+<li class="recap-part"><a href="#intro">引言</a></li>
+<li><a href="#model">本文使用的模型<div class="recap-note">Transformer：从输入 token_ids 到 loss 的完整计算过程，以及重要模型结构的定义</div></a></li>
+<li><a href="#shapes">深度学习中导数的形状<div class="recap-note">输入 $\times$ 输出：（标量、向量、矩阵） $\times$ （标量、向量、矩阵）</div></a></li>
+<li class="recap-part"><a href="#review">标量对标量：导数</a></li>
+<li><a href="#derivative">什么是导数<div class="recap-note">$\dfrac{dy}{dx} = \lim\limits_{\Delta x \to 0} \dfrac{f(x+\Delta x) - f(x)}{\Delta x}$<br/>即 $f$ 的图像在 $x$ 处切线的斜率</div></a></li>
+<li><a href="#rules">求导规则<div class="recap-note">标量求导规则</div></a></li>
+<li><a href="#chain-scalar">单变量链式法则<div class="recap-note">$y = f(u)$，$u = g(x)$ 时 $\dfrac{dy}{dx} = \dfrac{dy}{du}\,\dfrac{du}{dx}$。从最外层的 $y$ 开始，逐层往回乘。</div></a></li>
+<li><a href="#swish">例：Sigmoid 与 Swish 的导数<div class="recap-note">$\mathrm{Swish}(x) = x\,\sigma(x)$，按乘积法则得 $\mathrm{Swish}'(x) = \sigma(x)\big(1 + x(1-\sigma(x))\big)$。逐元素函数 $f$ 的导数记作 $f'$。</div></a></li>
+<li class="recap-part"><a href="#partials">标量对向量</a></li>
+<li><a href="#partial">偏导数<div class="recap-note">$\dfrac{\partial f}{\partial x}$ 是其余输入固定、只让 $x$ 变化时的导数。例如 $\dfrac{\partial}{\partial x}\,3x^2y = 6xy$。</div></a></li>
+<li><a href="#gradient">梯度<div class="recap-note">梯度把全部偏导数排成一行：$\nabla f = \dfrac{\partial f}{\partial \mathbf{x}}$，满足 $df = \nabla f \cdot d\mathbf{x}$。梯度垂直于等值线，指向 $f$ 增大最快的方向。</div></a></li>
+<li><a href="#chain-paths">全导数链式法则<div class="recap-note">$x$ 经过多个中间变量影响 $y$ 时，各条路径的贡献相加：$\dfrac{dy}{dx} = \sum_k \dfrac{\partial y}{\partial u_k}\,\dfrac{du_k}{dx}$。输入是向量时，对每个分量 $x_i$ 分别使用这条规则。</div></a></li>
+<li><a href="#loss-grad">例：Loss 对 logits 的梯度<div class="recap-note">$\ell = -\ln p_y$，$\mathbf{p} = \mathrm{softmax}(\mathbf{z})$，结果是 $\dfrac{\partial \ell}{\partial \mathbf{z}} = \mathbf{p} - \mathbf{y}$，其中 $\mathbf{y}$ 是目标 token 的 one-hot 向量。</div></a></li>
+<li><a href="#in-model">例：Loss 对 LM head 输入的梯度<div class="recap-note">$\mathbf{z} = \mathbf{x}W$ 中 $\dfrac{\partial z_j}{\partial x_i} = W_{ij}$。对 $V$ 条路径求和：$\dfrac{\partial \ell}{\partial x_i} = \sum_j (p_j - y_j)\,W_{ij}$。</div></a></li>
+<li class="recap-part"><a href="#vector">向量对向量：Jacobian</a></li>
+<li><a href="#jacobian">Jacobian<div class="recap-note">$J_{ji} = \dfrac{\partial z_j}{\partial x_i}$。$\mathbf{z} = \mathbf{x}W$ 时 $J = W^{T}$。Loss 对输入的导数是 $\dfrac{\partial L}{\partial \mathbf{x}} = \dfrac{\partial L}{\partial \mathbf{z}}\,J$。</div></a></li>
+<li><a href="#elementwise">逐元素运算的 Jacobian<div class="recap-note">逐元素函数的 Jacobian 是对角矩阵 $\mathrm{diag}\big(f'(\mathbf{x})\big)$。逐元素相乘 $\mathbf{a} \otimes \mathbf{b}$ 对 $\mathbf{a}$ 的 Jacobian 是 $\mathrm{diag}(\mathbf{b})$。</div></a></li>
+<li><a href="#softmax">softmax 的 Jacobian<div class="recap-note">$J = \mathrm{diag}(\mathbf{p}) - \mathbf{p}^{T}\mathbf{p}$。反向计算 $\dfrac{\partial L}{\partial \mathbf{x}} = \mathbf{p} \otimes \Big(\dfrac{\partial L}{\partial \mathbf{p}} - \dfrac{\partial L}{\partial \mathbf{p}} \cdot \mathbf{p}\Big)$，不需要写出 $n \times n$ 的矩阵。</div></a></li>
+<li><a href="#chain-vector">向量链式法则<div class="recap-note">嵌套运算的 Jacobian 是各层 Jacobian 按从外到内的顺序相乘：$\dfrac{\partial \mathbf{z}}{\partial \mathbf{x}} = \dfrac{\partial \mathbf{z}}{\partial \mathbf{u}}\,\dfrac{\partial \mathbf{u}}{\partial \mathbf{x}}$。</div></a></li>
+<li><a href="#softmax-ce">例：分两步求 Loss 对 logits 的梯度<div class="recap-note">先求 $\dfrac{\partial \ell}{\partial \mathbf{p}}$，再代入 softmax 的反向公式，结果同样是 $\mathbf{p} - \mathbf{y}$。实现中两者合成一个运算（`F.cross_entropy`）。</div></a></li>
+<li><a href="#head-jac">例：LM head 的 Jacobian<div class="recap-note">用 Jacobian 写成一次行向量乘矩阵：$\dfrac{\partial \ell}{\partial \mathbf{x}} = (\mathbf{p} - \mathbf{y})\,W^{T}$。</div></a></li>
+<li><a href="#ffn-jac">例：SwiGLU FFN 的 Jacobian<div class="recap-note">由三次矩阵乘法的 $W^{T}$、Swish 的 $\mathrm{diag}\big(\mathrm{Swish}'(\mathbf{a})\big)$ 和逐元素乘的 $\mathrm{diag}$ 相乘得到。$\mathbf{x}$ 经过 gate 和 up 两条路径，两项相加。</div></a></li>
+<li class="recap-part"><a href="#matrix">标量对矩阵</a></li>
+<li><a href="#weight-grad">权重的梯度<div class="recap-note">一个位置上 $\mathbf{z} = \mathbf{x}W$：$\dfrac{\partial L}{\partial W_{ij}} = x_i\,\dfrac{\partial L}{\partial z_j}$，合起来是 $\dfrac{\partial L}{\partial W} = \mathbf{x}^{T}\dfrac{\partial L}{\partial \mathbf{z}}$。计算时不需要写出三维数组 $\dfrac{\partial \mathbf{z}}{\partial W}$。</div></a></li>
+<li><a href="#sequence">输入（矩阵）的梯度<div class="recap-note">$T$ 个位置按行堆成 $X$，$G = \dfrac{\partial L}{\partial Z}$。对输入逐行计算，$\dfrac{\partial L}{\partial X} = GW^{T}$；权重被 $T$ 个位置共用，$\dfrac{\partial L}{\partial W} = \sum_t \mathbf{x}_t^{T}\,\dfrac{\partial L}{\partial \mathbf{z}_t} = X^{T}G$。</div></a></li>
+<li><a href="#op-matmul">矩阵乘法的反向规则<div class="recap-note">$Z = XW$：$\dfrac{\partial L}{\partial X} = GW^{T}$，$\dfrac{\partial L}{\partial W} = X^{T}G$。两个因子都随输入变化时（$Z = AB$）同样成立。</div></a></li>
+<li><a href="#head-weight">例：LM head 的权重<div class="recap-note">$L = \frac{1}{T}\sum_t \ell_t$，所以 $G = \frac{1}{T}(P - Y)$，$\dfrac{\partial L}{\partial W_{out}} = X^{T}G$。这是本文第一次得到 Loss 对模型参数的导数。</div></a></li>
+<li class="recap-part"><a href="#backprop">反向传播：vector-Jacobian product</a></li>
+<li><a href="#vjp">vector-Jacobian product<div class="recap-note">每经过一个运算计算一次 $\dfrac{\partial L}{\partial \mathbf{x}} = \dfrac{\partial L}{\partial \mathbf{z}}\,J$。从 Loss 开始按前向的相反顺序进行，每一步都是行向量乘矩阵，计算量远小于先把各个 Jacobian 相乘。</div></a></li>
+<li><a href="#no-jacobian">不构造 Jacobian<div class="recap-note">逐元素函数的反向是 $G \otimes f'(A)$，逐元素乘是 $G \otimes B$，矩阵乘法直接计算 $GW^{T}$。每个运算的反向只做几次与前向同规模的计算。</div></a></li>
+<li><a href="#accumulate">多条路径的导数相加<div class="recap-note">一个量被多个运算使用时，各运算传回的导数相加。残差连接 $Y = X + H$ 中 $\dfrac{\partial L}{\partial X} = G + (\text{子层传回的})$；共用权重的导数是各位置贡献之和。</div></a></li>
+<li class="recap-part"><a href="#backward">整个模型的反向传播</a></li>
+<li><a href="#op-attn">例：GQA attention<div class="recap-note">由矩阵乘法、常数缩放和逐行 softmax 组成，没有新规则。$K_j$、$V_j$ 的导数是组内各 head 传回的梯度之和；$X$ 的导数是 $Q$、$K$、$V$ 三条路径之和。</div></a></li>
+<li><a href="#op-embed">例：Embedding<div class="recap-note">前向是 one-hot 矩阵乘 $E$。反向把 $G$ 的第 $t$ 行加到 $\dfrac{\partial L}{\partial E}$ 的第 $\text{tok}_t$ 行上，同一个 token 出现几次就累加几次。</div></a></li>
+<li><a href="#op-cast">例：FP32 到 BF16 的转换<div class="recap-note">舍入按定义导数为零，框架约定反向为恒等运算（straight-through estimator）。更新累加在 FP32 主权重上。</div></a></li>
+<li><a href="#walkthrough">反向传播的全部步骤<div class="recap-note">从 $\dfrac{\partial L}{\partial L} = 1$ 开始，依次经过 cross-entropy 与 softmax、LM head、$N$ 层 Decoder、Embedding。每个权重都得到与自己同形状的导数。</div></a></li>
+<li class="recap-part"><a href="#cheatsheet">速查表</a></li>
+<li><a href="#notation">符号说明<div class="recap-note">$T$、$d$、$V$、$N$ 是序列长度、模型宽度、词表大小和 Decoder 层数。$G$ 是 Loss 对运算输出的导数，$\otimes$ 是逐元素相乘。</div></a></li>
+<li><a href="#references">参考文献<div class="recap-note">Parr 与 Howard 的原文，自动微分教材，混合精度训练，straight-through estimator，RMSNorm 和 RoPE 的论文。</div></a></li>
+</Recap>
+</div>
+
+## 引言 {/* #intro */}
+
+深度学习里的反向传播，本质上是在回答一个问题：模型中的<mark>某个中间量发生微小变化时，最终的 Loss 会怎样变化</mark>？
+
+如果模型里只有标量，这就是普通微积分里的求导。例如 $y = f(x)$，导数 $\dfrac{dy}{dx}$ 描述 $x$ 的变化如何影响 $y$。
+
+但神经网络几乎从来不是“标量进、标量出”。一层 Transformer 的输入可能是一个形状为 $T \times d$ 的矩阵，经过线性变换、Attention、Softmax、归一化等操作后，最终得到一个标量 Loss。于是反向传播实际需要处理的是这样的计算链：
+
+$$
+X \in \mathbb{R}^{T \times d} \;\longrightarrow\; Q, K, V \;\longrightarrow\; A \;\longrightarrow\; O \;\longrightarrow\; L \in \mathbb{R}
+$$
+
+现在假设我们想求 $L$ 对 $X$ 的导数，麻烦的问题出现了：<mark>一个标量对一个矩阵求导</mark>，结果到底是什么？<mark>矩阵对矩阵求导</mark>呢？<mark>向量经过 Softmax</mark> 后，它的导数又该如何表示？这些问题就是矩阵微积分要解决的事情。
+
+实际写深度学习代码时，我们通常看不到这些推导。PyTorch 会把前向计算记录成计算图，调用 `loss.backward()` 后，再按照链式法则从 Loss 一路反向计算梯度。但自动微分只是替我们执行了求导，并没有改变背后的数学：
+
+$$
+\text{backward} = \text{局部导数} + \text{链式法则}
+$$
+
+本文不打算从完整的矩阵微积分理论讲起，而是直接沿着一个 decoder-only Transformer 的计算图反向走一遍。我们会看到 Linear、矩阵乘法、Softmax、RMSNorm 等操作各自如何求导，以及这些局部规则如何组合起来，最终得到每个参数的梯度。
+
+本文假定读者了解 Transformer 的各个模块，用 PyTorch 训练过模型，微积分已经生疏 :)。
+
+### 本文使用的模型 {/* #model */}
+
+下图是一个 decoder-only Transformer 做语言模型训练时，从输入 token 到 Loss 的完整计算过程。$T$ 是序列长度，$d$ 是模型宽度，$V$ 是词表大小，$N$ 是 Decoder 的层数。图中省略了 batch 维度。
+
+<ModelGraph id="modelSvg3" label="主线把 N 层合并为一个 Decoder 方框，右侧展开一层内部" />
+
+这张图画出了本文使用的完整前向计算过程。输入是由 $T$ 个整数构成的 `token_ids`，经过 Embedding、若干 Transformer Block、输出投影和 CrossEntropy，最终得到一个标量 Loss $L$。
+
+前向计算时，每个节点都定义了<mark>输入如何变成输出</mark>；反向传播要做的，就是从 $L$ 出发沿图<mark>逆向计算梯度</mark>。最终我们需要 $L$ 对所有可训练参数的导数，但在到达这些参数之前，还必须先求出 $L$ 对一个个中间向量、矩阵的导数。对每个节点，我们需要知道：
+
+<mark>已知输出的梯度，如何得到输入和参数的梯度？</mark>
+
+感谢链式法则，整张计算图虽然看起来很大，真正需要掌握的求导规则其实只有有限几种。矩阵乘法、逐元素运算、归一化、Softmax、残差连接等，这些求导的规则只需要我们分别定义一次，之后遇到相同结构可直接复用。反向传播就是这些“子模块”的求导规则沿计算图不断组合的结果。
+
+图中还包含 RMSNorm、SwiGLU FFN、GQA Attention 和 RoPE。下面的折叠部分只负责补充它们的前向定义和记号；如果你已经熟悉这些模块，可以直接跳过。真正开始求导时，再按需回来查对应公式即可。
+
+<Fold summary="什么是 RMSNorm">
+
+RMSNorm 对每个位置的向量 $\mathbf{x} \in \mathbb{R}^{d}$ 单独计算：先除以 $\mathbf{x}$ 的均方根，再逐元素乘一个可学习的权重 $\gamma \in \mathbb{R}^{d}$[\[5\]](#references)：
+
+$$
+\mathrm{RMSNorm}(\mathbf{x}) = \frac{\mathbf{x}}{\mathrm{rms}(\mathbf{x})} \otimes \gamma \in \mathbb{R}^{d},\qquad \mathrm{rms}(\mathbf{x}) = \sqrt{\frac{1}{d}\sum_{k=1}^{d} x_k^2 + \epsilon}
+$$
+
+$\epsilon$ 是一个很小的正数（例如 $10^{-6}$），防止分母为零。除以 $\mathrm{rms}(\mathbf{x})$ 之后，各分量平方的平均值约等于 1，与输入向量本身的大小无关。和 LayerNorm 相比，RMSNorm 不减去均值，也没有偏置项。
+
+</Fold>
+
+<Fold summary="什么是 SwiGLU FFN">
+
+FFN 对序列里的每个位置独立计算，所以下面只写一个位置的向量 $\mathbf{x} \in \mathbb{R}^{d}$：
+
+$$
+\mathbf{h} = \big(\mathrm{Swish}(\mathbf{x}W_{gate}) \otimes \mathbf{x}W_{up}\big)\,W_{down}
+$$
+
+三个权重矩阵是 $W_{gate}, W_{up} \in \mathbb{R}^{d \times d_{ff}}$ 和 $W_{down} \in \mathbb{R}^{d_{ff} \times d}$。$\otimes$ 表示逐元素相乘。Swish 逐元素作用在向量上，对每个数做的是 $\mathrm{Swish}(z) = z\,\sigma(z)$，其中 $\sigma(z) = \dfrac{1}{1+e^{-z}}$ 是 sigmoid 函数。
+
+<BlockGraph kind="ffn" />
+
+</Fold>
+
+<Fold summary="什么是 GQA Attention">
+
+Attention 让每个位置读取它自己和前面所有位置的信息。输入 $X \in \mathbb{R}^{T \times d}$，每一行是一个位置的向量。在本文的模型里，$X$ 是 RMSNorm 的输出。
+
+先看一个 head。$X$ 分别乘三个权重矩阵 $W_Q, W_K, W_V \in \mathbb{R}^{d \times d_h}$，得到 query、key、value 三个矩阵 $Q, K, V \in \mathbb{R}^{T \times d_h}$，每一行对应一个位置：
+
+$$
+Q = XW_Q,\qquad K = XW_K,\qquad V = XW_V
+$$
+
+然后计算
+
+$$
+A = \mathrm{softmax}\!\left(\frac{QK^{T}}{\sqrt{d_h}} + M\right) V
+$$
+
+$QK^T \in \mathbb{R}^{T \times T}$，第 $t$ 行第 $s$ 列是位置 $t$ 的 query 与位置 $s$ 的 key 的点积，称为 attention 分数。$M$ 是 causal mask，把 $t < s$ 的元素置为 $-\infty$，使位置 $t$ 只读取自己和前面的位置。softmax 对每一行独立作用，把一行分数变成一组和为 1 的权重。最后乘 $V$：$A$ 的第 $t$ 行是各位置 value 向量按这组权重的加权和，$A \in \mathbb{R}^{T \times d_h}$。
+
+Multi-Head Attention（MHA）把这个计算并行做 $n_h$ 次，每个 head 有自己的 $W_{Qi}$、$W_{Ki}$、$W_{Vi}$。$n_h$ 个 head 的输出 $A_1, \ldots, A_{n_h}$ 按列拼接成 $T \times n_h d_h$ 的矩阵，再乘 $W_O \in \mathbb{R}^{n_h d_h \times d}$，回到 $\mathbb{R}^{T \times d}$。
+
+Grouped-Query Attention（GQA）相比 MHA 只改变 key 和 value 的数量：query 仍有 $n_h$ 个 head，key 和 value 只有 $n_{kv}$ 组，每组被 $n_h / n_{kv}$ 个 query head 共用。下图是 $n_h = 4$ 时 MHA 与 GQA 的对比，右边的 GQA 取 $n_{kv} = 2$。
+
+<GqaFigure />
+
+用下标写出来：query head $i$ 属于第 $j$ 组时，
+
+$$
+Q_i = XW_Q^{(i)},\qquad K_j = XW_K^{(j)},\qquad V_j = XW_V^{(j)}
+$$
+
+$$
+A_i = \mathrm{softmax}\!\left(\frac{Q_iK_j^{T}}{\sqrt{d_h}} + M\right) V_j
+$$
+
+这样做是为了减小推理时的 KV cache：生成每个新 token 时，前面所有位置的 $K$、$V$ 都要保存下来，组数从 $n_h$ 减到 $n_{kv}$，这部分显存按同样的比例减小。例如 Llama 2 70B 有 64 个 query head，8 组 K/V。
+
+本文的模型在计算 attention 分数之前，还对 query 和 key 各做两步处理。
+
+第一步是 QK-Norm：对 $Q_i$ 和 $K_j$ 的每一行做 RMSNorm，归一化的维度是 $d_h$。query 和 key 各有一个权重 $\gamma_q, \gamma_k \in \mathbb{R}^{d_h}$，同一层的所有 head 共用这两个权重。这一步限制了 attention 分数的大小，使训练更稳定。
+
+第二步是 RoPE：把 $Q_i$ 和 $K_j$ 的每一行按它所在的位置旋转，使 attention 分数依赖两个位置的差。定义见下面“什么是 RoPE”折叠块。
+
+加上这两步，query head $i$ 的完整计算是
+
+$$
+\tilde{Q}_i = \mathrm{RoPE}\big(\mathrm{RMSNorm}(XW_Q^{(i)})\big),\qquad \tilde{K}_j = \mathrm{RoPE}\big(\mathrm{RMSNorm}(XW_K^{(j)})\big),\qquad V_j = XW_V^{(j)}
+$$
+
+$$
+A_i = \mathrm{softmax}\!\left(\frac{\tilde{Q}_i\tilde{K}_j^{T}}{\sqrt{d_h}} + M\right) V_j
+$$
+
+下图画出了这个计算过程，再加上最后的拼接和 $W_O$。图中只画了 query head $i$ 一个 head；第 $j$ 组的 $\tilde{K}_j$ 和 $V_j$ 还要被同组的其他 head 使用，$\mathrm{Concat}$ 把 $n_h$ 个 head 的输出按列拼接起来。
+
+<BlockGraph kind="attn" />
+
+</Fold>
+
+<Fold summary="什么是 RoPE">
+
+attention 分数是 query 与 key 的点积，点积只由两个向量的值决定，不包含它们在序列里的位置。RoPE（rotary position embedding）在计算点积之前，按位置旋转 query 和 key，使点积依赖两个位置的差[\[6\]](#references)。
+
+<strong>两维的情形。</strong>先设 $d_h = 2$。位置 $t$ 的 query 向量 $\mathbf{q} = [\,q_1\ \ q_2\,]$ 看作平面上的一个点，RoPE 把它绕原点逆时针旋转角度 $t\theta$：
+
+$$
+\mathrm{RoPE}(\mathbf{q}) = \mathbf{q}\,R(t\theta),\qquad R(\alpha) = \begin{bmatrix}\cos\alpha & \sin\alpha\\ -\sin\alpha & \cos\alpha\end{bmatrix}
+$$
+
+$\theta$ 是一个固定的角度，位置每增加 1，向量多转 $\theta$。位置 $s$ 的 key 向量 $\mathbf{k}$ 同样旋转 $s\theta$。旋转矩阵满足 $R(\alpha)R(\beta)^{T} = R(\alpha - \beta)$，所以旋转之后的点积是
+
+$$
+\big(\mathbf{q}R(t\theta)\big)\big(\mathbf{k}R(s\theta)\big)^{T} = \mathbf{q}\,R(t\theta)R(s\theta)^{T}\,\mathbf{k}^{T} = \mathbf{q}\,R\big((t-s)\theta\big)\,\mathbf{k}^{T}
+$$
+
+结果只依赖位置差 $t - s$。几何上，两个向量的长度不变，夹角改变 $(t-s)\theta$，所以两个位置同时增加相同的数时，点积不变。
+
+<strong>$d_h$ 维的情形。</strong>把 $d_h$ 个分量按顺序分成 $d_h/2$ 对，第 $k$ 对 $(q_{2k-1}, q_{2k})$ 在自己的平面里旋转角度 $t\theta_k$，其中
+
+$$
+\theta_k = b^{-2(k-1)/d_h},\qquad k = 1, \ldots, d_h/2
+$$
+
+$b$ 是一个常数，原论文取 $10000$，Llama 3 取 $500000$。$\theta_1 = 1$，之后逐对减小，最后一对接近 $1/b$：前几对随位置转得快，后几对转得慢。各对之间互不影响，合起来是一个分块对角的 $d_h \times d_h$ 正交矩阵 $R_t$，对角线上是 $d_h/2$ 个 $2 \times 2$ 旋转矩阵：
+
+$$
+\mathrm{RoPE}(\mathbf{q}_t) = \mathbf{q}_t R_t \in \mathbb{R}^{d_h},\qquad R_t = \begin{bmatrix} R(t\theta_1) & & \\ & \ddots & \\ & & R(t\theta_{d_h/2}) \end{bmatrix}
+$$
+
+点积等于各对的点积之和，每一对都满足两维情形的结论，所以
+
+$$
+(\mathbf{q}_t R_t)(\mathbf{k}_s R_s)^{T} = \mathbf{q}_t\,R_{t-s}\,\mathbf{k}_s^{T}
+$$
+
+下图画出其中一对分量的旋转，取 $d_h = 8$、$b = 10000$，四对的 $\theta_k$ 分别是 $1$、$0.1$、$0.01$、$0.001$。虚线是旋转前的 $\mathbf{q}$ 和 $\mathbf{k}$，实线是旋转后的向量。两个滑块设置 query 的位置 $t$ 和 key 的位置 $s$。点“$t$ 和 $s$ 同时加 1”，两个向量转过相同的角度，旋转后的点积不变。切换到第 4 对，$t = 20$ 时向量只转了 $0.02$ 弧度。
+
+<RopeFigure />
+
+RoPE 没有参数，$R_t$ 由位置 $t$ 完全确定。实现里分量的配对方式不一定是相邻两个：Hugging Face 的 Llama 实现把第 $k$ 个和第 $k + d_h/2$ 个分量配成一对。两种配对只差一个固定的分量重排，上面的结论相同。
+
+</Fold>
+
+### 深度学习中导数的形状 {/* #shapes */}
+
+一元微积分里，$y = f(x)$ 的输入和输出都是标量，[导数](#derivative) $\dfrac{dy}{dx}$ 也是一个标量。神经网络中一个运算的输入和输出可以是标量 $x \in \mathbb{R}$、向量 $\mathbf{x} \in \mathbb{R}^{n}$ 或矩阵 $W \in \mathbb{R}^{p \times q}$，这时导数由多个数组成。
+
+导数要给出输出的每个分量对输入的每个分量的[偏导数](#partial)。输出 $\mathbf{y} \in \mathbb{R}^{m}$、输入 $\mathbf{x} \in \mathbb{R}^{n}$ 时，偏导数 $\dfrac{\partial y_i}{\partial x_j}$ 共有 $m \times n$ 个，排成 $m$ 行 $n$ 列的矩阵，这个矩阵称为 [Jacobian](#jacobian)。输入或输出是矩阵时，把矩阵看成一组标量元素，同样对每一对元素求偏导。矩阵对矩阵的导数 $\dfrac{\partial Y_{ij}}{\partial W_{kl}}$ 有四个下标，是一个四维数组。
+
+下表列出输入和输出分别是标量、向量、矩阵时导数的形状。高阶 Tensor（大于 2 维）规则与矩阵类似。
+
+<div class="shape"><table>
+<colgroup><col style="width:100px" /><col style="width:160px" /><col style="width:290px" /><col /></colgroup>
+<thead><tr>
+<th class="corner">输出 ↓　输入 →</th>
+<th>$x \in \mathbb{R}$</th>
+<th>$\mathbf{x} \in \mathbb{R}^{n}$</th>
+<th>$W \in \mathbb{R}^{p \times q}$</th>
+</tr></thead>
+<tbody>
+<tr>
+<th class="row">$y \in \mathbb{R}$</th>
+<td>
+
+$$
+\frac{dy}{dx} \in \mathbb{R}
+$$
+
+</td>
+<td>
+
+$$
+\frac{\partial y}{\partial \mathbf{x}} = \Big[\frac{\partial y}{\partial x_1}\ \ \cdots\ \ \frac{\partial y}{\partial x_n}\Big] \in \mathbb{R}^{n}
+$$
+
+</td>
+<td class="want">
+
+$$
+\frac{\partial y}{\partial W} = \begin{bmatrix} \frac{\partial y}{\partial W_{11}} & \cdots & \frac{\partial y}{\partial W_{1q}}\\ \vdots & & \vdots\\ \frac{\partial y}{\partial W_{p1}} & \cdots & \frac{\partial y}{\partial W_{pq}} \end{bmatrix} \in \mathbb{R}^{p \times q}
+$$
+
+</td>
+</tr>
+<tr>
+<th class="row">$\mathbf{y} \in \mathbb{R}^{m}$</th>
+<td>
+
+$$
+\frac{\partial \mathbf{y}}{\partial x} = \begin{bmatrix}\frac{\partial y_1}{\partial x}\\ \vdots\\ \frac{\partial y_m}{\partial x}\end{bmatrix} \in \mathbb{R}^{m}
+$$
+
+</td>
+<td>
+
+$$
+\frac{\partial \mathbf{y}}{\partial \mathbf{x}} = \begin{bmatrix} \frac{\partial y_1}{\partial x_1} & \cdots & \frac{\partial y_1}{\partial x_n}\\ \vdots & & \vdots\\ \frac{\partial y_m}{\partial x_1} & \cdots & \frac{\partial y_m}{\partial x_n} \end{bmatrix} \in \mathbb{R}^{m \times n}
+$$
+
+</td>
+<td class="no">
+
+$$
+\frac{\partial \mathbf{y}}{\partial W} \in \mathbb{R}^{m \times p \times q}
+$$
+
+</td>
+</tr>
+<tr>
+<th class="row">$Y \in \mathbb{R}^{r \times s}$</th>
+<td>
+
+$$
+\frac{\partial Y}{\partial x} \in \mathbb{R}^{r \times s}
+$$
+
+</td>
+<td class="no">
+
+$$
+\frac{\partial Y}{\partial \mathbf{x}} \in \mathbb{R}^{r \times s \times n}
+$$
+
+</td>
+<td class="no">
+
+$$
+\frac{\partial Y}{\partial W} \in \mathbb{R}^{r \times s \times p \times q}
+$$
+
+</td>
+</tr>
+</tbody></table></div>
+
+> 记号约定
+>
+> 本文不把矩阵展平，而是保留原有维度，因此 $Y\in\mathbb R^{r\times s}$ 对 $W\in\mathbb R^{p\times q}$ 的完整导数记为 $\mathbb R^{r\times s\times p\times q}$。
+
+> 本文的向量都是行向量，线性层写成 $\mathbf{x}W$，与 PyTorch 的 `x @ W` 一致。
+>
+> 向量对向量的导数，行对应输出、列对应输入，这种排法称为 numerator layout。有些资料采用转置的排法，称为 denominator layout。其他资料的公式形状与本文不一致时，先检查它采用哪一种排法。
+
+## 标量对标量：导数 {/* #review */}
+
+对向量和矩阵求导，最后都归结为对单个数求导。本章复习标量对标量的导数，也就是形状表左上角的一格。
+
+### 什么是导数 {/* #derivative */}
+
+先看最简单的情形：输入 $x \in \mathbb{R}$，输出 $y = f(x) \in \mathbb{R}$，两者都是标量。
+
+$x$ 变到 $x + \Delta x$ 时，$y$ 的变化量与 $x$ 的变化量之比是 $\dfrac{\Delta y}{\Delta x} = \dfrac{f(x+\Delta x) - f(x)}{\Delta x}$。<mark>$\Delta x$ 趋于零时这个比值的极限</mark>，就是 $y$ 对 $x$ 的导数，记作 $\dfrac{dy}{dx}$：
+
+$$
+\frac{dy}{dx} = \lim_{\Delta x \to 0} \frac{f(x+\Delta x) - f(x)}{\Delta x}
+$$
+
+同一个导数也可以写成 $\dfrac{d}{dx}y$、$\dfrac{df(x)}{dx}$ 或 $\dfrac{d}{dx}f(x)$。从几何上来看，$\dfrac{dy}{dx}$ 是 $f$ 的图像在 $x$ 处的切线的斜率。
+
+<Fold summary="割线、切线与导数的图像">
+
+比值 $\dfrac{\Delta y}{\Delta x}$ 是 $f$ 的图像上过 $x$ 和 $x+\Delta x$ 两点的直线的斜率，这条直线称为割线。
+
+这个比值随 $\Delta x$ 改变。取 $f(x) = x^3$，在 $x = 1$ 处：$\Delta x = 1$ 时比值是 $7$，$\Delta x = 0.1$ 时是 $3.31$，$\Delta x = 0.01$ 时是 $3.0301$。$\Delta x$ 越小，比值越接近 $3$。下图的两个滑块分别控制 $x_0$ 和 $\Delta x$，把 $\Delta x$ 从 $1$ 减小到 $0.001$，可以看到割线的斜率逐渐接近 $3$。
+
+<TangentFigure />
+
+$\Delta x$ 趋于零时，割线趋于一条确定的直线，这条直线是 $x_0$ 处的切线。切线的斜率不再依赖 $\Delta x$，这个斜率就是 $x_0$ 处的导数 $\dfrac{dy}{dx}$。
+
+$x_0$ 取不同位置时切线的斜率不同，所以导数 $\dfrac{dy}{dx}$ 本身也是 $x$ 的函数，图的下半部分画的是它。对 $y = x^3$ 有 $\dfrac{dy}{dx} = 3x^2$，对 $y = \sin x$ 有 $\dfrac{dy}{dx} = \cos x$。
+
+记号 $\dfrac{dy}{dx}$ 里的 $d$ 表示无穷小的变化量：把比值 $\dfrac{\Delta y}{\Delta x}$ 中的 $\Delta$ 换成 $d$，表示 $\Delta x$ 趋于零之后的结果。
+
+</Fold>
+
+### 求导规则 {/* #rules */}
+
+下表列出本文用到的标量求导规则。这些规则读者在微积分课上都见过，如果不理解需要重新上高中。
+
+<div class="rules"><table>
+<thead><tr><th>规则</th><th>$f(x)$</th><th>$\dfrac{d}{dx}f(x)$</th><th>例子</th></tr></thead>
+<tbody>
+<tr><td>不含 $x$ 的量</td><td>$c$</td><td>$0$</td><td>$\dfrac{d}{dx}\,99 = 0$；只要 $y$ 不依赖 $x$，$\dfrac{d}{dx}\,3y = 0$</td></tr>
+<tr><td>常数倍</td><td>$c\,f$</td><td>$c\,\dfrac{df}{dx}$</td><td>$\dfrac{d}{dx}\,3x^2 = 3 \cdot 2x = 6x$</td></tr>
+<tr><td>幂函数</td><td>$x^n$</td><td>$n\,x^{n-1}$</td><td>$\dfrac{d}{dx}\,x^3 = 3x^2$；$\dfrac{d}{dx}\,x^{-1} = -x^{-2}$</td></tr>
+<tr><td>加法</td><td>$f + g$</td><td>$\dfrac{df}{dx} + \dfrac{dg}{dx}$</td><td>$\dfrac{d}{dx}\,(x^2 + 3x) = 2x + 3$</td></tr>
+<tr><td>减法</td><td>$f - g$</td><td>$\dfrac{df}{dx} - \dfrac{dg}{dx}$</td><td>$\dfrac{d}{dx}\,(x^2 - 3x) = 2x - 3$</td></tr>
+<tr><td>乘积法则</td><td>$f\,g$</td><td>$f\,\dfrac{dg}{dx} + \dfrac{df}{dx}\,g$</td><td>$\dfrac{d}{dx}\,(x^2 \cdot x) = x^2 \cdot 1 + 2x \cdot x = 3x^2$</td></tr>
+<tr><td>商法则</td><td>$\dfrac{f}{g}$</td><td>$\dfrac{\dfrac{df}{dx}\,g - f\,\dfrac{dg}{dx}}{g^2}$</td><td>$\dfrac{d}{dx}\,\dfrac{x}{x+1} = \dfrac{(x+1) - x}{(x+1)^2} = \dfrac{1}{(x+1)^2}$</td></tr>
+<tr><td>指数函数</td><td>$e^x$</td><td>$e^x$</td><td>$\dfrac{d}{dx}\,e^{2x} = 2e^{2x}$（配合链式法则）</td></tr>
+<tr><td>对数函数</td><td>$\ln x$</td><td>$\dfrac{1}{x}$</td><td>$\dfrac{d}{dx}\,\ln(x^2) = \dfrac{1}{x^2} \cdot 2x = \dfrac{2}{x}$（配合链式法则）</td></tr>
+<tr><td>sigmoid</td><td>$\sigma(x) = \dfrac{1}{1+e^{-x}}$</td><td>$\sigma(x)\,\big(1-\sigma(x)\big)$</td><td></td></tr>
+<tr><td>Swish</td><td>$x\,\sigma(x)$</td><td>$\sigma(x) + x\,\sigma(x)\,\big(1-\sigma(x)\big)$</td><td></td></tr>
+</tbody></table></div>
+
+$\dfrac{d}{dx}$ 也可以看成一个运算符，输入一个函数，输出另一个函数。可以这么思考：
+
+- 加法可以拆开：$\dfrac{d}{dx}\big(f(x) + g(x)\big) = \dfrac{d}{dx}f(x) + \dfrac{d}{dx}g(x)$；
+- 常数因子可以提到它前面：$\dfrac{d}{dx}\big(\alpha f(x)\big) = \alpha \dfrac{d}{dx}f(x)$。
+
+所以对复杂表达式求导可以先拆分、分别求导、再组合：
+
+$$
+\frac{d}{dx}\,9(x + x^2) = 9\,\frac{d}{dx}(x + x^2) = 9\Big(\frac{d}{dx}x + \frac{d}{dx}x^2\Big) = 9(1 + 2x) = 9 + 18x
+$$
+
+### 单变量链式法则 {/* #chain-scalar */}
+
+链式法则处理的是函数嵌套。若 $y = f(u)$，$u = g(x)$，那么 $y$ 对 $x$ 的导数为
+
+$$
+\frac{dy}{dx} = \frac{dy}{du}\,\frac{du}{dx}
+$$
+
+也就是说，要计算 $x$ 的一个微小变化最终如何影响 $y$，可以把这条依赖路径上每一段的局部导数依次相乘。前向计算沿 $x \rightarrow u \rightarrow y$ 进行，而求导沿相反方向 $y \rightarrow u \rightarrow x$ 进行。
+
+如果依赖链更长，例如 $x \rightarrow v \rightarrow u \rightarrow y$，那么
+
+$$
+\frac{dy}{dx} = \frac{dy}{du}\,\frac{du}{dv}\,\frac{dv}{dx}
+$$
+
+反向传播做的正是这件事：从最终的 Loss 出发，沿计算图反向传播梯度，每经过一个节点，就乘上这个节点对应的局部导数，只是变量从标量推广成了向量、矩阵和更高阶 Tensor，这部分很快会讲到。
+
+<PathDiagram id="chainSvg" kind="chain" label="反向传播的方向：从 y 经过 u 传回 x，只有一条路径" />
+
+### 例：Sigmoid 与 Swish 的导数 {/* #swish */}
+
+SwiGLU FFN 的 gate 分支使用 Swish，Swish 由 sigmoid 定义。规则表给出了两者的导数，下面用链式法则和乘积法则推出这两个结果。
+
+sigmoid 的公式是 $\sigma(x) = \dfrac{1}{1+e^{-x}}$，可以写成复合函数：$\sigma(x) = u^{-1}$，其中 $u = 1 + e^{-x}$：
+
+$$
+\frac{d\sigma}{du} = -u^{-2},\qquad \frac{du}{dx} = -e^{-x}
+$$
+
+按链式法则把两者相乘：
+
+$$
+\begin{aligned}
+\frac{d\sigma}{dx} = \frac{d\sigma}{du}\,\frac{du}{dx} &= \frac{e^{-x}}{(1+e^{-x})^2}\\
+&= \frac{1}{1+e^{-x}} \cdot \frac{e^{-x}}{1+e^{-x}}\\
+&= \sigma(x)\,\big(1-\sigma(x)\big)
+\end{aligned}
+$$
+
+Swish 是两个函数的乘积：$\mathrm{Swish}(x) = x \cdot \sigma(x)$。按乘积法则，再代入上面的 $\dfrac{d\sigma}{dx}$：
+
+$$
+\begin{aligned}
+\frac{d\,\mathrm{Swish}(x)}{dx}
+&= 1 \cdot \sigma(x) + x\,\frac{d\sigma}{dx}\\
+&= \sigma(x) + x\,\sigma(x)\,\big(1-\sigma(x)\big)\\
+&= \sigma(x)\,\big(1 + x\,(1-\sigma(x))\big)
+\end{aligned}
+$$
+
+## 标量对向量 {/* #partials */}
+
+前面讨论的函数只有一个输入，例如 $y = f(x)$。但神经网络中的一个输出通常同时依赖许多量。例如 LM head 的一个 logit：
+
+$$
+z_j = \sum_{k=1}^{d} x_k W_{kj}
+$$
+
+$z_j$ 同时依赖 $x_1, \ldots, x_d$ 和 $W_{1j}, \ldots, W_{dj}$。如果我们只想知道其中某一个量变化时 $z_j$ 如何变化，就需要在其他量保持不变的情况下对它求导。这就是偏导数。
+
+我们先用一个只有两个输入的函数把这个概念讲清楚，再回到上面的 LM head。
+
+### 偏导数 {/* #partial */}
+
+对多元函数，只改变其中一个自变量、保持其他自变量不变时得到的导数称为偏导数，通常用 $\partial$ 表示，写作 $\dfrac{\partial f}{\partial x}$，在 $(x_0, y_0)$ 处的值写作 $\left.\dfrac{\partial f}{\partial x}\right|_{(x_0,y_0)}$。
+
+举个例子：设 $f(x, y) = 3x^2 y$ 有两个输入，可以沿 $x$ 方向改变，也可以沿 $y$。我们先只让一个输入变化。
+
+<mark>固定 $y$，只让 $x$ 变化</mark>。固定 $y = y_0$ 后，$x \mapsto f(x, y_0)$ 就成为一个关于 $x$ 的单变量函数，因此可以直接使用前面的一元求导规则。它的图像是一条单变量曲线 $z = f(x, y_0)$，这条曲线在 $x = x_0$ 处的切线斜率，就是 $x$ 变化时 $f$ 的变化率。
+
+计算时把 $y$ 当作常数：
+
+$$
+\frac{\partial}{\partial x}\,3x^2y = 3y \cdot \frac{d}{dx}x^2 = 3y \cdot 2x = 6xy
+$$
+
+<mark>固定 $x$，只让 $y$ 变化</mark>，得到 $f$ 对 $y$ 的偏导数：
+
+$$
+\frac{\partial}{\partial y}\,3x^2y = 3x^2 \cdot \frac{d}{dy}y = 3x^2
+$$
+
+所以，一个二元函数在同一点可以有两个不同的局部变化率 $\dfrac{\partial f}{\partial x}$ 和 $\dfrac{\partial f}{\partial y}$。前者描述沿 $x$ 方向移动时函数怎样变化，后者描述沿 $y$ 方向移动时函数怎样变化。如果函数有更多输入，道理完全一样。
+
+<GradientFigure>
+<Caption>
+
+左边是 $f(x, y)$ 的取值，经过选定的位置 $(x_0, y_0)$ 的曲线是 $f$ 的等值线，曲线上每一点的 $f$ 都等于 $f(x_0, y_0)$。
+
+绿色箭头：$\dfrac{\partial f}{\partial x}$；粉色箭头：$\dfrac{\partial f}{\partial y}$。紫色箭头是两者合成的向量。
+
+右边两张图是过 $(x_0, y_0)$、分别固定 $y = y_0$ 和固定 $x = x_0$ 切出的两条单变量曲线，各带一条切线，两条切线的斜率就是两个偏导数。
+
+</Caption>
+</GradientFigure>
+
+现在重新回到 LM head：
+
+$$
+z_j = \sum_{k=1}^{d} x_k W_{kj}
+$$
+
+展开就是
+
+$$
+z_j = x_1W_{1j} + x_2W_{2j} + \cdots + x_dW_{dj}
+$$
+
+假设只改变 $x_k$，其他 $x$ 和所有权重都保持不变。与 $x_k$ 有关的只有 $x_kW_{kj}$ 这一项，因此
+
+$$
+\frac{\partial z_j}{\partial x_k} = W_{kj}
+$$
+
+$x_k$ 增加一个很小的量时，它对 $z_j$ 的影响会被权重 $W_{kj}$ 缩放。同样，如果只改变权重 $W_{kj}$，其他变量保持不变：
+
+$$
+\frac{\partial z_j}{\partial W_{kj}} = x_k
+$$
+
+所以在线性层里，输入对输出的影响由权重决定，而权重对输出的影响由对应的输入决定。
+
+例如 $z_j = x_1W_{1j} + x_2W_{2j} + x_3W_{3j}$，那么
+
+$$
+\frac{\partial z_j}{\partial x_1} = W_{1j},\qquad \frac{\partial z_j}{\partial x_2} = W_{2j},\qquad \frac{\partial z_j}{\partial x_3} = W_{3j}
+$$
+
+到这里，我们仍然是在一次研究一个标量输入。但实际反向传播不会只问 $\dfrac{\partial z_j}{\partial x_1}$ 是多少，它通常需要同时知道 $z_j$ 对整个输入向量 $\mathbf{x} = [\,x_1\ \ \cdots\ \ x_d\,]$ 的变化率。也就是说，我们想把 $\dfrac{\partial z_j}{\partial x_1}, \dfrac{\partial z_j}{\partial x_2}, \ldots, \dfrac{\partial z_j}{\partial x_d}$ 一次组织起来。这组偏导数组成的向量，就是下一节要讨论的梯度。
+
+### 梯度 {/* #gradient */}
+
+偏导数一次只描述一个输入分量变化时，函数如何变化。但训练模型时，参数通常会同时改变。我们还需要知道：当多个输入一起发生微小变化时，输出会怎样变化。
+
+设 $f = f(x, y)$。当 $x, y$ 分别发生很小的变化 $dx, dy$ 时，$f$ 的一阶变化为
+
+$$
+df = \frac{\partial f}{\partial x}\,dx + \frac{\partial f}{\partial y}\,dy
+$$
+
+把两个输入写成行向量：
+
+$$
+\mathbf{x} = [\,x\ \ y\,]\qquad d\mathbf{x} = [\,dx\ \ dy\,]
+$$
+
+再把两个偏导数排成一个行向量：
+
+$$
+\nabla f = \frac{\partial f}{\partial \mathbf{x}} = \Big[\,\frac{\partial f}{\partial x}\quad \frac{\partial f}{\partial y}\,\Big]
+$$
+
+这个向量称为 $f$ 的梯度，记作 $\nabla f$ 或 $\dfrac{\partial f}{\partial \mathbf{x}}$，$\nabla$ 读作 nabla。于是全微分可以写成点积：
+
+$$
+df = \nabla f \cdot d\mathbf{x}
+$$
+
+例如前面的函数 $f(x, y) = 3x^2y$ 有 $\dfrac{\partial f}{\partial x} = 6xy$，$\dfrac{\partial f}{\partial y} = 3x^2$，因此
+
+$$
+\nabla f = [\,6xy\quad 3x^2\,]
+$$
+
+梯度把“<mark>每个输入分量分别如何影响 $f$</mark>”收集到了一个向量中。而 $df = \nabla f \cdot d\mathbf{x}$ 进一步告诉我们：给定输入变化 $d\mathbf{x}$，可以直接由梯度算出 $f$ 的一阶变化。
+
+梯度还有一个重要的几何意义。若沿等值线移动，那么 $f$ 不变，因此 $df = \nabla f \cdot d\mathbf{x} = 0$，所以<mark>梯度与等值线垂直</mark>。另一方面，
+
+$$
+df = \|\nabla f\|\,\|d\mathbf{x}\|\cos\theta
+$$
+
+其中 $\theta$ 是梯度与移动方向之间的夹角。在移动距离 $\|d\mathbf{x}\|$ 固定时，$\theta = 0$ 时 $df$ 最大。因此，<mark>梯度指向函数局部增长最快的方向，负梯度则指向下降最快的方向</mark>。
+
+这一点正好对应模型训练。若标量 Loss 为 $L = L(\mathbf{w})$，其中 $\mathbf{w} = [\,w_1\ \ w_2\ \ \cdots\ \ w_n\,]$，那么
+
+$$
+\nabla_{\mathbf{w}}L = \frac{\partial L}{\partial \mathbf{w}} = \Big[\,\frac{\partial L}{\partial w_1}\quad \frac{\partial L}{\partial w_2}\quad \cdots\quad \frac{\partial L}{\partial w_n}\,\Big]
+$$
+
+梯度中的第 $i$ 个分量，就是参数 $w_i$ 发生微小变化时 Loss 的变化率。梯度下降沿负梯度方向更新参数：
+
+$$
+\mathbf{w} \leftarrow \mathbf{w} - \eta\,\nabla_{\mathbf{w}}L
+$$
+
+这里先把参数写成向量只是为了方便说明。实际的 PyTorch 参数可以是任意维 Tensor；后面会看到，标量 Loss 对一个 Tensor 求导时，得到的梯度与这个 Tensor 具有相同的形状。
+
+### 全导数链式法则 {/* #chain-paths */}
+
+[单变量链式法则](#chain-scalar)处理的情形里，$x$ 只通过一个中间变量 $u$ 影响 $y$，只有一条路径。$x$ 也可以同时通过多个中间变量 $u_1, u_2, \ldots, u_n$ 影响 $y$：每个 $u_k$ 是 $x$ 的函数，$y$ 是这 $n$ 个 $u_k$ 的函数。这时 $x$ 和 $y$ 之间有 $n$ 条路径，每条经过一个 $u_k$。这里 $x$ 和 $y$ 都是标量，求的是<mark>标量对标量的导数</mark>。
+
+<PathDiagram id="pathsSvg" kind="paths" label="反向传播的方向：从 y 经过 u_1 到 u_n 共 n 条路径传回 x" />
+
+按[“梯度”一节](#gradient)中 $df$ 的式子，$dy$ 是各个 $u_k$ 的贡献之和：
+
+$$
+dy = \sum_{k=1}^{n} \frac{\partial y}{\partial u_k}\,du_k
+$$
+
+<mark>每个 $u_k$ 是 $x$ 的函数</mark>，同样有 $du_k = \dfrac{du_k}{dx}\,dx$。代入后两边除以 $dx$：
+
+$$
+\frac{dy}{dx} = \sum_{k=1}^{n} \frac{\partial y}{\partial u_k}\,\frac{du_k}{dx}
+$$
+
+这里的 $\dfrac{dy}{dx}$ 称为 $y$ 对 $x$ 的全导数（total derivative），它计入 $x$ 经过所有路径对 $y$ 的影响。求和的第 $k$ 项是经过 $u_k$ 的那条路径的贡献：从 $y$ 出发，先乘 $\dfrac{\partial y}{\partial u_k}$，再乘 $\dfrac{du_k}{dx}$，图中高亮的是 $k = 1$ 的一条。$n$ 条路径的贡献相加，就是全导数。
+
+<Fold summary="只算一条路径为什么会出错">
+
+取 $y = x + x^2$，直接求导得 $\dfrac{dy}{dx} = 1 + 2x$。引入中间变量 $u = x^2$，把它写成 $y = x + u$。这时 $x$ 有两条路径影响 $y$：一条直接进入加法，一条经过 $u$。
+
+只沿经过 $u$ 的路径套用单变量链式法则，得到 $\dfrac{\partial y}{\partial u}\,\dfrac{du}{dx} = 1 \cdot 2x = 2x$，漏掉了直接路径的贡献 $1$。
+
+只对 $x$ 求偏导，得到 $\dfrac{\partial y}{\partial x} = 1$。偏导数假定 $u$ 保持不变，但 $u = x^2$ 会随 $x$ 变化，所以这个结果漏掉了经过 $u$ 的路径。
+
+把 $x$ 自身也看作一个中间变量（$u_1 = x$，$\dfrac{du_1}{dx} = 1$），按全导数的公式把两条路径的贡献相加：
+
+$$
+\frac{dy}{dx} = \frac{\partial y}{\partial x}\cdot 1 + \frac{\partial y}{\partial u}\,\frac{du}{dx} = 1 + 2x
+$$
+
+路径之间相加，不是因为 $y$ 本身是两项之和。把 $y$ 换成 $x \cdot x^2$，同样令 $u = x^2$，$y = x\,u$。直接路径的贡献是 $\dfrac{\partial y}{\partial x} = u = x^2$，经过 $u$ 的路径的贡献是 $\dfrac{\partial y}{\partial u}\,\dfrac{du}{dx} = x \cdot 2x = 2x^2$，两者相加得 $3x^2$，与直接对 $x^3$ 求导的结果相同。
+
+</Fold>
+
+模型里更常见的是<mark>标量对向量的梯度</mark>：输入是一个向量 $\mathbf{x} = [\,x_1\ \ x_2\ \ \cdots\ \ x_m\,]$，由它算出中间变量 $\mathbf{u} = [\,u_1\ \ u_2\ \ \cdots\ \ u_n\,]$，再由 $\mathbf{u}$ 算出标量 $y$（例如 Loss）：
+
+$$
+\begin{aligned}
+u_k &= g_k(x_1, x_2, \ldots, x_m),\qquad k = 1, \ldots, n \\
+y &= f(u_1, u_2, \ldots, u_n)
+\end{aligned}
+$$
+
+<PathDiagram id="vecPathsSvg" kind="vecPaths" label="反向传播的方向：y 连到 u_1 到 u_n，每个 u_k 再连到 x_1 到 x_m 的每一个；高亮从 y 经过 n 条路径传回 x_1" />
+
+每个 $u_k$ 都可能依赖全部 $m$ 个分量，所以 $y$ 和每个 $x_i$ 之间都有 $n$ 条路径。反向传播时，$y$ 对 $x_i$ 的偏导数沿这 $n$ 条路径传回 $x_i$，图中高亮的是 $x_1$ 的 $n$ 条。要求的梯度 $\dfrac{\partial y}{\partial \mathbf{x}}$ 由 $y$ 对每个分量 $x_i$ 的偏导数组成。
+
+做法是一次只看一个分量。固定 $x_i$ 以外的全部分量，$y$ 就只随 $x_i$ 一个标量变化，问题回到上面标量对标量的全导数链式法则。$m$ 个分量各算一次，排成一行，就是梯度：
+
+$$
+\begin{aligned}
+\frac{\partial y}{\partial \mathbf{x}} &= \Big[\,\frac{\partial y}{\partial x_1}\ \ \frac{\partial y}{\partial x_2}\ \ \cdots\ \ \frac{\partial y}{\partial x_m}\,\Big] \\
+\frac{\partial y}{\partial x_i} &= \sum_{k=1}^{n} \frac{\partial y}{\partial u_k}\,\frac{\partial u_k}{\partial x_i},\qquad i = 1, \ldots, m
+\end{aligned}
+$$
+
+左边的 $\dfrac{\partial y}{\partial x_i}$ 是把 $y$ 看成 $x_1, \ldots, x_m$ 的函数时对 $x_i$ 的偏导数：其余分量固定，但 $u_1, \ldots, u_n$ 都随 $x_i$ 变化，所以它计入了经过全部 $n$ 个 $u_k$ 的路径。右边的 $\dfrac{\partial u_k}{\partial x_i}$ 也是在其余分量固定时求的，所以同样写成偏导数。
+
+模型里的多条路径有两种情形。一种在一个运算内部：一个输入分量出现在多个输出分量里，例如 LM head 的每个输入分量都出现在每一个 logit 里，[“例：Loss 对 LM head 输入的梯度”](#in-model)用这条规则计算。另一种是同一个量在计算图里被使用多次，例如残差连接和共用的权重，见[“多条路径的导数相加”](#accumulate)一节。
+
+### 例：Loss 对 logits 的梯度 {/* #loss-grad */}
+
+<TailGraph id="tailSvgLoss" variant="loss" label="从 LM head 的输入到 Loss 的计算过程，高亮 logits、softmax、cross-entropy 和 Loss" />
+
+反向传播从 Loss 出发，第一步经过 cross-entropy 和 softmax，所以 Loss 对 logits 的梯度是模型里第一个要算的梯度。左图是模型最后一段在一个位置上的计算，高亮的是从 logits 到 Loss 的部分。
+
+LM head 在这个位置输出 $\mathbf{z} = [\,z_1\ \ z_2\ \ \cdots\ \ z_V\,]$，softmax 把它们变成一个概率分布：
+
+$$
+p_j = \frac{e^{z_j}}{\sum_{k=1}^{V} e^{z_k}}
+$$
+
+每个 $p_j$ 都在 0 和 1 之间，$V$ 个加起来等于 1，$p_j$ 是模型给词表中第 $j$ 个 token 的概率。设这个位置的目标 token 在词表中的编号是 $y$，它对应模型图中的 `target_ids`。这里的 $y$ 是一个整数编号，与前文表示函数输出的 $y$ 含义不同。cross-entropy Loss 是目标 token 的概率取负对数。一个位置的 Loss 记作 $\ell$，以便与整个序列的 Loss $L$ 区分，两者的关系见[“例：LM head 的权重”](#head-weight)一节：
+
+$$
+\ell = -\ln p_y
+$$
+
+$p_y$ 越接近 1，$\ell$ 越接近 0。
+
+$\ell$ 是一个标量，经过 softmax 依赖 $\mathbf{z}$ 的每一个分量，所以它对 $\mathbf{z}$ 的导数是一个梯度：$\dfrac{\partial{\ell}}{\partial{\mathbf{z}}} \in \mathbb{R}^{V}$。先用 $\ln\dfrac{a}{b} = \ln a - \ln b$ 和 $\ln e^{z} = z$ 把 $\ell$ 展开：
+
+$$
+\ell = -\ln \frac{e^{z_y}}{\sum_k e^{z_k}} = -z_y + \ln \sum_{k=1}^{V} e^{z_k}
+$$
+
+对 $z_j$ 求偏导时，其余的 logit 都当作常数，两项分别计算。
+
+第一项 $-z_y$：$j = y$ 时，它对 $z_j$ 的导数是 $-1$；$j \neq y$ 时，$-z_y$ 不含 $z_j$，导数是 $0$。
+
+第二项：记 $u = \sum_k e^{z_k}$。其余 logit 固定时，$u$ 是 $z_j$ 的单变量函数，按[单变量链式法则](#chain-scalar)，$\ln u$ 对 $z_j$ 的导数是 $\dfrac{1}{u}$ 乘 $u$ 对 $z_j$ 的导数。$u$ 的 $V$ 项里只有 $e^{z_j}$ 含 $z_j$，它的导数是 $e^{z_j}$，所以
+
+$$
+\frac{\partial}{\partial z_j} \ln \sum_k e^{z_k} = \frac{e^{z_j}}{\sum_k e^{z_k}} = p_j
+$$
+
+两项相加：
+
+$$
+\frac{\partial \ell}{\partial z_j} = \begin{cases} p_j - 1 & j = y \\ p_j & j \neq y \end{cases}
+$$
+
+把目标 token 写成一个 one-hot 向量 $\mathbf{y}$：第 $y$ 个分量是 1，其余分量是 0。$V$ 个偏导数排成一行，就是 $\ell$ 对 $\mathbf{z}$ 的梯度：
+
+$$
+\frac{\partial \ell}{\partial \mathbf{z}} = \mathbf{p} - \mathbf{y},\qquad \mathbf{p} = [\,p_1\ \ p_2\ \ \cdots\ \ p_V\,]
+$$
+
+例如 $V = 3$，$\mathbf{z} = [\,2\ \ 1\ \ 0\,]$，目标是第 1 个 token。这时 $\mathbf{p} \approx [\,0.665\ \ 0.245\ \ 0.090\,]$，梯度是 $[\,-0.335\ \ 0.245\ \ 0.090\,]$。
+
+梯度的每个分量给出对应的 logit 增大时 Loss 的变化率。
+
+- 目标 token 的分量是 $p_y - 1 < 0$，它的 logit 增大时 Loss 减小；
+- 其余分量是 $p_j > 0$，这些 logit 增大时 Loss 增大，变化率等于该 token 的概率；
+- $p_y$ 接近 1 时，所有分量都接近 0，Loss 几乎不再随 logits 变化。
+
+### 例：Loss 对 LM head 输入的梯度 {/* #in-model */}
+
+<TailGraph id="tailSvgHead" variant="head" label="从 LM head 的输入到 Loss 的计算过程，高亮 LM head 的输入、LM head 和 logits" />
+
+LM head 计算 $\mathbf{z} = \mathbf{x}W_{out}$，下面把 $W_{out}$ 简写为 $W$，它是 $d \times V$ 的矩阵。输入 $\mathbf{x} \in \mathbb{R}^{d}$ 是模型图里 $\hat{X}_N$ 的一行，也就是最后一个 RMSNorm 在这个位置的输出。左图高亮的是这一步，左侧标出了上一节算出的 $\dfrac{\partial \ell}{\partial \mathbf{z}}$。
+
+要求 $\ell$ 对 $x_i$ 的偏导数，先看 $x_i$ 影响哪些 logit。本章开头给出了 $z_j = \sum_k x_k W_{kj}$，每个 logit 都是 $\mathbf{x}$ 与 $W$ 一列的点积，所以 $x_i$ 出现在每一个 logit 里。对 $x_i$ 求偏导数时，其余的 $x_k$ 和全部权重都当作常数，和式的 $d$ 项里只有 $x_iW_{ij}$ 含 $x_i$，所以
+
+$$
+\frac{\partial z_j}{\partial x_i} = W_{ij}
+$$
+
+$x_i$ 变化时，$V$ 个 logit 都随之变化，第 $j$ 个 logit 的变化率是 $W_{ij}$。
+
+$x_i$ 经过每一个 logit 影响 $\ell$，共有 $V$ 条路径。按[全导数链式法则](#chain-paths)，每条路径上把 $\dfrac{\partial \ell}{\partial z_j}$ 与 $\dfrac{\partial z_j}{\partial x_i}$ 相乘，再对 $V$ 条路径求和：
+
+$$
+\frac{\partial \ell}{\partial x_i} = \sum_{j=1}^{V} \frac{\partial \ell}{\partial z_j}\,\frac{\partial z_j}{\partial x_i} = \sum_{j=1}^{V} (p_j - y_j)\,W_{ij}
+$$
+
+<PathDiagram id="headPathsSvg" kind="headPaths" label="反向传播的方向：Loss 连到 z_1 到 z_V，每个 z_j 再连到 x_1 到 x_d 的每一个；高亮从 Loss 经过 V 条路径传回 x_i，每条路径上 Loss 到 z_j 一段的偏导数是 p_j - y_j，z_j 到 x_i 一段是 W_ij" />
+
+我们用 <mark>Jacobian</mark> 来计算 Loss 对输入的导数（[Jacobian 在下一章](#jacobian)即将介绍，这里先直接给出答案）。$\mathbf{z}$ 对 $\mathbf{x}$ 的 Jacobian 矩阵如下：
+
+$$
+\begin{aligned}
+J = \dfrac{\partial \mathbf{z}}{\partial \mathbf{x}} &= \begin{bmatrix} W_{11} & W_{21} & \cdots & W_{d1} \\[8pt] W_{12} & W_{22} & \cdots & W_{d2} \\[4pt] \vdots & \vdots & & \vdots \\[4pt] \vdots & \vdots & & \vdots \\[4pt] W_{1V} & W_{2V} & \cdots & W_{dV} \end{bmatrix} = W^{T}
+\end{aligned}
+$$
+
+从 $\ell$ 到 $x_i$ 的导数可以写成：
+
+$$
+\frac{\partial \ell}{\partial x_i} = \sum_{j=1}^{V} \frac{\partial \ell}{\partial z_j}\,\frac{\partial z_j}{\partial x_i} = \sum_{j=1}^{V} \frac{\partial \ell}{\partial z_j}\,J_{ji}
+$$
+
+第 $i$ 个分量是 $\mathbf{p}-\mathbf{y}$ 与 $J$ 第 $i$ 列（即 $W$ 第 $i$ 行）的点积；$d$ 个分量合起来，也就是 $(\mathbf{p}-\mathbf{y})J$：
+
+$$
+\frac{\partial \ell}{\partial \mathbf{x}} = \frac{\partial \ell}{\partial \mathbf{z}}J = (\mathbf{p} - \mathbf{y})J
+$$
+
+## 向量对向量：Jacobian {/* #vector */}
+
+### Jacobian {/* #jacobian */}
+
+设函数 $f$ 的输入是 $\mathbf{x} \in \mathbb{R}^{n}$，输出是 $\mathbf{z} = f(\mathbf{x}) \in \mathbb{R}^{m}$。$\mathbf{z}$ 的每个分量 $z_j$ 对 $\mathbf{x}$ 的每个分量 $x_i$ 都有一个偏导数 $\dfrac{\partial z_j}{\partial x_i}$。把它们排成一个矩阵，第 $j$ 行第 $i$ 列放 $\dfrac{\partial z_j}{\partial x_i}$。这个矩阵称为 $\mathbf{z}$ 对 $\mathbf{x}$ 的 Jacobian，记作 $J$ 或 $\dfrac{\partial \mathbf{z}}{\partial \mathbf{x}}$：
+
+$$
+\begin{aligned}
+J &= \begin{bmatrix} \dfrac{\partial z_1}{\partial x_1} & \dfrac{\partial z_1}{\partial x_2} & \cdots & \dfrac{\partial z_1}{\partial x_n} \\[8pt] \dfrac{\partial z_2}{\partial x_1} & \dfrac{\partial z_2}{\partial x_2} & \cdots & \dfrac{\partial z_2}{\partial x_n} \\[4pt] \vdots & \vdots & & \vdots \\[4pt] \dfrac{\partial z_m}{\partial x_1} & \dfrac{\partial z_m}{\partial x_2} & \cdots & \dfrac{\partial z_m}{\partial x_n} \end{bmatrix}\\
+J_{ji} &= \frac{\partial z_j}{\partial x_i}
+\end{aligned}
+$$
+
+也可以表示成下面的形式：
+
+$$
+\begin{aligned}
+J &= \begin{bmatrix} \dfrac{\partial z_1}{\partial \mathbf{x}} \\ \dfrac{\partial z_2}{\partial \mathbf{x}} \\ \vdots \\ \dfrac{\partial z_m}{\partial \mathbf{x}} \end{bmatrix}\qquad \dfrac{\partial z_j}{\partial \mathbf{x}} \in \mathbb{R}^{1\times n}\\
+J &= \begin{bmatrix} \dfrac{\partial \mathbf{z}}{\partial x_1} & \dfrac{\partial \mathbf{z}}{\partial x_2} & \cdots & \dfrac{\partial \mathbf{z}}{\partial x_n} \end{bmatrix}\qquad \dfrac{\partial \mathbf{z}}{\partial x_i} \in \mathbb{R}^{m\times 1}
+\end{aligned}
+$$
+
+<mark>行对应输出，列对应输入</mark>。**一行**对应一个输出 $z_j$，它就是 $z_j$ 对 $\mathbf{x}$ 的梯度。**一列**对应一个输入 $x_i$，给出 $x_i$ 变化时每个输出分量的变化率。
+
+最常见的例子是矩阵乘法 $\mathbf{z} = \mathbf{x}W$，$W$ 是 $n \times m$ 的矩阵，第 $j$ 个输出是 $z_j = \sum_{k=1}^{n} x_k W_{kj}$。对 $x_i$ 求偏导数时，其余的 $x_k$ 和全部 $W$ 都当作常数，和式里只有 $x_iW_{ij}$ 含 $x_i$，所以 $\dfrac{\partial z_j}{\partial x_i} = W_{ij}$，即 $J_{ji} = W_{ij}$：
+
+$$
+J = W^{T}
+$$
+
+下图取 $n = 2$、$m = 3$。下方是 $3 \times 2$ 的 Jacobian $J$，它的第 $i$ 列是 $\mathbf{z}$ 对 $x_i$ 的偏导数，正好是 $W$ 的第 $i$ 行。
+
+<JacobianFigure />
+
+### 逐元素运算的 Jacobian {/* #elementwise */}
+
+一般地，输出的第 $j$ 个分量只依赖输入的第 $j$ 个分量，所以 Jacobian <mark>一定是对角矩阵</mark>。
+
+**一元运算**
+
+设 $\mathbf{x} \in \mathbb{R}^{n}$，$\mathbf{z} = f(\mathbf{x})$，其中 $z_j = f(x_j)$。按定义逐项求偏导：
+
+$$
+\frac{\partial z_j}{\partial x_i} = \begin{cases} f'(x_j) & i = j \\ 0 & i \neq j \end{cases}
+$$
+
+也就是
+
+$$
+J = \frac{\partial \mathbf{z}}{\partial \mathbf{x}} = \mathrm{diag}\big(f'(x_1), \ldots, f'(x_n)\big) = \mathrm{diag}\big(f'(\mathbf{x})\big)
+$$
+
+几个常见例子：
+
+- ReLU：$f'(x_j) = \mathbb{1}[x_j > 0]$，所以 $J = \mathrm{diag}\big(\mathbb{1}[\mathbf{x} > 0]\big)$；
+- sigmoid：$\sigma'(x_j) = \sigma(x_j)\big(1 - \sigma(x_j)\big)$，所以 $J = \mathrm{diag}\big(\sigma(\mathbf{x}) \otimes (1 - \sigma(\mathbf{x}))\big)$；
+- $\exp$：$J = \mathrm{diag}(e^{\mathbf{x}})$；
+- $\tanh$：$J = \mathrm{diag}\big(1 - \tanh^2(\mathbf{x})\big)$。
+
+**二元运算**
+
+两个向量之间的逐元素运算同理。以逐元素相乘 $\mathbf{z} = \mathbf{a} \otimes \mathbf{b}$ 为例，$z_j = a_j b_j$。对 $\mathbf{a}$ 求偏导时把 $\mathbf{b}$ 当作常数，$\dfrac{\partial z_j}{\partial a_j} = b_j$，非对角线元素仍为零；对 $\mathbf{b}$ 求偏导同理：
+
+$$
+\frac{\partial (\mathbf{a} \otimes \mathbf{b})}{\partial \mathbf{a}} = \mathrm{diag}(\mathbf{b}),\qquad \frac{\partial (\mathbf{a} \otimes \mathbf{b})}{\partial \mathbf{b}} = \mathrm{diag}(\mathbf{a})
+$$
+
+### softmax 的 Jacobian {/* #softmax */}
+
+softmax 的输入是 $\mathbf{x} \in \mathbb{R}^{n}$，输出是 $\mathbf{p} \in \mathbb{R}^{n}$：
+
+$$
+p_j = \frac{e^{x_j}}{\sum_k e^{x_k}}
+$$
+
+分子 $e^{x_j}$ 只在 $i = j$ 时依赖 $x_i$，分母则对每个 $x_i$ 的导数都有贡献：
+
+$$
+\frac{\partial p_j}{\partial x_i} = \frac{\delta_{ij}\,e^{x_j}}{\sum_k e^{x_k}} - \frac{e^{x_j}\,e^{x_i}}{\big(\sum_k e^{x_k}\big)^2} = \delta_{ij}\,p_j - p_j p_i
+$$
+
+其中 $\delta_{ij}$ 是 Kronecker delta：$i = j$ 时为 1，$i \neq j$ 时为 0。写成矩阵：
+
+$$
+J = \mathrm{diag}(\mathbf{p}) - \mathbf{p}^{T}\mathbf{p}
+$$
+
+例如 $\mathbf{x} = [\,\ln 4\ \ \ln 3\ \ \ln 2\ \ 0\,]$，这时 $e^{x_j}$ 依次是 4、3、2、1，$\mathbf{p} = [\,0.4\ \ 0.3\ \ 0.2\ \ 0.1\,]$：
+
+$$
+J = \begin{bmatrix} 0.24 & -0.12 & -0.08 & -0.04 \\ -0.12 & 0.21 & -0.06 & -0.03 \\ -0.08 & -0.06 & 0.16 & -0.02 \\ -0.04 & -0.03 & -0.02 & 0.09 \end{bmatrix}
+$$
+
+对角线元素为正：<mark>$x_j$ 增大时，$p_j$ 增大</mark>。非对角线元素为负：<mark>$x_i$ 增大时，其余的 $p_j$（$j \neq i$）减小。</mark>
+
+计算 Loss 对 $\mathbf{x}$ 的导数不需要构造 $n \times n$ 的 $J$。记 Loss 对输出的导数为 $\mathbf{g} = \dfrac{\partial L}{\partial \mathbf{p}}$：
+
+$$
+\frac{\partial L}{\partial \mathbf{x}} = \mathbf{g}J = \mathbf{g} \otimes \mathbf{p} - (\mathbf{g}\cdot\mathbf{p})\,\mathbf{p} = \mathbf{p} \otimes \big(\mathbf{g} - \mathbf{g}\cdot\mathbf{p}\big)
+$$
+
+$\mathbf{g}\cdot\mathbf{p} = \sum_k p_k g_k$ 是标量，等于 $\mathbf{g}$ 的各分量以 $\mathbf{p}$ 为权重的加权平均值。整个计算是量与 $n$ 成正比。
+
+这个结果有两个性质：
+
+- $\mathbf{p}$ 的分量之和固定为 1，所以 <mark>$J$ 每一列之和为零</mark>；
+- 把 $\mathbf{x}$ 的每个分量加上同一个常数，$\mathbf{p}$ 不变，所以 <mark>$J$ 每一行之和为零</mark>。
+
+softmax 后面接 cross-entropy 时，$L = -\sum_j y_j \ln p_j$，其中 $\mathbf{y}$ 是目标 token 的 one-hot 向量。这时 $g_j = -\dfrac{y_j}{p_j}$，代入上式化简得到
+
+$$
+\frac{\partial L}{\partial \mathbf{x}} = \mathbf{p} - \mathbf{y}
+$$
+
+推导过程见[“例：分两步求 Loss 对 logits 的梯度”](#softmax-ce)。这个结果形式简单，并且避开了单独计算 $\ln p_j$ 时的数值问题，所以深度学习框架通常把 softmax 和 cross-entropy 合成一个运算。
+
+### 向量链式法则 {/* #chain-vector */}
+
+两个运算嵌套时，先由 $\mathbf{x} \in \mathbb{R}^{n}$ 算出 $\mathbf{u} \in \mathbb{R}^{q}$，再由 $\mathbf{u}$ 算出 $\mathbf{z} \in \mathbb{R}^{m}$。设两个运算各自的 Jacobian $\dfrac{\partial \mathbf{u}}{\partial \mathbf{x}}$（$q \times n$）和 $\dfrac{\partial \mathbf{z}}{\partial \mathbf{u}}$（$m \times q$）已经算出，我们要计算整体的 Jacobian $\dfrac{\partial \mathbf{z}}{\partial \mathbf{x}}$，即 $m \times n$ 个偏导数 $\dfrac{\partial z_j}{\partial x_i}$。
+
+$x_i$ 经由 $u_1, u_2, \ldots, u_q$ 影响 $z_j$，属于[多条路径](#chain-paths)的情形，需要使用全导数：
+
+$$
+\frac{\partial z_j}{\partial x_i} = \sum_{k=1}^{q} \frac{\partial z_j}{\partial u_k}\,\frac{\partial u_k}{\partial x_i}
+$$
+
+右边对 $k$ 求和的形式正是矩阵乘法的定义：第一个矩阵的第 $j$ 行与第二个矩阵的第 $i$ 列的点积。所以整体的 Jacobian 是两个 Jacobian 的乘积：
+
+$$
+\frac{\partial \mathbf{z}}{\partial \mathbf{x}} = \frac{\partial \mathbf{z}}{\partial \mathbf{u}}\,\frac{\partial \mathbf{u}}{\partial \mathbf{x}}
+$$
+
+例如先做矩阵乘法 $\mathbf{u} = \mathbf{x}W$，再逐元素平方 $z_j = u_j^2$。$W$ 取[“Jacobian”](#jacobian)一节图中的矩阵，$\mathbf{x} = [\,1\ \ -0.5\,]$，这时 $\mathbf{u} = [\,0.75\ \ -2.5\ \ 1\,]$。两个 Jacobian 分别是 $W^{T}$ 和 $\mathrm{diag}(2\mathbf{u})$：
+
+$$
+\frac{\partial \mathbf{z}}{\partial \mathbf{x}} = \mathrm{diag}(2\mathbf{u})\,W^{T} = \begin{bmatrix} 1.5 & 0 & 0 \\ 0 & -5 & 0 \\ 0 & 0 & 2 \end{bmatrix}\begin{bmatrix} 1 & 0.5 \\ -2 & 1 \\ 0.5 & -1 \end{bmatrix} = \begin{bmatrix} 1.5 & 0.75 \\ 10 & -5 \\ 1 & -2 \end{bmatrix}
+$$
+
+嵌套更多层时，把各层的 Jacobian 按从外到内的顺序相乘。**外**意味着更靠近输出，也就是和前向的计算顺序相反。如前向是先 $\mathbf{x} \to \mathbf{u}$ 再 $\mathbf{u} \to \mathbf{z}$，那计算 Jacobian 的时候就是 $\frac{\partial \mathbf{z}}{\partial \mathbf{u}}\,\frac{\partial \mathbf{u}}{\partial \mathbf{x}}$。
+
+### 例：分两步求 Loss 对 logits 的梯度 {/* #softmax-ce */}
+
+LM head 之后的 softmax 接着 cross-entropy。[“例：Loss 对 logits 的梯度”](#loss-grad)把两者合在一起直接求导，这里用[“softmax 的 Jacobian”](#softmax)分两步计算：先求 $\ell$ 对 softmax 输出 $\mathbf{p}$ 的导数，再代入那一节的公式。softmax 的输入是 logits，下面把 $\mathbf{x}$ 写成 $\mathbf{z}$。
+
+$\ell = -\ln p_y$ 只含 $p_y$，按对数函数的求导规则：
+
+$$
+\frac{\partial \ell}{\partial p_j} = \begin{cases} -\dfrac{1}{p_y} & j = y \\[6pt] 0 & j \neq y \end{cases}
+$$
+
+$\dfrac{\partial \ell}{\partial \mathbf{p}}$ 只有一个非零分量，所以 $\dfrac{\partial \ell}{\partial \mathbf{p}}\cdot\mathbf{p} = -\dfrac{1}{p_y} \cdot p_y = -1$。代入公式，$\dfrac{\partial \ell}{\partial \mathbf{z}}$ 的第 $j$ 个分量是 $p_j\Big(\dfrac{\partial \ell}{\partial p_j} + 1\Big)$。$j = y$ 时是 $p_y - 1$，其余是 $p_j$。合起来：
+
+$$
+\frac{\partial \ell}{\partial \mathbf{z}} = \mathbf{p} - \mathbf{y}
+$$
+
+与直接求导的结果相同。实现中 softmax 和 cross-entropy 通常合成一个运算（PyTorch 的 `F.cross_entropy`），原因有两个：合并后只需一次减法，不必先算出 $-1/p_y$ 再代入 softmax 的公式；前向按 $\ln p_j = z_j - \ln\sum_k e^{z_k}$ 计算，配合减去每行最大值，避免 $e^{z_j}$ 溢出和 $p_j$ 下溢后取对数。
+
+### 例：LM head 的 Jacobian {/* #head-jac */}
+
+LM head 计算 $\mathbf{z} = \mathbf{x}W$，其中 $W$ 是 $d \times V$ 的 $W_{out}$，$\mathbf{x} \in \mathbb{R}^{d}$，$\mathbf{z} \in \mathbb{R}^{V}$。按“Jacobian”一节，$\mathbf{z}$ 对 $\mathbf{x}$ 的 Jacobian 是 $W^{T}$，一个 $V \times d$ 的矩阵。Loss 对 logits 的导数是 $\dfrac{\partial \ell}{\partial \mathbf{z}} = \mathbf{p} - \mathbf{y}$，于是
+
+$$
+\frac{\partial \ell}{\partial \mathbf{x}} = \frac{\partial \ell}{\partial \mathbf{z}}\,J = (\mathbf{p} - \mathbf{y})\,W^{T}
+$$
+
+形状检查：$1 \times V$ 乘 $V \times d$ 得到 $1 \times d$。结果的第 $i$ 个分量是 $\mathbf{p} - \mathbf{y}$ 与 $W$ 第 $i$ 行的点积 $\sum_j (p_j - y_j)\,W_{ij}$，与[“例：Loss 对 LM head 输入的梯度”](#in-model)逐个分量求和的结果相同。那里对 $d$ 个分量各做一次 $V$ 条路径的求和，这里合成了一次行向量乘矩阵。
+
+### 例：SwiGLU FFN 的 Jacobian {/* #ffn-jac */}
+
+SwiGLU FFN 在一个位置上的输入是 $\mathbf{x} \in \mathbb{R}^{d}$，计算分为五步：
+
+$$
+\begin{aligned}
+\mathbf{a} &= \mathbf{x}W_{gate}, & \mathbf{b} &= \mathbf{x}W_{up}, \\
+\mathbf{c} &= \mathrm{Swish}(\mathbf{a}), & \mathbf{u} &= \mathbf{c} \otimes \mathbf{b}, \\
+\mathbf{h} &= \mathbf{u}W_{down}
+\end{aligned}
+$$
+
+其中 $\mathbf{a}, \mathbf{b}, \mathbf{c}, \mathbf{u} \in \mathbb{R}^{d_{ff}}$，$\mathbf{h} \in \mathbb{R}^{d}$。每一步都是本章讲过的运算，Jacobian 可以直接写出：
+
+- 三次矩阵乘法：$\dfrac{\partial \mathbf{a}}{\partial \mathbf{x}} = W_{gate}^{T}$，$\dfrac{\partial \mathbf{b}}{\partial \mathbf{x}} = W_{up}^{T}$，$\dfrac{\partial \mathbf{h}}{\partial \mathbf{u}} = W_{down}^{T}$；
+- 逐元素函数：$\dfrac{\partial \mathbf{c}}{\partial \mathbf{a}} = \mathrm{diag}\big(\mathrm{Swish}'(\mathbf{a})\big)$，$\mathrm{Swish}'$ 见[“例：Sigmoid 与 Swish 的导数”](#swish)；
+- 逐元素相乘：$\dfrac{\partial \mathbf{u}}{\partial \mathbf{c}} = \mathrm{diag}(\mathbf{b})$，$\dfrac{\partial \mathbf{u}}{\partial \mathbf{b}} = \mathrm{diag}(\mathbf{c})$。
+
+gate 分支 $\mathbf{x} \to \mathbf{a} \to \mathbf{c}$ 是两个运算的嵌套，按向量链式法则：
+
+$$
+\frac{\partial \mathbf{c}}{\partial \mathbf{x}} = \mathrm{diag}\big(\mathrm{Swish}'(\mathbf{a})\big)\,W_{gate}^{T}
+$$
+
+形状检查：$d_{ff} \times d_{ff}$ 乘 $d_{ff} \times d$ 得到 $d_{ff} \times d$。
+
+$\mathbf{x}$ 经过 $\mathbf{c}$ 和 $\mathbf{b}$ 两个中间向量影响 $\mathbf{u}$。对每个偏导数 $\dfrac{\partial u_j}{\partial x_i}$，按全导数链式法则把经过 $\mathbf{c}$ 的路径和经过 $\mathbf{b}$ 的路径相加，写成矩阵就是两个 Jacobian 乘积之和：
+
+$$
+\frac{\partial \mathbf{u}}{\partial \mathbf{x}} = \mathrm{diag}(\mathbf{b})\,\mathrm{diag}\big(\mathrm{Swish}'(\mathbf{a})\big)\,W_{gate}^{T} + \mathrm{diag}(\mathbf{c})\,W_{up}^{T}
+$$
+
+最后乘 $W_{down}$ 那次矩阵乘法的 Jacobian，得到整个 FFN 的 Jacobian，它是 $d \times d$ 的矩阵：
+
+$$
+\frac{\partial \mathbf{h}}{\partial \mathbf{x}} = W_{down}^{T}\,\Big(\mathrm{diag}(\mathbf{b})\,\mathrm{diag}\big(\mathrm{Swish}'(\mathbf{a})\big)\,W_{gate}^{T} + \mathrm{diag}(\mathbf{c})\,W_{up}^{T}\Big)
+$$
+
+反向传播从 Loss 对 $\mathbf{h}$ 的导数出发，依次乘上面列出的各个 Jacobian，不需要先算出这个 $d \times d$ 的矩阵，见[“反向传播：vector-Jacobian product”](#backprop)一章。
+
+## 标量对矩阵 {/* #matrix */}
+
+### 权重的梯度 {/* #weight-grad */}
+
+仍取矩阵乘法 $\mathbf{z} = \mathbf{x}W$，$\mathbf{x} \in \mathbb{R}^{n}$，$W$ 是 $n \times m$ 的矩阵。已知 Loss 对输出的导数 $\dfrac{\partial L}{\partial \mathbf{z}}$，要求 Loss 对 $W$ 的导数 $\dfrac{\partial L}{\partial W}$。它与 $W$ 同形状，第 $i$ 行第 $j$ 列是 $\dfrac{\partial L}{\partial W_{ij}}$。
+
+<strong>第一步：$W_{ij}$ 影响哪些输出。</strong>$z_j = \sum_k x_k W_{kj}$ 只用到 $W$ 的第 $j$ 列，$W_{ij}$ 只出现在 $z_j$ 的 $x_iW_{ij}$ 这一项里，所以
+
+$$
+\frac{\partial z_j}{\partial W_{ij}} = x_i
+$$
+
+其余输出分量不含 $W_{ij}$，对它的偏导数为 0。
+
+<strong>第二步：链式法则。</strong>$W_{ij}$ 只经过 $z_j$ 影响 $L$，只有一条路径，按[单变量链式法则](#chain-scalar)：
+
+$$
+\frac{\partial L}{\partial W_{ij}} = \frac{\partial L}{\partial z_j}\,\frac{\partial z_j}{\partial W_{ij}} = x_i\,\frac{\partial L}{\partial z_j}
+$$
+
+<strong>第三步：排成矩阵。</strong>第 $i$ 行第 $j$ 列是 $x_i\,\dfrac{\partial L}{\partial z_j}$，这正是 $n \times 1$ 的列向量 $\mathbf{x}^{T}$ 乘 $1 \times m$ 的行向量 $\dfrac{\partial L}{\partial \mathbf{z}}$：
+
+$$
+\frac{\partial L}{\partial W} = \mathbf{x}^{T}\,\frac{\partial L}{\partial \mathbf{z}}
+$$
+
+下图取 $\mathbf{x} = [\,1\ \ -0.5\,]$，$\dfrac{\partial L}{\partial \mathbf{z}} = [\,1\ \ 0\ \ -1\,]$。
+
+<OuterFigure variant="outer" />
+
+按链式法则的一般形式，$\dfrac{\partial L}{\partial W}$ 要经过 $\dfrac{\partial \mathbf{z}}{\partial W}$。这是向量对矩阵的导数，共有 $m \times n \times m$ 个偏导数 $\dfrac{\partial z_k}{\partial W_{ij}}$。第一步已经给出它的全部元素：$k = j$ 时为 $x_i$，其余为 0。按 $k$ 分开看，每个 $\dfrac{\partial z_k}{\partial W}$ 是与 $W$ 同形状的矩阵，只有第 $k$ 列不为零，这一列是 $\mathbf{x}^{T}$。第二步只用到 $k = j$ 的元素，所以计算 $\dfrac{\partial L}{\partial W}$ 不需要写出这个数组。
+
+### 输入（矩阵）的梯度 {/* #sequence */}
+
+训练时一个序列的 $T$ 个位置一起计算。把各位置的输入按行堆成 $T \times n$ 的矩阵 $X$，$Z = XW$ 的第 $t$ 行是 $\mathbf{z}_t = \mathbf{x}_tW$。Loss 对各位置输出的导数按同样的方式堆成 $T \times m$ 的矩阵 $G = \dfrac{\partial L}{\partial Z}$，第 $t$ 行是 $\dfrac{\partial L}{\partial \mathbf{z}_t}$。
+
+<strong>对输入的导数：逐行计算。</strong>$\mathbf{x}_t$ 只影响 $\mathbf{z}_t$，所以每一行都按一个位置计算。$\mathbf{z}_t$ 对 $\mathbf{x}_t$ 的 Jacobian 是[“Jacobian”](#jacobian)一节的 $W^{T}$：
+
+$$
+\frac{\partial L}{\partial \mathbf{x}_t} = \frac{\partial L}{\partial \mathbf{z}_t}\,W^{T}
+$$
+
+$T$ 行合起来是 $\dfrac{\partial L}{\partial X} = GW^{T}$。模型里的大多数运算都对每个位置分别计算，对输入的导数也都逐行计算。attention 让每个位置读取其他位置，是例外，见[“例：GQA attention”](#op-attn)。
+
+<strong>对权重的导数：各位置相加。</strong>$W$ 被 $T$ 个位置共用，每个 $W_{ij}$ 经过 $\mathbf{z}_1, \ldots, \mathbf{z}_T$ 影响 $L$。按[全导数链式法则](#chain-paths)，把 $T$ 条路径的贡献相加，每一条都是上一节的外积：
+
+$$
+\frac{\partial L}{\partial W} = \sum_{t=1}^{T} \mathbf{x}_t^{T}\,\frac{\partial L}{\partial \mathbf{z}_t} = X^{T}G
+$$
+
+$X^{T}G$ 是 $n \times T$ 乘 $T \times m$，矩阵乘法中对 $T$ 的求和就是对位置的求和。下图取 $T = 3$，位置 1 沿用上一节的数值。
+
+<OuterFigure variant="sum" />
+
+按链式法则的一般形式，$\dfrac{\partial L}{\partial X}$ 要经过 $\dfrac{\partial Z}{\partial X}$。这是矩阵对矩阵的导数，共有 $T \times m \times T \times n$ 个偏导数 $\dfrac{\partial Z_{tj}}{\partial X_{si}}$：$s \neq t$ 时为 0，$s = t$ 时为 $W_{ij}$。也就是说，这个四维数组里不为零的只有 $T$ 个 $m \times n$ 的块，每一块都是 $W^{T}$。$Z$ 对一行 $\mathbf{x}_s$ 的导数是矩阵对向量，它是这个数组的一部分，其中也只有一块 $W^{T}$ 不为零。逐行计算只用到 $W^{T}$，所以不需要写出这两个数组。
+
+### 矩阵乘法的反向规则 {/* #op-matmul */}
+
+前两节的结果合起来，就是矩阵乘法的反向规则。设前向是 $Z = XW$，$X \in \mathbb{R}^{T \times n}$，$W \in \mathbb{R}^{n \times m}$，$Z \in \mathbb{R}^{T \times m}$。已知 Loss 对输出的导数 $\dfrac{\partial L}{\partial Z} \in \mathbb{R}^{T \times m}$，Loss 对输入和对权重的导数是：
+
+$$
+\frac{\partial L}{\partial X} = \dfrac{\partial L}{\partial Z}\,W^{T} \in \mathbb{R}^{T \times n},\qquad \frac{\partial L}{\partial W} = X^{T}\dfrac{\partial L}{\partial Z} \in \mathbb{R}^{n \times m}
+$$
+
+反向传播经过一次矩阵乘法时，用到的只有 $\dfrac{\partial L}{\partial Z}$、$W$ 和前向计算时保存的 $X$。
+
+### 例：LM head 的权重 {/* #head-weight */}
+
+LM head 计算 $\mathbf{z} = \mathbf{x}W_{out}$，$W_{out}$ 是 $d \times V$ 的矩阵。一个位置上 $\dfrac{\partial \ell}{\partial \mathbf{z}} = \mathbf{p} - \mathbf{y}$，按[“权重的梯度”](#weight-grad)一节：
+
+$$
+\frac{\partial \ell}{\partial W_{out}} = \mathbf{x}^{T}(\mathbf{p} - \mathbf{y})
+$$
+
+第 $i$ 行第 $j$ 列是 $x_i(p_j - y_j)$，$y_j$ 是 one-hot 向量 $\mathbf{y}$ 的第 $j$ 个分量。这是本文第一次得到 Loss 对模型参数的导数。
+
+训练用的 Loss $L$ 是 $T$ 个位置各自的 Loss $\ell_t$ 的平均：$L = \dfrac{1}{T}\sum_{t=1}^{T} \ell_t$，$L$ 对每个 $\ell_t$ 的偏导数都是 $\dfrac{1}{T}$（直接求和、不取平均时是 $1$）。位置 $t$ 的 logits $\mathbf{z}_t$ 只通过 $\ell_t$ 影响 $L$，按单变量链式法则，
+
+$$
+\frac{\partial L}{\partial \mathbf{z}_t} = \frac{1}{T}\,(\mathbf{p}_t - \mathbf{y}_t)
+$$
+
+把 $T$ 个位置的这一行堆成 $T \times V$ 的矩阵 $G = \dfrac{1}{T}(P - Y)$，其中 $P$ 和 $Y$ 分别由 $\mathbf{p}_t$ 和 $\mathbf{y}_t$ 按行堆成。LM head 的输入 $X$ 是 $T \times d$ 的矩阵，第 $t$ 行是位置 $t$ 的 $\mathbf{x}_t$。按矩阵乘法的反向规则：
+
+$$
+\frac{\partial L}{\partial W_{out}} = X^{T}G,\qquad \frac{\partial L}{\partial X} = G\,W_{out}^{T}
+$$
+
+模型里其余带权重的方框 $W_Q$、$W_K$、$W_V$、$W_O$、$W_{gate}$、$W_{up}$、$W_{down}$ 也都是矩阵乘法，使用同一条规则，$G$ 由它们后面的运算传回。
+
+## 反向传播：vector-Jacobian product {/* #backprop */}
+
+前几章求出了矩阵乘法、逐元素运算和 softmax 的 Jacobian，以及 Loss 对输入和权重的导数。整个模型由许多运算组成，反向传播需要一种对所有运算都适用的计算方式，并且在 Jacobian 很大时，计算量和显存仍然在可以接受的范围内。同一个量被多个运算使用时，还要把各条路径传回的导数合并。
+
+### vector-Jacobian product {/* #vjp */}
+
+反向传播需要的是标量 Loss 对各个量的导数。[“Jacobian”](#jacobian)一节已经得到：设一个运算的输入是 $\mathbf{x}$，输出是 $\mathbf{z}$，Jacobian 是 $J = \dfrac{\partial \mathbf{z}}{\partial \mathbf{x}}$，已知 Loss 对输出的导数 $\dfrac{\partial L}{\partial \mathbf{z}}$，则
+
+$$
+\frac{\partial L}{\partial \mathbf{x}} = \frac{\partial L}{\partial \mathbf{z}}\,J
+$$
+
+结果仍是行向量，与 $\mathbf{x}$ 同形状。这个运算称为 vector-Jacobian product。反向传播每经过一个运算做的就是它：取 Loss 对该运算**输出**的导数，乘这个运算的 Jacobian，得到 Loss 对**输入**的导数，交给产生这个输入的上一个运算。
+
+连续经过多个运算时，也可以先按向量链式法则把各个 Jacobian 乘起来。以[“向量链式法则”](#chain-vector)一节的 $\mathbf{x} \to \mathbf{u} \to \mathbf{z}$ 为例，把两个 Jacobian 记作 $J_2 = \dfrac{\partial \mathbf{z}}{\partial \mathbf{u}}$（$m \times q$）和 $J_1 = \dfrac{\partial \mathbf{u}}{\partial \mathbf{x}}$（$q \times n$）：
+
+$$
+\frac{\partial L}{\partial \mathbf{x}} = \frac{\partial L}{\partial \mathbf{z}}\,(J_2 J_1) = \Big(\frac{\partial L}{\partial \mathbf{z}}\,J_2\Big)\,J_1
+$$
+
+矩阵乘法满足结合律，两种顺序结果相同，计算量不同。左边先算 $J_2J_1$，需要 $m \times q \times n$ 次乘法。右边从 $\dfrac{\partial L}{\partial \mathbf{z}}$ 开始，每一步都是行向量乘一个 Jacobian，结果仍是行向量，一共需要 $m \times q + q \times n$ 次乘法。两者之比是 $\dfrac{mn}{m + n}$，$m$ 和 $n$ 都是 4096 时约为两千。反向传播采用右边的顺序：从 Loss 开始，按前向计算的相反顺序，逐个运算做 vector-Jacobian product。
+
+其他运算的反向规则也写成与[矩阵乘法的反向规则](#op-matmul)相同的格式。对每个运算：前向算出 输出 $= f(\text{输入})$；反向的输入是 $G = \dfrac{\partial L}{\partial\,\text{输出}}$，它和输出同形状；返回 $\dfrac{\partial L}{\partial\,\text{输入}}$，和输入同形状；运算有权重的，再返回 $\dfrac{\partial L}{\partial W}$，和 $W$ 同形状。自动微分系统按这个格式为每种运算登记一条反向规则，`backward()` 按前向的相反顺序逐条调用。
+
+### 不构造 Jacobian {/* #no-jacobian */}
+
+计算 $\dfrac{\partial L}{\partial \mathbf{z}}\,J$ 不需要先构造 $J$。下面是最常见的几种 Jacobian：
+
+**对角 Jacobian**。$J = \mathrm{diag}(\mathbf{v})$ 时，$\dfrac{\partial L}{\partial \mathbf{z}}\,J$ 的第 $k$ 个分量是 $\dfrac{\partial L}{\partial z_k}\,v_k$，也就是逐元素相乘：
+
+$$
+\frac{\partial L}{\partial \mathbf{z}}\,\mathrm{diag}(\mathbf{v}) = \frac{\partial L}{\partial \mathbf{z}} \otimes \mathbf{v}
+$$
+
+逐元素函数 $\mathbf{z} = f(\mathbf{x})$ 的反向是 $\dfrac{\partial L}{\partial \mathbf{x}} = \dfrac{\partial L}{\partial \mathbf{z}} \otimes f'(\mathbf{x})$。输入有 $n$ 个分量时，这是一次 $n$ 个元素的逐元素乘，而不是一次 $n \times n$ 的矩阵乘。
+
+**矩阵乘法的 Jacobian**。$\mathbf{z} = \mathbf{x}W$ 时 $J = W^T$，$\dfrac{\partial L}{\partial \mathbf{x}} = \dfrac{\partial L}{\partial \mathbf{z}}\,W^{T}$，直接使用 $W$ 做一次普通的矩阵乘法。
+
+**softmax 的 Jacobian**。它不是对角矩阵，但[“softmax 的 Jacobian”](#softmax)一节已经把 $\dfrac{\partial L}{\partial \mathbf{p}}\,J$ 化简为一次点积、一次减法和一次逐元素乘，同样不需要构造 $J$。
+
+$T$ 个位置堆成矩阵时，Jacobian 为对角矩阵的几种运算写成矩阵形式如下，$G$ 是 Loss 对输出的导数，与输出同形状。矩阵乘法的矩阵形式见[“矩阵乘法的反向规则”](#op-matmul)一节。
+
+**逐元素函数** $H = f(A)$：$\dfrac{\partial L}{\partial A} = G \otimes f'(A)$。$f$ 可以是 Swish、sigmoid、指数等单变量函数。
+
+**逐元素乘** $H = A \otimes B$：$\dfrac{\partial L}{\partial A} = G \otimes B$，$\dfrac{\partial L}{\partial B} = G \otimes A$。
+
+**常数倍** $H = \alpha A$：$\dfrac{\partial L}{\partial A} = \alpha G$。
+
+[“权重的梯度”](#weight-grad)一节说明了，计算 Loss 对权重的导数不需要写出向量对矩阵的三维数组。这个数组的规模很大：$W$ 是 $n \times m$ 时，$\dfrac{\partial \mathbf{z}}{\partial W}$ 共有 $m \times n \times m$ 个数。以 Llama 2 7B 的 FFN 为例，$W_{gate}$ 是 $4096 \times 11008$ 的矩阵，这个数组约有 $5 \times 10^{11}$ 个元素，约为该模型全部参数量的七十倍，放不进显存。[矩阵乘法的反向规则](#op-matmul)直接给出 $\dfrac{\partial L}{\partial W} = X^{T}G$，只需一次与前向同规模的矩阵乘法。
+
+反向传播对每个运算都只做几次与前向同规模的矩阵乘法和逐元素乘，开销不超过前向计算的几倍。
+
+### 多条路径的导数相加 {/* #accumulate */}
+
+一个量在计算图里被多个运算使用时，反向传播从每个运算各得到一份 Loss 对它的导数。按[全导数链式法则](#chain-paths)，Loss 对这个量的导数是这几份之和。常见的有两种情形。
+
+- **残差连接** $Y = X + H$，其中 $H$ 由 $X$ 经过一个子层算出：设 $G = \dfrac{\partial L}{\partial Y}$。相加对两个输入的 Jacobian 都是单位矩阵，所以 $\dfrac{\partial L}{\partial H} = G$，$\dfrac{\partial L}{\partial X}$ 中来自这条路径的部分同样等于 $G$。$X$ 还通过子层影响 $Y$，该路径传回的导数与这份 $G$ 相加，最终 $\dfrac{\partial L}{\partial X} = G + (\text{子层传回的})$。实现上先把 $G$ 交给子层算完，再做这次加法。
+- **同一个量被多次使用**：序列里的 $T$ 个位置使用同一组权重，Loss 对权重的导数是 $T$ 个位置的贡献之和，[矩阵乘法的反向规则](#op-matmul)里 $X^{T}G$ 对 $T$ 的求和就是这一步。模型里还有两处：GQA 的一组 K、V 被多个 query head 共用，见[“例：GQA attention”](#op-attn)；同一个 token 在序列里出现多次时，Embedding 矩阵的同一行被使用多次，见[“例：Embedding”](#op-embed)。
+
+## 整个模型的反向传播 {/* #backward */}
+
+前几章的规则覆盖了模型里的大多数运算。本章先用三个例子处理剩下的部分：GQA attention、Embedding 和 FP32 到 BF16 的转换，最后按步骤列出整个模型的反向传播。
+
+### 例：GQA attention {/* #op-attn */}
+
+attention 是前面几章各条规则的组合，没有新规则。对一个 query head $i$，设它所在的组是 $j$，前向依次是：
+
+<ol class="pts">
+<li>三次矩阵乘法：$Q_i = XW_Q^{(i)}$，$K_j = XW_K^{(j)}$，$V_j = XW_V^{(j)}$。</li>
+<li>矩阵乘法加常数缩放加 mask：$S_i = Q_iK_j^T/\sqrt{d_h} + M$。</li>
+<li>逐行 softmax：$P_i = \mathrm{softmax}(S_i)$。</li>
+<li>矩阵乘法：$A_i = P_iV_j$。</li>
+<li>拼接所有 head，矩阵乘法：$A = [A_1 \cdots A_{n_h}]\,W_O$。</li>
+</ol>
+
+反向按相反顺序：$W_O$ 那次矩阵乘法给出 $\dfrac{\partial L}{\partial W_O}$，并把 $G$ 拆回每个 head 的 $\dfrac{\partial L}{\partial A_i}$；$A_i = P_iV_j$ 给出 $\dfrac{\partial L}{\partial P_i}$ 和 $V_j$ 的一份梯度；对 $T \times T$ 的 $P_i$ 逐行使用 softmax 的反向公式，给出 $\dfrac{\partial L}{\partial S_i}$；除以 $\sqrt{d_h}$；$Q_iK_j^T$ 那次矩阵乘法给出 $\dfrac{\partial L}{\partial Q_i}$ 和 $K_j$ 的一份梯度。
+
+$Q_iK_j^T$ 和 $P_iV_j$ 两边都是 activation，没有权重，按[矩阵乘法的反向规则](#op-matmul)里 $Z = AB$ 的形式计算。以 $Q_iK_j^T$ 为例，记 $G_i$ 为 Loss 对 $Q_iK_j^T$ 的导数，取 $A = Q_i$、$B = K_j^T$，得到 $\dfrac{\partial L}{\partial Q_i} = G_iK_j$，$\dfrac{\partial L}{\partial K_j^T} = Q_i^TG_i$，转置后就是 $K_j$ 的一份梯度 $G_i^TQ_i$。causal mask $M$ 是常数，它把 $-\infty$ 加到被遮住的位置。这些位置的 softmax 输出为零，softmax 的反向公式要与 $\mathbf{p}$ 逐元素相乘，所以 Loss 对它们的导数也为零，所以反向不需要单独处理 mask。
+
+需要相加的地方有两处。第一，$K_j$ 和 $V_j$ 被同一组的 $n_h / n_{kv}$ 个 head 共用，每个 head 各传回一份梯度，$\dfrac{\partial L}{\partial K_j}$ 是这些梯度之和，之后才用矩阵乘法规则得到 $\dfrac{\partial L}{\partial W_K^{(j)}} = X^T\dfrac{\partial L}{\partial K_j}$。第二，$X$ 同时进入了 $Q$、$K$、$V$ 三次矩阵乘法，$\dfrac{\partial L}{\partial X}$ 是这三条路径的梯度之和，再加上残差传回的一份。
+
+### 例：Embedding {/* #op-embed */}
+
+前向：第 $t$ 个位置取出 $E$ 的第 $\text{tok}_t$ 行，$X_0[t] = E[\text{tok}_t]$。这等价于一个 one-hot 矩阵（$T \times V$，每行只有一个 1）乘 $E$，所以它是矩阵乘法的特例。
+
+反向的输入是 $G$（$T \times d$）：$\dfrac{\partial L}{\partial E}$ 从全零的 $V \times d$ 矩阵开始，把 $G$ 的第 $t$ 行加到第 $\text{tok}_t$ 行上。同一个 token 在序列里出现几次，对应行就累加几次。`token_ids` 是整数，不对它求导，反向传播在这里结束。
+
+### 例：FP32 到 BF16 的转换 {/* #op-cast */}
+
+前向：$W_{\text{bf16}} = \mathrm{round}(W_{\text{fp32}})$，把每个数舍入到 BF16 能表示的最近的值。这一步在图里的每个带权重的方框内部，矩阵乘法之前。
+
+这个函数是阶梯函数：在几乎所有点导数为零，在跳变点不可导。按定义求导会使梯度在这里变为零，权重无法更新。所以框架不按定义求导，而是登记一条约定：
+
+$$
+\frac{\partial L}{\partial W_{\text{fp32}}} := \frac{\partial L}{\partial W_{\text{bf16}}}\ \text{转回 FP32}
+$$
+
+也就是把舍入当作恒等运算，导数原样通过。前向用不可导的舍入，反向用恒等函数替代它的导数，这种做法称为 straight-through estimator，Bengio 等人在 2013 年的论文中对它做了系统的讨论[\[4\]](#references)。这样得到的梯度是在舍入后的 BF16 权重处算出的，却被当作 FP32 权重处的梯度使用，两者的差别与舍入误差同量级，训练中不对这部分误差做修正。
+
+算出梯度之后，更新也不能直接加在 BF16 权重上。单步更新 $\eta\,\partial L/\partial w$ 相对权重自身的幅度，往往小于 BF16 相邻可表示数的相对间隔（BF16 存储 7 位尾数，相对间隔约 $2^{-7}$），加上去之后会被舍入丢掉。这个问题来自 BF16 的精度，与 straight-through estimator 无关。Micikevicius 等人在 2018 年的混合精度训练论文里针对 FP16 说明了这个问题[\[3\]](#references)，解决办法是保留一份 FP32 主权重：更新累加在 FP32 上，每一步前向再舍入成 BF16。
+
+权重导数本身也由 BF16 的矩阵乘法算出：前向保存的 $X$ 和反向传回的 $G$ 都是 BF16。$X^T G$ 的每个元素是对序列长度 $T$ 求和的内积。同一篇论文指出，这类内积要把逐项乘积累加到 FP32，写回内存时再转换成低精度；不这样做，一些模型达不到 FP32 训练的精度[\[3\]](#references)。写回的 $\dfrac{\partial L}{\partial W_{\text{bf16}}}$ 再按上面的约定转回 FP32，用于更新主权重。
+
+### 反向传播的全部步骤 {/* #walkthrough */}
+
+反向传播从 $L$ 出发，沿图中箭头的反方向进行，每经过一个方框调用对应的规则，每到一个圆角框把各条路径传回的导数相加。下面按步骤列出整个过程，图上高亮的是当前位置。
+
+<Backprop>
+<div class="step" data-marks="loss">
+
+<span class="t">起点。</span>$L$ 对自己的导数是 $1$。反向传播从这个数开始，它是第一个 $G$，是一个标量。
+
+</div>
+<div class="step" data-marks="ce softmax P logits">
+
+<span class="t">cross-entropy 与 softmax。</span>两条规则合成一条：
+
+$$
+\frac{\partial L}{\partial Z} = \frac{1}{T}\,(P - Y)
+$$
+
+$Z$ 是 logits，$T \times V$。这一步在 FP32 里算，结果转成 BF16，交给下一步的矩阵乘法。
+
+</div>
+<div class="step" data-marks="head">
+
+<span class="t">LM head。</span>矩阵乘法规则，$G = \dfrac{\partial L}{\partial Z}$：
+
+$$
+\frac{\partial L}{\partial W_{out}} = X_N^{T}G\ \ (d \times V,\ \text{累加到 FP32}),\qquad \frac{\partial L}{\partial X_N} = G\,W_{out}^{T}\ \ (T \times d)
+$$
+
+</div>
+<div class="step" data-marks="XL dec d:Xout">
+
+<span class="t">进入最后一层 Decoder。</span>$\dfrac{\partial L}{\partial X_N}$ 即第 $N$ 层输出 $X_i$（$i = N$）的导数。右边展开的是这一层的内部，反向顺序是自下而上。
+
+</div>
+<div class="step" data-marks="d:plus2">
+
+<span class="t">第二个残差。</span>$X_i = Y_i + H$。$\dfrac{\partial L}{\partial H} = G = \dfrac{\partial L}{\partial X_i}$；$Y_i$ 同样分到一份 $G$，它与 FFN 路径传回的部分相加，这次相加在“到达 $Y_i$”一步完成。
+
+</div>
+<div class="step" data-marks="d:ffn d:H">
+
+<span class="t">SwiGLU FFN。</span>$H = \big(\mathrm{Swish}(Y_iW_{gate}) \otimes Y_iW_{up}\big)W_{down}$，反向依次是：$W_{down}$ 的矩阵乘法、逐元素乘、Swish、$W_{gate}$ 和 $W_{up}$ 的矩阵乘法。
+
+$$
+\frac{\partial L}{\partial W_{down}} = U^{T}G,\qquad G_U = G\,W_{down}^{T}
+$$
+
+$$
+G_{gate} = G_U \otimes (Y_iW_{up}) \otimes \mathrm{Swish}'(Y_iW_{gate}),\qquad G_{up} = G_U \otimes \mathrm{Swish}(Y_iW_{gate})
+$$
+
+其中 $U$ 是逐元素乘的结果。然后 $\dfrac{\partial L}{\partial W_{gate}} = Y_i^{T}G_{gate}$，$\dfrac{\partial L}{\partial W_{up}} = Y_i^{T}G_{up}$，传回 $Y_i$ 的是两条路径的梯度之和 $G_{gate}W_{gate}^{T} + G_{up}W_{up}^{T}$。
+
+</div>
+<div class="step" data-marks="d:Y">
+
+<span class="t">到达 $Y_i$。</span>两份梯度相加：残差路径的 $G$，加上 FFN 传回的 $G_{gate}W_{gate}^{T} + G_{up}W_{up}^{T}$。
+
+</div>
+<div class="step" data-marks="d:plus1">
+
+<span class="t">第一个残差。</span>$Y_i = X_{i-1} + A$。$\dfrac{\partial L}{\partial A} = \dfrac{\partial L}{\partial Y_i}$，$X_{i-1}$ 同样分到一份。
+
+</div>
+<div class="step" data-marks="d:attn d:A">
+
+<span class="t">GQA attention。</span>按前向的相反顺序：$W_O$ 的矩阵乘法，拆回各 head；$P_iV_j$ 的矩阵乘法；逐行做 softmax 的反向；除以 $\sqrt{d_h}$；$Q_iK_j^{T}$ 的矩阵乘法。共用的 $K_j$、$V_j$ 把组内每个 head 传回的梯度相加，再用矩阵乘法规则得到 $\dfrac{\partial L}{\partial W_K^{(j)}}$、$\dfrac{\partial L}{\partial W_V^{(j)}}$；每个 head 各得 $\dfrac{\partial L}{\partial W_Q^{(i)}}$。传回 $X_{i-1}$ 的是 $Q$、$K$、$V$ 三条路径的梯度之和。
+
+</div>
+<div class="step" data-marks="d:Xin">
+
+<span class="t">到达 $X_{i-1}$。</span>加上残差传回的一份，得到 $\dfrac{\partial L}{\partial X_{i-1}}$。它是 $\mathrm{Decoder}_{i-1}$ 输出的导数。令 $i$ 减 1，从“第二个残差”一步重新开始，直到第 1 层处理完，得到 $\dfrac{\partial L}{\partial X_0}$。
+
+</div>
+<div class="step" data-marks="X0 emb">
+
+<span class="t">Embedding。</span>$G = \dfrac{\partial L}{\partial X_0}$，$T \times d$。按 `token_ids` 把 $G$ 的每一行加到 $\dfrac{\partial L}{\partial E}$ 的对应行上。`token_ids` 是整数，反向在这里结束。
+
+</div>
+<div class="step" data-marks="">
+
+<span class="t">结束。</span>图里每个权重都得到了与自己同形状的导数，全部在 FP32 中。优化器用它们更新 FP32 主权重，下一步前向再把权重舍入成 BF16。
+
+</div>
+</Backprop>
+
+## 速查表 {/* #cheatsheet */}
+
+本文用到的规则汇总。$G$ 是 Loss 对该运算输出的导数，与输出同形状。
+
+<div class="cheat tbl"><table>
+<thead><tr><th>运算</th><th>前向</th><th>Jacobian</th><th>反向（vector-Jacobian product）</th></tr></thead>
+<tbody>
+<tr><td>矩阵乘法</td><td>$Z = XW$</td><td>$\partial \mathbf{z}/\partial \mathbf{x} = W^{T}$</td><td>$\partial L/\partial X = GW^{T}$，$\partial L/\partial W = X^{T}G$</td></tr>
+<tr><td>逐元素函数</td><td>$H = f(A)$</td><td>$\mathrm{diag}(f'(\mathbf{a}))$</td><td>$G \otimes f'(A)$</td></tr>
+<tr><td>逐元素乘</td><td>$H = A \otimes B$</td><td>$\mathrm{diag}(\mathbf{b})$，$\mathrm{diag}(\mathbf{a})$</td><td>$\partial L/\partial A = G \otimes B$，$\partial L/\partial B = G \otimes A$</td></tr>
+<tr><td>相加</td><td>$Y = X + H$</td><td>$I$，$I$</td><td>两边各得 $G$；多条路径到达同一处时相加</td></tr>
+<tr><td>常数倍</td><td>$Y = \alpha X$</td><td>$\alpha I$</td><td>$\alpha G$</td></tr>
+<tr><td>平均</td><td>$L = \frac{1}{T}\sum_t \ell_t$</td><td>$[\frac{1}{T}\ \cdots\ \frac{1}{T}]$</td><td>$\partial L/\partial \ell_t = \frac{1}{T}$</td></tr>
+<tr><td>softmax（逐行）</td><td>$\mathbf{p} = \mathrm{softmax}(\mathbf{x})$</td><td>$\mathrm{diag}(\mathbf{p}) - \mathbf{p}^{T}\mathbf{p}$</td><td>$\mathbf{p} \otimes \big(\frac{\partial L}{\partial \mathbf{p}} - \frac{\partial L}{\partial \mathbf{p}}\cdot\mathbf{p}\big)$</td></tr>
+<tr><td>softmax + cross-entropy</td><td>$L = -\frac{1}{T}\sum_t \ln p_{t,y_t}$</td><td>合并后不单独出现</td><td>$\partial L/\partial Z = \frac{1}{T}(P - Y)$</td></tr>
+<tr><td>Embedding</td><td>$X_0[t] = E[\text{tok}_t]$</td><td>one-hot 矩阵</td><td>把 $G$ 的第 $t$ 行加到 $\partial L/\partial E$ 的第 $\text{tok}_t$ 行</td></tr>
+<tr><td>FP32 到 BF16</td><td>$W_{\text{bf16}} = \mathrm{round}(W_{\text{fp32}})$</td><td>按定义为零</td><td>约定为恒等：$G$ 转回 FP32 原样通过</td></tr>
+</tbody></table></div>
+
+链式法则的三个版本：单变量时，外层函数的导数乘内层函数的导数；有多条路径时，各条路径的贡献相加；向量情形下，外层的 Jacobian 乘内层的 Jacobian。
+
+### 符号说明 {/* #notation */}
+
+<div class="cheat tbl"><table>
+<thead><tr><th>符号</th><th>含义</th></tr></thead>
+<tbody>
+<tr><td>$x$，$\mathbf{x}$，$X$</td><td>标量；向量（行向量，一个位置）；矩阵（$T$ 个位置堆成，$T \times d$）</td></tr>
+<tr><td>$T$，$d$，$V$，$N$</td><td>序列长度；模型宽度；词表大小；Decoder 层数</td></tr>
+<tr><td>$d_{ff}$，$n_h$，$n_{kv}$，$d_h$</td><td>FFN 中间宽度；query head 数；K/V head 数；每个 head 的宽度</td></tr>
+<tr><td>$\Delta x$，$\Delta\mathbf{x}$</td><td>输入的变化量（有限大小）；变化量很小时 $\Delta y \approx \dfrac{dy}{dx}\,\Delta x$</td></tr>
+<tr><td>$\dfrac{df}{dx}$，$\dfrac{\partial f}{\partial x}$</td><td>单变量导数；偏导数（其他输入固定）</td></tr>
+<tr><td>$\nabla f$，$\dfrac{\partial f}{\partial \mathbf{x}}$</td><td>梯度，$f$ 对每个输入的偏导数排成一行</td></tr>
+<tr><td>$J$，$\dfrac{\partial \mathbf{z}}{\partial \mathbf{x}}$</td><td>Jacobian，第 $j$ 行第 $i$ 列是 $\partial z_j / \partial x_i$（行对应输出，列对应输入）</td></tr>
+<tr><td>$G$</td><td>Loss 对某个运算输出的导数，与输出同形状</td></tr>
+<tr><td>$\otimes$</td><td>逐元素相乘（Hadamard product）</td></tr>
+<tr><td>$\mathrm{diag}(\mathbf{v})$</td><td>以 $\mathbf{v}$ 为对角线的方阵</td></tr>
+<tr><td>$I$，$\mathbf{y}_t$，$Y$</td><td>单位矩阵；目标 token 的 one-hot 向量；它们堆成的 $T \times V$ 矩阵</td></tr>
+<tr><td>$\sigma$，$\mathrm{Swish}$</td><td>$\sigma(z) = 1/(1+e^{-z})$；$\mathrm{Swish}(z) = z\,\sigma(z)$</td></tr>
+<tr><td>$\mathrm{Swish}'$，$f'$</td><td>只有一个输入的标量函数的导数，$\mathrm{Swish}'(z) = \dfrac{d\,\mathrm{Swish}(z)}{dz}$；作用在向量或矩阵上时逐元素计算，结果与输入同形状</td></tr>
+</tbody></table></div>
+
+### 参考文献 {/* #references */}
+
+<div class="refs">
+
+1. Parr, T. & Howard, J. [The Matrix Calculus You Need For Deep Learning](https://arxiv.org/abs/1802.01528), 2018. 中文翻译见[本站](../)。
+2. Griewank, A. & Walther, A. [Evaluating Derivatives: Principles and Techniques of Algorithmic Differentiation](https://doi.org/10.1137/1.9780898717761), 2nd ed., SIAM, 2008.
+3. Micikevicius, P. et al. [Mixed Precision Training](https://arxiv.org/abs/1710.03740), ICLR 2018.
+4. Bengio, Y., Léonard, N. & Courville, A. [Estimating or Propagating Gradients Through Stochastic Neurons for Conditional Computation](https://arxiv.org/abs/1308.3432), 2013.
+5. Zhang, B. & Sennrich, R. [Root Mean Square Layer Normalization](https://arxiv.org/abs/1910.07467), NeurIPS 2019.
+6. Su, J. et al. [RoFormer: Enhanced Transformer with Rotary Position Embedding](https://arxiv.org/abs/2104.09864), 2021.
+
+</div>
