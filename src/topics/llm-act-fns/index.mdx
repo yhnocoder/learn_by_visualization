@@ -565,15 +565,15 @@ $$
   <tr><td>DeepSeek-V3 / R1</td><td class="m">2024-12 / 2025-01</td><td>SwiGLU</td><td>MoE 路由用 sigmoid 打分而非 softmax，配合无辅助 loss 的负载均衡；后来的 V3.1、V3.2 沿用。</td></tr>
   <tr><td>Gemma 3</td><td class="m">2025-03</td><td>GeGLU<span class="tag">gelu_pytorch_tanh</span></td><td>Gemma 系列一直用 GELU gate，且是 tanh 近似版本；Gemma 3 的 4B、12B、27B 为 $d_{ff}=4d$，1B 为 $6d$。Gemma 2 曾在 logits 上用 tanh soft-capping，Gemma 3 的配置里两个 soft-capping 字段都是 null。</td></tr>
   <tr><td>Llama 4</td><td class="m">2025-04</td><td>SwiGLU</td><td>Llama 系列从第一代起就是 SwiGLU，$d_{ff}\approx\tfrac{8}{3}d$ 向上取整到 256 的倍数。</td></tr>
-  <tr><td>Qwen3 / Qwen3-Next / Qwen3.5</td><td class="m">2025-04 起</td><td>SwiGLU</td><td><code>hidden_act: silu</code>。Qwen3-Next 起在注意力输出后加 sigmoid gate（gated attention），Gated DeltaNet 与门控注意力 3:1 混合（<code>full_attention_interval: 4</code>）。</td></tr>
+  <tr><td>Qwen3 / Qwen3-Next / Qwen3.5</td><td class="m">2025-04 起</td><td>SwiGLU</td><td>`hidden_act: silu`。Qwen3-Next 起在注意力输出后加 sigmoid gate（gated attention），Gated DeltaNet 与门控注意力 3:1 混合（`full_attention_interval: 4`）。</td></tr>
   <tr><td>Kimi K2</td><td class="m">2025-07</td><td>SwiGLU</td><td>DeepSeek-V3 式架构，1T 参数。</td></tr>
-  <tr><td>gpt-oss 20B / 120B</td><td class="m">2025-08</td><td>SwiGLU 变体</td><td>$\alpha=1.702$，gate 分支上方 clamp 到 7，线性分支 clamp 到 $\pm7$ 并加 1；<code>swiglu_limit: 7.0</code>。</td></tr>
-  <tr><td>Nemotron 3 Nano / Super</td><td class="m">2025-12 / 2026-03</td><td>Squared ReLU</td><td>Mamba-2 与注意力混合的 MoE，专家用 $\mathrm{ReLU}^2$（<code>mlp_hidden_act: relu2</code>），路由用 sigmoid；延续 Nemotron-4 和 Nemotron-H 的选择。</td></tr>
+  <tr><td>gpt-oss 20B / 120B</td><td class="m">2025-08</td><td>SwiGLU 变体</td><td>$\alpha=1.702$，gate 分支上方 clamp 到 7，线性分支 clamp 到 $\pm7$ 并加 1；`swiglu_limit: 7.0`。</td></tr>
+  <tr><td>Nemotron 3 Nano / Super</td><td class="m">2025-12 / 2026-03</td><td>Squared ReLU</td><td>Mamba-2 与注意力混合的 MoE，专家用 $\mathrm{ReLU}^2$（`mlp_hidden_act: relu2`），路由用 sigmoid；延续 Nemotron-4 和 Nemotron-H 的选择。</td></tr>
   <tr><td>Cohere Tiny Aya</td><td class="m">2026-02</td><td>SwiGLU</td><td>3.35B dense，多语言小模型。</td></tr>
-  <tr><td>Gemma 4 31B</td><td class="m">2026-03</td><td>GeGLU<span class="tag">gelu_pytorch_tanh</span></td><td>仍是 tanh 近似 GELU gate，$d_{ff}=4d$（5376 → 21504）；最终 logits 再次使用 soft-capping，<code>final_logit_softcapping: 30.0</code>。</td></tr>
-  <tr><td>DeepSeek-V4</td><td class="m">2026-04</td><td>SwiGLU + clamping</td><td>与 gpt-oss 相同的 clamp 方式、无“加 1”，<code>swiglu_limit: 10.0</code>；路由打分 <code>scoring_func: sqrtsoftplus</code>；专家权重 <code>expert_dtype: fp4</code>。</td></tr>
-  <tr><td>Kimi K3</td><td class="m">2026-07</td><td>SiTU-GLU</td><td><code>hidden_act: situ</code>，<code>activation_situ_beta: 4.0</code>，<code>activation_situ_linear_beta: 25.0</code>，乘积上界 100；896 专家激活 16 个。</td></tr>
-  <tr><td>GLM-4.5、Mistral Small 3、OLMo 2/3、SmolLM3、MiniMax-M1 等</td><td class="m">2024-11 至 2025-11</td><td>SwiGLU</td><td>Llama 式 dense 或 MoE 架构的常规选择，配置文件里写作 <code>hidden_act: silu</code>。</td></tr>
+  <tr><td>Gemma 4 31B</td><td class="m">2026-03</td><td>GeGLU<span class="tag">gelu_pytorch_tanh</span></td><td>仍是 tanh 近似 GELU gate，$d_{ff}=4d$（5376 → 21504）；最终 logits 再次使用 soft-capping，`final_logit_softcapping: 30.0`。</td></tr>
+  <tr><td>DeepSeek-V4</td><td class="m">2026-04</td><td>SwiGLU + clamping</td><td>与 gpt-oss 相同的 clamp 方式、无“加 1”，`swiglu_limit: 10.0`；路由打分 `scoring_func: sqrtsoftplus`；专家权重 `expert_dtype: fp4`。</td></tr>
+  <tr><td>Kimi K3</td><td class="m">2026-07</td><td>SiTU-GLU</td><td>`hidden_act: situ`，`activation_situ_beta: 4.0`，`activation_situ_linear_beta: 25.0`，乘积上界 100；896 专家激活 16 个。</td></tr>
+  <tr><td>GLM-4.5、Mistral Small 3、OLMo 2/3、SmolLM3、MiniMax-M1 等</td><td class="m">2024-11 至 2025-11</td><td>SwiGLU</td><td>Llama 式 dense 或 MoE 架构的常规选择，配置文件里写作 `hidden_act: silu`。</td></tr>
   </tbody>
 </table></div>
 
@@ -597,36 +597,39 @@ $$
 
 ### 函数速查表 {/* #activation-reference */}
 
-<div class="tbl"><table>
-  <thead><tr><th>函数</th><th>$f(x)$</th><th>$\frac{df(x)}{dx}$</th><th>值域</th><th>典型位置</th></tr></thead>
-  <tbody>
-  <tr><td>Sigmoid</td><td>$\sigma(x)=\frac{1}{1+e^{-x}}$</td><td>$\sigma(x)(1-\sigma(x))$</td><td>$(0,1)$</td><td>各类 gate、MoE 路由</td></tr>
-  <tr><td>Tanh</td><td>$\tanh(x)$</td><td>$1-\tanh^2(x)$</td><td>$(-1,1)$</td><td>soft-capping $c\tanh(x/c)$</td></tr>
-  <tr><td>ReLU</td><td>$\max(0,x)$</td><td>$\mathbb{1}[x>0]$</td><td>$[0,\infty)$</td><td>稀疏推理</td></tr>
-  <tr><td>Squared ReLU</td><td>$\max(0,x)^2$</td><td>$2\max(0,x)$</td><td>$[0,\infty)$</td><td>Nemotron FFN</td></tr>
-  <tr><td>GELU</td><td>$x\,\Phi(x)$</td><td>$\Phi(x)+x\,p(x)$</td><td>$[-0.17,\infty)$</td><td>GeGLU 的 gate</td></tr>
-  <tr><td>SiLU</td><td>$x\,\sigma(x)$</td><td>$\sigma(x)(1+x(1-\sigma(x)))$</td><td>$[-0.28,\infty)$</td><td>SwiGLU 的 gate</td></tr>
-  <tr><td>Softplus</td><td>$\log(1+e^x)$</td><td>$\sigma(x)$</td><td>$(0,\infty)$</td><td>Mamba 步长、参数约束</td></tr>
-  <tr><td>SiTU gate</td><td>$\beta_1\tanh(x/\beta_1)\,\sigma(x)$</td><td>$(1-\tanh^2)\sigma+\beta_1\tanh\cdot\sigma(1-\sigma)$</td><td>$\approx[-0.27,\,\beta_1)$，$\beta_1=4$</td><td>Kimi K3 FFN</td></tr>
-  </tbody>
-</table></div>
+<div class="tbl">
+
+| 函数 | $f(x)$ | $\frac{df(x)}{dx}$ | 值域 | 典型位置 |
+|---|---|---|---|---|
+| Sigmoid | $\sigma(x)=\frac{1}{1+e^{-x}}$ | $\sigma(x)(1-\sigma(x))$ | $(0,1)$ | 各类 gate、MoE 路由 |
+| Tanh | $\tanh(x)$ | $1-\tanh^2(x)$ | $(-1,1)$ | soft-capping $c\tanh(x/c)$ |
+| ReLU | $\max(0,x)$ | $\mathbb{1}[x>0]$ | $[0,\infty)$ | 稀疏推理 |
+| Squared ReLU | $\max(0,x)^2$ | $2\max(0,x)$ | $[0,\infty)$ | Nemotron FFN |
+| GELU | $x\,\Phi(x)$ | $\Phi(x)+x\,p(x)$ | $[-0.17,\infty)$ | GeGLU 的 gate |
+| SiLU | $x\,\sigma(x)$ | $\sigma(x)(1+x(1-\sigma(x)))$ | $[-0.28,\infty)$ | SwiGLU 的 gate |
+| Softplus | $\log(1+e^x)$ | $\sigma(x)$ | $(0,\infty)$ | Mamba 步长、参数约束 |
+| SiTU gate | $\beta_1\tanh(x/\beta_1)\,\sigma(x)$ | $(1-\tanh^2)\sigma+\beta_1\tanh\cdot\sigma(1-\sigma)$ | $\approx[-0.27,\,\beta_1)$，$\beta_1=4$ | Kimi K3 FFN |
+
+</div>
 
 ### 参考文献 {/* #references */}
 
-<div class="refs"><ol>
-  <li>Shazeer, N. <a href="https://arxiv.org/abs/2002.05202">GLU Variants Improve Transformer</a>, 2020.</li>
-  <li>Hendrycks, D. &amp; Gimpel, K. <a href="https://arxiv.org/abs/1606.08415">Gaussian Error Linear Units (GELUs)</a>, 2016.</li>
-  <li>Ramachandran, P. et al. <a href="https://arxiv.org/abs/1710.05941">Searching for Activation Functions</a>, 2017.</li>
-  <li>So, D. et al. <a href="https://arxiv.org/abs/2109.08668">Primer: Searching for Efficient Transformers for Language Modeling</a>, 2021.</li>
-  <li>Mirzadeh, I. et al. <a href="https://arxiv.org/abs/2310.04564">ReLU Strikes Back: Exploiting Activation Sparsity in Large Language Models</a>, ICLR 2024.</li>
-  <li>Song, Y. et al. <a href="https://arxiv.org/abs/2406.05955">Turbo Sparse: Achieving LLM SOTA Performance with Minimal Activated Parameters</a>, 2024.</li>
-  <li>NVIDIA. <a href="https://arxiv.org/abs/2512.20848">Nemotron 3 Nano: Open, Efficient Mixture-of-Experts Hybrid Mamba-Transformer Model</a>, 2025；<a href="https://arxiv.org/abs/2504.03624">Nemotron-H</a>, 2025.</li>
-  <li>DeepSeek. <a href="https://arxiv.org/abs/2606.19348">DeepSeek-V4: Towards Highly Efficient Million-Token Context Intelligence</a>, 2026.</li>
-  <li>Moonshot AI. <a href="https://arxiv.org/abs/2607.24653">Kimi K3 技术报告</a>（<a href="https://github.com/MoonshotAI/Kimi-K3/blob/main/k3_tech_report.pdf">GitHub PDF</a>）, 2026；Huang, J. <a href="https://jianyuh.github.io/llm/architecture/2026/07/18/Kimi-K3.html">Kimi K3 技术报告解读（SiTU-GLU 公式与常数）</a>, 2026.</li>
-  <li>Ceramic AI. <a href="https://www.ceramic.ai/blog/gpt-oss-swiglu">What's actually different about GPT-OSS?</a>；Adrian. <a href="https://www.adrian.idv.hk/2026-03-25-gptoss/">GPT-OSS Model</a>, 2026.</li>
-  <li>Qiu, Z. et al. <a href="https://arxiv.org/abs/2505.06708">Gated Attention for Large Language Models: Non-linearity, Sparsity, and Attention-Sink-Free</a>, NeurIPS 2025.</li>
-  <li>Raschka, S. <a href="https://magazine.sebastianraschka.com/p/the-big-llm-architecture-comparison">The Big LLM Architecture Comparison</a>, 2025；<a href="https://magazine.sebastianraschka.com/p/a-dream-of-spring-for-open-weight">A Dream of Spring for Open-Weight LLMs</a>, 2026.</li>
-  <li>Hugging Face. <a href="https://huggingface.co/docs/transformers/model_doc/gemma">Gemma 文档（gelu_pytorch_tanh 说明）</a>；<a href="https://huggingface.co/docs/transformers/model_doc/deepseek_v4">DeepSeek-V4 文档（swiglu_limit、scoring_func）</a>。</li>
-  <li>配置文件：<a href="https://huggingface.co/openai/gpt-oss-20b/blob/main/config.json">gpt-oss-20b</a>、<a href="https://huggingface.co/moonshotai/Kimi-K3/blob/main/config.json">Kimi-K3</a>、<a href="https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16/blob/main/config.json">Nemotron-3-Nano</a>、<a href="https://huggingface.co/Qwen/Qwen3-Next-80B-A3B-Instruct/blob/main/config.json">Qwen3-Next</a>、<a href="https://huggingface.co/google/gemma-3-4b-it/blob/main/config.json">Gemma-3-4b</a>、<a href="https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/main/config.json">DeepSeek-V4-Pro</a>、<a href="https://huggingface.co/google/gemma-4-31b-it/blob/main/config.json">Gemma-4-31b</a>、<a href="https://huggingface.co/meta-llama/Llama-4-Scout-17B-16E/blob/main/config.json">Llama-4-Scout</a>、<a href="https://huggingface.co/moonshotai/Kimi-K2-Instruct/blob/main/config.json">Kimi-K2</a>、<a href="https://huggingface.co/zai-org/GLM-4.5/blob/main/config.json">GLM-4.5</a>、<a href="https://huggingface.co/nvidia/Nemotron-H-8B-Base-8K/blob/main/config.json">Nemotron-H-8B</a>、<a href="https://huggingface.co/deepseek-ai/DeepSeek-V3/blob/main/config.json">DeepSeek-V3</a>。</li>
-  <li>实现代码（transformers）：<a href="https://github.com/huggingface/transformers/blob/main/src/transformers/models/gpt_oss/modeling_gpt_oss.py">modeling_gpt_oss.py</a>、<a href="https://github.com/huggingface/transformers/blob/main/src/transformers/models/deepseek_v4/modeling_deepseek_v4.py">modeling_deepseek_v4.py</a>、<a href="https://github.com/huggingface/transformers/blob/main/src/transformers/activations.py">activations.py</a>。</li>
-</ol></div>
+<div class="refs">
+
+1. Shazeer, N. [GLU Variants Improve Transformer](https://arxiv.org/abs/2002.05202), 2020.
+2. Hendrycks, D. & Gimpel, K. [Gaussian Error Linear Units (GELUs)](https://arxiv.org/abs/1606.08415), 2016.
+3. Ramachandran, P. et al. [Searching for Activation Functions](https://arxiv.org/abs/1710.05941), 2017.
+4. So, D. et al. [Primer: Searching for Efficient Transformers for Language Modeling](https://arxiv.org/abs/2109.08668), 2021.
+5. Mirzadeh, I. et al. [ReLU Strikes Back: Exploiting Activation Sparsity in Large Language Models](https://arxiv.org/abs/2310.04564), ICLR 2024.
+6. Song, Y. et al. [Turbo Sparse: Achieving LLM SOTA Performance with Minimal Activated Parameters](https://arxiv.org/abs/2406.05955), 2024.
+7. NVIDIA. [Nemotron 3 Nano: Open, Efficient Mixture-of-Experts Hybrid Mamba-Transformer Model](https://arxiv.org/abs/2512.20848), 2025；[Nemotron-H](https://arxiv.org/abs/2504.03624), 2025.
+8. DeepSeek. [DeepSeek-V4: Towards Highly Efficient Million-Token Context Intelligence](https://arxiv.org/abs/2606.19348), 2026.
+9. Moonshot AI. [Kimi K3 技术报告](https://arxiv.org/abs/2607.24653)（[GitHub PDF](https://github.com/MoonshotAI/Kimi-K3/blob/main/k3_tech_report.pdf)）, 2026；Huang, J. [Kimi K3 技术报告解读（SiTU-GLU 公式与常数）](https://jianyuh.github.io/llm/architecture/2026/07/18/Kimi-K3.html), 2026.
+10. Ceramic AI. [What's actually different about GPT-OSS?](https://www.ceramic.ai/blog/gpt-oss-swiglu)；Adrian. [GPT-OSS Model](https://www.adrian.idv.hk/2026-03-25-gptoss/), 2026.
+11. Qiu, Z. et al. [Gated Attention for Large Language Models: Non-linearity, Sparsity, and Attention-Sink-Free](https://arxiv.org/abs/2505.06708), NeurIPS 2025.
+12. Raschka, S. [The Big LLM Architecture Comparison](https://magazine.sebastianraschka.com/p/the-big-llm-architecture-comparison), 2025；[A Dream of Spring for Open-Weight LLMs](https://magazine.sebastianraschka.com/p/a-dream-of-spring-for-open-weight), 2026.
+13. Hugging Face. [Gemma 文档（gelu_pytorch_tanh 说明）](https://huggingface.co/docs/transformers/model_doc/gemma)；[DeepSeek-V4 文档（swiglu_limit、scoring_func）](https://huggingface.co/docs/transformers/model_doc/deepseek_v4)。
+14. 配置文件：[gpt-oss-20b](https://huggingface.co/openai/gpt-oss-20b/blob/main/config.json)、[Kimi-K3](https://huggingface.co/moonshotai/Kimi-K3/blob/main/config.json)、[Nemotron-3-Nano](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16/blob/main/config.json)、[Qwen3-Next](https://huggingface.co/Qwen/Qwen3-Next-80B-A3B-Instruct/blob/main/config.json)、[Gemma-3-4b](https://huggingface.co/google/gemma-3-4b-it/blob/main/config.json)、[DeepSeek-V4-Pro](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/main/config.json)、[Gemma-4-31b](https://huggingface.co/google/gemma-4-31b-it/blob/main/config.json)、[Llama-4-Scout](https://huggingface.co/meta-llama/Llama-4-Scout-17B-16E/blob/main/config.json)、[Kimi-K2](https://huggingface.co/moonshotai/Kimi-K2-Instruct/blob/main/config.json)、[GLM-4.5](https://huggingface.co/zai-org/GLM-4.5/blob/main/config.json)、[Nemotron-H-8B](https://huggingface.co/nvidia/Nemotron-H-8B-Base-8K/blob/main/config.json)、[DeepSeek-V3](https://huggingface.co/deepseek-ai/DeepSeek-V3/blob/main/config.json)。
+15. 实现代码（transformers）：[modeling_gpt_oss.py](https://github.com/huggingface/transformers/blob/main/src/transformers/models/gpt_oss/modeling_gpt_oss.py)、[modeling_deepseek_v4.py](https://github.com/huggingface/transformers/blob/main/src/transformers/models/deepseek_v4/modeling_deepseek_v4.py)、[activations.py](https://github.com/huggingface/transformers/blob/main/src/transformers/activations.py)。
+
+</div>

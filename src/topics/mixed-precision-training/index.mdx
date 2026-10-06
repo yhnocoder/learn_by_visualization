@@ -193,14 +193,15 @@ $$
 
 FLOPs 按矩阵乘法计 $2 \times$ 输入行数 $\times$ 输入维度 $\times$ 输出维度；注意力的两个矩阵乘法按完整矩阵计，不扣除因果掩码省下的一半。RMSNorm、RoPE、SiLU、残差相加的运算量与矩阵乘法相比可以忽略，表中记为 0。反向传播的 FLOPs 大约是前向的两倍。
 
-<Wide><div class="tbl"><table>
-  <thead><tr><th>机制</th><th>解决的失效</th><th>在四个演示里</th><th>代价</th></tr></thead>
-  <tbody>
-    <tr><td>fp32 master weights</td><td>更新量小于权重 ulp 的一半时被吸收</td><td>torch.amp：权重本身就是 fp32；DeepSpeed：fp32_flat；Megatron 默认：main 列表，更新后 copy 回 fp16 权重；Megatron precision-aware：bf16 参数与 int16 余数在 FusedAdam kernel 内拼成 fp32</td><td>每参数多 4 字节（torch.amp 是 fp32 权重加 fp16 副本）</td></tr>
-    <tr><td>loss scaling</td><td>激活梯度小于 $2^{-24}$ 时归零</td><td>loss × S 后 backward；torch.amp 与 Megatron 用 \_amp_foreach_non_finite_check_and_unscale\_ 原地 ÷ S 并检查；DeepSpeed 先查 fp16 梯度再转换后 ÷ S；实现四是 bf16，不需要</td><td>每步一次乘法和一次除法，溢出时跳过一步</td></tr>
-    <tr><td>fp32 accumulation</td><td>点积的部分和增大后吸收后续乘积</td><td>每一个 Linear 与 q @ kᵀ、p @ v 的内部，三种实现相同</td><td>Tensor Core 硬件支持，输出前转回 fp16</td></tr>
-  </tbody>
-</table></div></Wide>
+<Wide><div class="tbl">
+
+| 机制 | 解决的失效 | 在四个演示里 | 代价 |
+|---|---|---|---|
+| fp32 master weights | 更新量小于权重 ulp 的一半时被吸收 | torch.amp：权重本身就是 fp32；DeepSpeed：fp32_flat；Megatron 默认：main 列表，更新后 copy 回 fp16 权重；Megatron precision-aware：bf16 参数与 int16 余数在 FusedAdam kernel 内拼成 fp32 | 每参数多 4 字节（torch.amp 是 fp32 权重加 fp16 副本） |
+| loss scaling | 激活梯度小于 $2^{-24}$ 时归零 | loss × S 后 backward；torch.amp 与 Megatron 用 \_amp_foreach_non_finite_check_and_unscale\_ 原地 ÷ S 并检查；DeepSpeed 先查 fp16 梯度再转换后 ÷ S；实现四是 bf16，不需要 | 每步一次乘法和一次除法，溢出时跳过一步 |
+| fp32 accumulation | 点积的部分和增大后吸收后续乘积 | 每一个 Linear 与 q @ kᵀ、p @ v 的内部，三种实现相同 | Tensor Core 硬件支持，输出前转回 fp16 |
+
+</div></Wide>
 
 ## bf16 改变了什么 {/* #s7 */}
 

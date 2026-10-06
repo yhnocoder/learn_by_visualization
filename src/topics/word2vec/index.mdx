@@ -25,7 +25,9 @@ import './word2vec.css';
 
 语言学里有一个现成的替代量，<mark>叫分布假设（distributional hypothesis）</mark>：一个词的含义由它周围经常出现的词决定。Firth 在 1957 年的表述是：
 
-<blockquote><p>You shall know a word by the company it keeps.</p><cite>J. R. Firth, 1957</cite></blockquote>
+> You shall know a word by the company it keeps.
+>
+> <cite>J. R. Firth, 1957</cite>
 
 以 `banking` 为例，它在语料里的邻居通常是 `money`、`loan`、`crisis`、`regulation` 这类词；`finance` 的邻居和它高度重合；`apple` 的邻居则几乎不重合。分布假设把"意思相近"替换成了"邻居的分布相近"。
 
@@ -158,15 +160,16 @@ $$
 
 前向过程的每一步，在大模型里都有对应的部件：
 
-<div class="tbl"><table>
-  <thead><tr><th>Skip-gram</th><th>大模型</th><th>形状</th></tr></thead>
-  <tbody>
-    <tr><td>$v_c = \mathbf{V}^{\top} x$，按行查表</td><td>embedding 层，`nn.Embedding`</td><td>$|V| \times d$</td></tr>
-    <tr><td>没有任何计算</td><td>若干层 Transformer</td><td>$d \to d$</td></tr>
-    <tr><td>$s = \mathbf{U} v_c$</td><td>LM head，`Linear(d, |V|, bias=False)`</td><td>$|V| \times d$</td></tr>
-    <tr><td>softmax，得到上下文词的分布</td><td>softmax，得到下一个词的分布</td><td>$|V|$</td></tr>
-  </tbody>
-</table></div>
+<div class="tbl">
+
+| Skip-gram | 大模型 | 形状 |
+|---|---|---|
+| $v_c = \mathbf{V}^{\top} x$，按行查表 | embedding 层，`nn.Embedding` | $\vert V\vert \times d$ |
+| 没有任何计算 | 若干层 Transformer | $d \to d$ |
+| $s = \mathbf{U} v_c$ | LM head，`Linear(d, \|V\|, bias=False)` | $\vert V\vert \times d$ |
+| softmax，得到上下文词的分布 | softmax，得到下一个词的分布 | $\vert V\vert$ |
+
+</div>
 
 <strong>$\mathbf{V}$ 是 embedding 层。</strong>one-hot 向量乘 $\mathbf{V}^{\top}$ 等于取出 $\mathbf{V}$ 的一行，`nn.Embedding` 做的就是这件事，只是省掉了那次乘法。大模型的 token embedding 矩阵形状同样是 $|V| \times d$，Hugging Face 把它叫 input embeddings。
 
