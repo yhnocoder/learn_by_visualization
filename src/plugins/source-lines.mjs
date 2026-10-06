@@ -6,8 +6,9 @@
 import { visit } from 'unist-util-visit';
 
 const BLOCKS = new Set(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote', 'pre', 'table', 'tr', 'figure', 'figcaption', 'div', 'section', 'mjx-container', 'img', 'hr', 'dt', 'dd']);
-// 页面内编辑只用于这些元素：它们的源码是一段完整的 Markdown，可以单独渲染预览
-const EDITABLE = new Set(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote', 'table']);
+// 页面内编辑只用于这些元素：它们的源码是一段完整的 Markdown，可以单独渲染预览。
+// pre 包括代码块和行间公式（remark-math 把 $$...$$ 输出成 <pre>，公式插件把这两个属性转到 <mjx-container> 上）
+const EDITABLE = new Set(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote', 'table', 'pre']);
 
 export default function rehypeSourceLines(){
   return (tree, file) => {

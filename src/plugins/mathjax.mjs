@@ -86,7 +86,11 @@ export default function rehypeMathSvg(){
       }catch(cause){
         file.fail(`公式无法渲染：${tex}`, { place: node.position, cause });
       }
-      parent.children[parent.children.indexOf(scope)] = rawHtml(entry.html, inline);
+      // 行间公式的 <pre> 带有 source-lines.mjs 加的源码位置，转到 <mjx-container> 上，页面内编辑才能点开它
+      let html = entry.html;
+      const { dataSource, dataSourceRange } = scope.properties;
+      if(dataSourceRange) html = html.replace('<mjx-container', `<mjx-container data-source="${dataSource}" data-source-range="${dataSourceRange}"`);
+      parent.children[parent.children.indexOf(scope)] = rawHtml(html, inline);
       for(const id of entry.glyphs) glyphs.add(id);
       found = true;
       return SKIP;
