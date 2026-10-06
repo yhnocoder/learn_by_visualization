@@ -26,17 +26,17 @@ import './translation.css';
 
 ## 引言 {/* #intro */}
 
-对我们大多数人来说，上一次接触微积分还是在学校里，但导数是机器学习的重要组成部分，尤其是通过优化损失函数来训练的深度神经网络。打开一篇机器学习论文，或者 [PyTorch](http://pytorch.org/) 等库的文档，你就会再次遇到微积分。而且，出现的不只是普通的标量微积分：你需要的是将[线性代数](https://en.wikipedia.org/wiki/Linear_algebra)与[多元微积分](https://en.wikipedia.org/wiki/Multivariable_calculus)结合起来的<i>矩阵微分</i>。
+对我们大多数人来说，上一次接触微积分还是在学校里，但导数是机器学习的重要组成部分，尤其是通过优化损失函数来训练的深度神经网络。打开一篇机器学习论文，或者 [PyTorch](http://pytorch.org/) 等库的文档，你就会再次遇到微积分。而且，出现的不只是普通的标量微积分：你需要的是将[线性代数](https://en.wikipedia.org/wiki/Linear_algebra)与[多元微积分](https://en.wikipedia.org/wiki/Multivariable_calculus)结合起来的*矩阵微分*。
 
-也许“<i>需要</i>”并不十分准确。Jeremy 的课程表明，借助现代深度学习库内置的自动微分，只需少量标量微积分知识，就能成为世界一流的深度学习实践者。但如果你确实想理解这些库的内部工作原理，并读懂讨论模型训练技术最新进展的学术论文，就需要掌握矩阵微积分中的部分知识。
+也许“*需要*”并不十分准确。Jeremy 的课程表明，借助现代深度学习库内置的自动微分，只需少量标量微积分知识，就能成为世界一流的深度学习实践者。但如果你确实想理解这些库的内部工作原理，并读懂讨论模型训练技术最新进展的学术论文，就需要掌握矩阵微积分中的部分知识。
 
-例如，神经网络中单个计算单元的激活值，通常先通过边权重向量 $\mathbf{w}$ 与输入向量 $\mathbf{x}$ 的点积（线性代数中的运算），再加上一个标量偏置（阈值）来计算：$z(\mathbf{x}) = \sum_i^n w_i x_i + b = \mathbf{w} \cdot \mathbf{x} + b$。函数 $z(\mathbf{x})$ 称为该单元的<i>仿射函数</i>，之后再应用一个[整流线性单元](https://goo.gl/7BXceK)，将负值截断为零：$max(0, z(\mathbf{x}))$。这样的计算单元有时也称为“人工神经元”，其结构如下：
+例如，神经网络中单个计算单元的激活值，通常先通过边权重向量 $\mathbf{w}$ 与输入向量 $\mathbf{x}$ 的点积（线性代数中的运算），再加上一个标量偏置（阈值）来计算：$z(\mathbf{x}) = \sum_i^n w_i x_i + b = \mathbf{w} \cdot \mathbf{x} + b$。函数 $z(\mathbf{x})$ 称为该单元的*仿射函数*，之后再应用一个[整流线性单元](https://goo.gl/7BXceK)，将负值截断为零：$max(0, z(\mathbf{x}))$。这样的计算单元有时也称为“人工神经元”，其结构如下：
 
-<center><a href="https://explained.ai/matrix-calculus/images/neuron.png"><Image src={neuronImg} alt="neuron.png" class="original-diagram" loading="eager" /></a></center>
+<div class="centered">[<Image src={neuronImg} alt="neuron.png" class="original-diagram" loading="eager" />](https://explained.ai/matrix-calculus/images/neuron.png)</div>
 
-神经网络由许多这样的单元组成，它们被组织成多个神经元集合，称为<i>层</i>。一层中各单元的激活值成为下一层各单元的输入。最后一层中一个或多个单元的激活值称为网络输出。
+神经网络由许多这样的单元组成，它们被组织成多个神经元集合，称为*层*。一层中各单元的激活值成为下一层各单元的输入。最后一层中一个或多个单元的激活值称为网络输出。
 
-<i>训练</i>这个神经元，就是选择权重 $\mathbf{w}$ 和偏置 $b$，使我们对全部 $N$ 个输入 $\mathbf{x}$ 都能得到期望的输出。为此，我们最小化一个<i>损失函数</i>：它针对所有输入向量 $\mathbf{x}$，比较网络最终的 $activation({\mathbf{x}})$ 与 $target(\mathbf{x})$（$\mathbf{x}$ 对应的期望输出）。为了最小化损失，我们使用某种梯度下降方法，例如普通的[随机梯度下降](https://en.wikipedia.org/wiki/Stochastic_gradient_descent)（SGD）、带动量的 SGD，或 [Adam](https://en.wikipedia.org/wiki/Stochastic_gradient_descent#Adam)。这些方法都需要 $activation({\mathbf{x}})$ 关于模型参数 $\mathbf{w}$ 和 $b$ 的偏导数（梯度）。我们的目标是逐步调整 $\mathbf{w}$ 和 $b$，使所有输入 $\mathbf{x}$ 上的总损失持续减小。
+*训练*这个神经元，就是选择权重 $\mathbf{w}$ 和偏置 $b$，使我们对全部 $N$ 个输入 $\mathbf{x}$ 都能得到期望的输出。为此，我们最小化一个*损失函数*：它针对所有输入向量 $\mathbf{x}$，比较网络最终的 $activation({\mathbf{x}})$ 与 $target(\mathbf{x})$（$\mathbf{x}$ 对应的期望输出）。为了最小化损失，我们使用某种梯度下降方法，例如普通的[随机梯度下降](https://en.wikipedia.org/wiki/Stochastic_gradient_descent)（SGD）、带动量的 SGD，或 [Adam](https://en.wikipedia.org/wiki/Stochastic_gradient_descent#Adam)。这些方法都需要 $activation({\mathbf{x}})$ 关于模型参数 $\mathbf{w}$ 和 $b$ 的偏导数（梯度）。我们的目标是逐步调整 $\mathbf{w}$ 和 $b$，使所有输入 $\mathbf{x}$ 上的总损失持续减小。
 
 如果足够仔细，我们可以对一种常见损失函数（均方误差）的标量形式求导，从而推导出梯度：
 
@@ -46,76 +46,33 @@ $$
 
 但这只是一个神经元，而神经网络必须同时训练所有层中所有神经元的权重和偏置。由于存在多个输入，也可能存在多个网络输出，我们需要函数关于向量求导的一般规则，甚至需要向量值函数关于向量求导的规则。
 
-本文将逐步推导一些关于向量求偏导的重要规则，尤其是对训练神经网络有用的规则。这个领域称为<i>矩阵微积分</i>。好消息是，我们只需要其中很小的一部分，本文将介绍这些内容。虽然网上有很多多元微积分和线性代数的资料，但这两者通常作为两门独立的本科课程教授，因此大多数资料也是分别讨论的。真正讨论矩阵微积分的页面，往往只是列出规则而很少解释，或者只介绍一部分内容。由于符号密集、对基础概念的讨论又很少，除了少数数学专业读者，这些资料通常很难理解。（请参阅文末附有说明的资源列表。）
+本文将逐步推导一些关于向量求偏导的重要规则，尤其是对训练神经网络有用的规则。这个领域称为*矩阵微积分*。好消息是，我们只需要其中很小的一部分，本文将介绍这些内容。虽然网上有很多多元微积分和线性代数的资料，但这两者通常作为两门独立的本科课程教授，因此大多数资料也是分别讨论的。真正讨论矩阵微积分的页面，往往只是列出规则而很少解释，或者只介绍一部分内容。由于符号密集、对基础概念的讨论又很少，除了少数数学专业读者，这些资料通常很难理解。（请参阅文末附有说明的资源列表。）
 
-因此，我们将重新推导并逐步得出一些关键的矩阵微积分规则，以解释这些规则。矩阵微积分其实没有那么难：需要学习的并不是几十条新规则，而是几个关键概念。我们希望这篇短文能帮助你快速入门与神经网络训练有关的矩阵微积分。我们假定你已经熟悉神经网络结构与训练的基础。如果还不熟悉，请先学习 [Jeremy 的课程](http://course.fast.ai/)并完成第一部分，再回来阅读本文。（请注意，与许多更偏学术的学习方式不同，我们强烈建议<i>先</i>在实践中学习训练和使用神经网络，<i>再</i>研究背后的数学。有了实际背景，数学会容易理解得多；而且，要成为有效的实践者，也不必先彻底掌握这里的全部微积分。）
+因此，我们将重新推导并逐步得出一些关键的矩阵微积分规则，以解释这些规则。矩阵微积分其实没有那么难：需要学习的并不是几十条新规则，而是几个关键概念。我们希望这篇短文能帮助你快速入门与神经网络训练有关的矩阵微积分。我们假定你已经熟悉神经网络结构与训练的基础。如果还不熟悉，请先学习 [Jeremy 的课程](http://course.fast.ai/)并完成第一部分，再回来阅读本文。（请注意，与许多更偏学术的学习方式不同，我们强烈建议*先*在实践中学习训练和使用神经网络，*再*研究背后的数学。有了实际背景，数学会容易理解得多；而且，要成为有效的实践者，也不必先彻底掌握这里的全部微积分。）
 
-<i>关于符号的说明</i>：Jeremy 的课程完全使用代码而非数学符号来解释概念，因为代码中不熟悉的函数很容易搜索和实验。本文则相反：我们使用大量数学符号，因为本文的目标之一，就是帮助你理解深度学习论文和书籍中出现的记号。在[文章末尾](#notation)，你会看到一份简短的符号表，其中也列出了可用于搜索更多信息的词或短语。
+*关于符号的说明*：Jeremy 的课程完全使用代码而非数学符号来解释概念，因为代码中不熟悉的函数很容易搜索和实验。本文则相反：我们使用大量数学符号，因为本文的目标之一，就是帮助你理解深度学习论文和书籍中出现的记号。在[文章末尾](#notation)，你会看到一份简短的符号表，其中也列出了可用于搜索更多信息的词或短语。
 
 ## 复习：标量求导规则 {/* #sec:1.2 */}
 
 希望你还记得以下一些主要的标量求导规则。如果记忆有些模糊，可以看看 [Khan Academy 关于标量求导规则的视频](https://www.khanacademy.org/math/ap-calculus-ab/ab-derivative-rules)。
 
-<center>
+<div class="centered">
 
-<div aria-label="原文表格，可横向滚动" class="table-scroll" role="group" tabindex="0">
-<table>
-<thead>
-<tr>
-<th align="center" valign="top" width="20%">规则</th>
-<th align="center" valign="top">$f(x)$</th>
-<th align="center" valign="top" width="30%">标量导数记号，求导变量为 $x$</th>
-<th align="center" valign="top">例子</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td align="center" valign="top"><mark>常数</mark></td>
-<td align="center" valign="top">$c$</td>
-<td align="center" valign="top">$0$</td>
-<td align="center" valign="top">$\frac{d}{dx}99 = 0$</td>
-</tr>
-<tr>
-<td align="center" valign="top"><mark>乘以常数</mark></td>
-<td align="center" valign="top">$cf$</td>
-<td align="center" valign="top">$c \frac{df}{dx}$</td>
-<td align="center" valign="top">$\frac{d}{dx}3x = 3$</td>
-</tr>
-<tr>
-<td align="center" valign="top"><mark>幂函数法则</mark></td>
-<td align="center" valign="top">$x^n$</td>
-<td align="center" valign="top">$nx^{n-1}$</td>
-<td align="center" valign="top">$\frac{d}{dx}x^3 = 3x^2$</td>
-</tr>
-<tr>
-<td align="center" valign="top"><mark>加法法则</mark></td>
-<td align="center" valign="top">$f + g$</td>
-<td align="center" valign="top">$\frac{df}{dx} + \frac{dg}{dx}$</td>
-<td align="center" valign="top">$\frac{d}{dx} (x^2 + 3x) = 2x + 3$</td>
-</tr>
-<tr>
-<td align="center" valign="top"><mark>减法法则</mark></td>
-<td align="center" valign="top">$f - g$</td>
-<td align="center" valign="top">$\frac{df}{dx} - \frac{dg}{dx}$</td>
-<td align="center" valign="top">$\frac{d}{dx}(x^2 - 3x) = 2x - 3$</td>
-</tr>
-<tr>
-<td align="center" valign="top"><mark>乘积法则</mark></td>
-<td align="center" valign="top">$fg$</td>
-<td align="center" valign="top">$f \frac{dg}{dx} + \frac{df}{dx} g$</td>
-<td align="center" valign="top">$\frac{d}{dx}x^2x = x^2 + x2x = 3x^2$</td>
-</tr>
-<tr>
-<td align="center" valign="top"><mark>链式法则</mark></td>
-<td align="center" valign="top">$f(g(x))$</td>
-<td align="center" valign="top">$\frac{df(u)}{du}\frac{du}{dx}$，令 $u=g(x)$</td>
-<td align="center" valign="top">$\frac{d}{dx} ln(x^2) = \frac{1}{x^2}2x = \frac{2}{x}$</td>
-</tr>
-</tbody>
-</table>
+<div aria-label="原文表格，可横向滚动" class="table-scroll scalar-rules" role="group" tabindex="0">
+
+| 规则 | $f(x)$ | 标量导数记号，求导变量为 $x$ | 例子 |
+|---|---|---|---|
+| <mark>常数</mark> | $c$ | $0$ | $\frac{d}{dx}99 = 0$ |
+| <mark>乘以常数</mark> | $cf$ | $c \frac{df}{dx}$ | $\frac{d}{dx}3x = 3$ |
+| <mark>幂函数法则</mark> | $x^n$ | $nx^{n-1}$ | $\frac{d}{dx}x^3 = 3x^2$ |
+| <mark>加法法则</mark> | $f + g$ | $\frac{df}{dx} + \frac{dg}{dx}$ | $\frac{d}{dx} (x^2 + 3x) = 2x + 3$ |
+| <mark>减法法则</mark> | $f - g$ | $\frac{df}{dx} - \frac{dg}{dx}$ | $\frac{d}{dx}(x^2 - 3x) = 2x - 3$ |
+| <mark>乘积法则</mark> | $fg$ | $f \frac{dg}{dx} + \frac{df}{dx} g$ | $\frac{d}{dx}x^2x = x^2 + x2x = 3x^2$ |
+| <mark>链式法则</mark> | $f(g(x))$ | $\frac{df(u)}{du}\frac{du}{dx}$，令 $u=g(x)$ | $\frac{d}{dx} ln(x^2) = \frac{1}{x^2}2x = \frac{2}{x}$ |
+
 </div>
 
-</center>
+</div>
 
 此外还有三角函数、指数函数等的求导规则，可以在 [Khan Academy 的微分课程](https://www.khanacademy.org/math/differential-calculus)中找到。
 
@@ -131,11 +88,11 @@ $$
 
 ## 向量微积分与偏导数入门 {/* #sec:1.3 */}
 
-神经网络层并不是只有一个参数的单个函数 $f(x)$。因此，我们继续考虑 $f(x,y)$ 这样的多参数函数。例如，$xy$（即 $x$ 与 $y$ 的乘积）的导数是什么？换句话说，改变变量时，乘积 $xy$ 会如何变化？这取决于改变的是 $x$ 还是 $y$。每次只对一个变量（参数）求导，就会为这个双参数函数得到两个不同的<i>偏导数</i>：一个针对 $x$，另一个针对 $y$。偏导数不使用运算符 $\frac{d}{dx}$，而使用 $\frac{\partial}{\partial x}$（这是变体的 $d$，不是希腊字母 $\delta$）。因此，$\frac{\partial }{\partial x}xy$ 和 $\frac{\partial }{\partial y}xy$ 是 $xy$ 的偏导数，英文中也常简称为 <i>partials</i>。对于足够光滑的单参数函数，运算符 $\frac{\partial}{\partial x}$ 与 $\frac{d}{dx}$ 等价。不过，使用 $\frac{d}{dx}$ 更好，因为它明确表示你指的是标量导数。
+神经网络层并不是只有一个参数的单个函数 $f(x)$。因此，我们继续考虑 $f(x,y)$ 这样的多参数函数。例如，$xy$（即 $x$ 与 $y$ 的乘积）的导数是什么？换句话说，改变变量时，乘积 $xy$ 会如何变化？这取决于改变的是 $x$ 还是 $y$。每次只对一个变量（参数）求导，就会为这个双参数函数得到两个不同的*偏导数*：一个针对 $x$，另一个针对 $y$。偏导数不使用运算符 $\frac{d}{dx}$，而使用 $\frac{\partial}{\partial x}$（这是变体的 $d$，不是希腊字母 $\delta$）。因此，$\frac{\partial }{\partial x}xy$ 和 $\frac{\partial }{\partial y}xy$ 是 $xy$ 的偏导数，英文中也常简称为 *partials*。对于足够光滑的单参数函数，运算符 $\frac{\partial}{\partial x}$ 与 $\frac{d}{dx}$ 等价。不过，使用 $\frac{d}{dx}$ 更好，因为它明确表示你指的是标量导数。
 
 关于 $x$ 的偏导数就是通常的标量导数，只是把等式中的其他变量全部视为常数。考虑函数 $f(x,y) = 3x^2y$。它关于 $x$ 的偏导写成 $\frac{\partial}{\partial x} 3x^2y$。从 $\frac{\partial}{\partial x}$ 的角度来看，存在三个常数：3、2 和 $y$。因此，$\frac{\partial}{\partial x} 3yx^2 = 3y\frac{\partial}{\partial x} x^2 = 3y2x = 6yx$。关于 $y$ 的偏导则将 $x$ 视为常数：$\frac{\partial}{\partial y} 3x^2y = 3x^2\frac{\partial}{\partial y} y = 3x^2\frac{\partial y}{\partial y} = 3x^2 \times 1 = 3x^2$。最好先亲自推导这些结果再继续阅读，否则后面的内容将难以理解。如需帮助，可以观看 [Khan Academy 关于偏导数的视频](https://www.khanacademy.org/math/multivariable-calculus/multivariable-derivatives/partial-derivative-and-gradient-articles/a/introduction-to-partial-derivatives)。
 
-为了明确我们正在讨论向量微积分，而不只是多元微积分，来看看如何处理针对 $f(x,y) = 3x^2y$ 算出的偏导数 $\frac{\partial f(x,y)}{\partial x}$ 和 $\frac{\partial f(x,y)}{\partial y}$（也就是 $\frac{\partial}{\partial x}f(x,y)$ 和 $\frac{\partial }{\partial y}f(x,y)$）。与其让它们分散存在，不如将它们组织成一个水平向量。这个向量称为 $f(x,y)$ 的<i>梯度</i>，写成：
+为了明确我们正在讨论向量微积分，而不只是多元微积分，来看看如何处理针对 $f(x,y) = 3x^2y$ 算出的偏导数 $\frac{\partial f(x,y)}{\partial x}$ 和 $\frac{\partial f(x,y)}{\partial y}$（也就是 $\frac{\partial}{\partial x}f(x,y)$ 和 $\frac{\partial }{\partial y}f(x,y)$）。与其让它们分散存在，不如将它们组织成一个水平向量。这个向量称为 $f(x,y)$ 的*梯度*，写成：
 
 $$
 \nabla f(x,y)  = [ \frac{\partial f(x,y)}{\partial x}, \frac{\partial f(x,y)}{\partial y}] = [6yx, 3x^2]
@@ -159,7 +116,7 @@ $$
 
 因而得到梯度 $\nabla g(x,y) = [2, 8y^7]$。
 
-梯度向量组织了某个标量函数的全部偏导数。如果有两个函数，也可以将它们的梯度逐行排列成一个矩阵。这样得到的就是 <i>Jacobian 矩阵</i>（简称 <i>Jacobian</i>），其中每一行都是一个梯度：
+梯度向量组织了某个标量函数的全部偏导数。如果有两个函数，也可以将它们的梯度逐行排列成一个矩阵。这样得到的就是 *Jacobian 矩阵*（简称 *Jacobian*），其中每一行都是一个梯度：
 
 $$
 J =
@@ -177,7 +134,7 @@ $$
 
 这就进入了矩阵微积分！
 
-<mark>请注意，Jacobian 有多种表示方式。</mark>我们使用的是所谓的 [numerator layout](https://en.wikipedia.org/wiki/Matrix_calculus#Layout_conventions)，但很多论文和软件使用 <i>denominator layout</i>。后者就是 numerator layout 下 Jacobian 的转置（沿对角线翻转）：
+<mark>请注意，Jacobian 有多种表示方式。</mark>我们使用的是所谓的 [numerator layout](https://en.wikipedia.org/wiki/Matrix_calculus#Layout_conventions)，但很多论文和软件使用 *denominator layout*。后者就是 numerator layout 下 Jacobian 的转置（沿对角线翻转）：
 
 $$
 \begin{bmatrix}
@@ -369,7 +326,7 @@ $$
 
 当 $f_{i}$ 和 $g_{i}$ 不是 $w_{j}$ 的函数时，这些偏导数就为零。我们知道，element-wise运算意味着 $f_{i}$ 只是 $w_{i}$ 的函数，而 $g_{i}$ 只是 $x_{i}$ 的函数。例如，$\mathbf{w}+\mathbf{x}$ 计算的是 $w_i + x_i$ 的和。因此，$f_i(\mathbf{w}) \bigcirc g_i(\mathbf{x})$ 简化为 $f_i(w_i) \bigcirc g_i(x_i)$，我们的目标就变成 $\frac{\partial}{\partial w_j} f_i(w_i) = \frac{\partial}{\partial w_j} g_i(x_i) = 0$。当 $j \neq i$ 时，对于关于 $w_{j}$ 的偏导运算符而言，$f_i(w_i)$ 和 $g_i(x_i)$ 都是常数，所以非对角位置的偏导数为零。（严格来说，$f_i(w_i)$ 的写法不完全符合此前的记号约定，因为 $f_{i}$ 和 $g_{i}$ 是向量的函数，而不是单个元素的函数。我们本应写成类似 $\hat f_{i}(w_i) = f_{i}(\mathbf{w})$ 的形式，但这会使公式更加复杂，而程序员通常习惯于函数重载，因此这里仍沿用这一记法。）
 
-后面会利用这一简化。我们把 $f_i(\mathbf{w})$ 和 $g_i(\mathbf{x})$ 分别最多只访问 $w_{i}$ 和 $x_{i}$ 的限制，称为<i>element-wise对角条件</i>。
+后面会利用这一简化。我们把 $f_i(\mathbf{w})$ 和 $g_i(\mathbf{x})$ 分别最多只访问 $w_{i}$ 和 $x_{i}$ 的限制，称为*element-wise对角条件*。
 
 在这一条件下，Jacobian 对角线上的元素为 $\frac{\partial}{\partial w_i} ( f_i(w_i) \bigcirc g_i(x_i) )$：
 
@@ -432,7 +389,7 @@ $$
 \end{array}
 $$
 
-运算符 $\otimes$ 和 $\oslash$ 分别表示element-wise乘法和除法；$\otimes$ 有时称为 <i>Hadamard product</i>。element-wise乘除没有统一的标准记号，因此这里采用与一般二元运算记号一致的写法。
+运算符 $\otimes$ 和 $\oslash$ 分别表示element-wise乘法和除法；$\otimes$ 有时称为 *Hadamard product*。element-wise乘除没有统一的标准记号，因此这里采用与一般二元运算记号一致的写法。
 
 ### 标量与向量运算的导数 {/* #sec:1.4.3 */}
 
@@ -531,7 +488,7 @@ $$
 
 ### 链式法则 {/* #sec:1.4.5 */}
 
-仅凭前面介绍的矩阵微积分基本规则，还无法计算非常复杂的函数的偏导数。例如，对于 $sum(\mathbf{w}+\mathbf{x})$ 这样的嵌套表达式，如果不把它展开为等价的标量形式，就无法直接求导。我们需要通过所谓的<i>向量链式法则</i>来组合基本向量规则。然而，多种求导规则都被称为“链式法则”，因此必须明确具体指的是哪一种。这里的目标之一，是清楚地定义并命名三种不同的链式法则，并说明它们分别适用于什么情况。首先从<i>单变量链式法则</i>开始：计算标量函数关于标量的导数。然后介绍一个重要概念——<i>全导数</i>，并用它定义一个名称较为严格的规则：<i>单变量全导数链式法则</i>。最后，我们就能完整地讨论神经网络所需的向量链式法则。
+仅凭前面介绍的矩阵微积分基本规则，还无法计算非常复杂的函数的偏导数。例如，对于 $sum(\mathbf{w}+\mathbf{x})$ 这样的嵌套表达式，如果不把它展开为等价的标量形式，就无法直接求导。我们需要通过所谓的*向量链式法则*来组合基本向量规则。然而，多种求导规则都被称为“链式法则”，因此必须明确具体指的是哪一种。这里的目标之一，是清楚地定义并命名三种不同的链式法则，并说明它们分别适用于什么情况。首先从*单变量链式法则*开始：计算标量函数关于标量的导数。然后介绍一个重要概念——*全导数*，并用它定义一个名称较为严格的规则：*单变量全导数链式法则*。最后，我们就能完整地讨论神经网络所需的向量链式法则。
 
 从概念上说，链式法则采用分治策略，将复杂表达式拆成导数更容易计算的子表达式；快速排序也采用分治策略。它的作用在于，我们可以分别处理每个简单子表达式，再将中间结果组合起来，得到正确的整体结果。
 
@@ -596,7 +553,7 @@ $$
 
 理解单变量链式法则的另一种方式，是将整个表达式画成数据流图或一系列运算；对熟悉编译器的读者来说，也就是[抽象语法树](https://en.wikipedia.org/wiki/Abstract_syntax_tree)：
 
-<center><a href="https://explained.ai/matrix-calculus/images/sin-square.png"><Image src={sinSquareImg} alt="sin-square.png" class="original-diagram" loading="eager" /></a></center>
+<div class="centered">[<Image src={sinSquareImg} alt="sin-square.png" class="original-diagram" loading="eager" />](https://explained.ai/matrix-calculus/images/sin-square.png)</div>
 
 函数参数 $x$ 的变化先经过平方运算，再经过 $sin$ 运算，最终改变结果 $y$。可以将 $\frac{du}{dx}$ 理解为“变化从 $x$ 传到 $u$”，将 $\frac{dy}{du}$ 理解为“变化从 $u$ 传到 $y$”。从 $x$ 到 $y$ 需要经过一个中间步骤。按照惯例，链式法则通常从输出变量向参数的方向书写，即 $\frac{dy}{dx} = \frac{dy}{du} \frac{du}{dx}$。但如果从 $x$ 到 $y$ 的方向理解，反过来使用等价的 $\frac{dy}{dx} = \frac{du}{dx}\frac{dy}{du}$ 会更加清楚。
 
@@ -604,28 +561,19 @@ $$
 
 ---
 
-为对自动微分感兴趣的读者补充说明：论文和库文档会使用以下术语：<i>前向微分</i>与<i>反向微分</i>（用于反向传播算法）。从数据流的角度来看，我们计算的是前向微分，因为它沿正常的数据流方向进行。反向微分则沿相反方向，所问的是输出的变化会如何影响函数参数 $x$。由于反向微分能一次确定所有函数参数的变化，因此对于有大量参数的函数，它在计算导数时高效得多。相比之下，前向微分必须逐个考虑每个参数的变化如何影响函数输出 $y$。下表着重展示了两种方法计算偏导数的顺序。
+为对自动微分感兴趣的读者补充说明：论文和库文档会使用以下术语：*前向微分*与*反向微分*（用于反向传播算法）。从数据流的角度来看，我们计算的是前向微分，因为它沿正常的数据流方向进行。反向微分则沿相反方向，所问的是输出的变化会如何影响函数参数 $x$。由于反向微分能一次确定所有函数参数的变化，因此对于有大量参数的函数，它在计算导数时高效得多。相比之下，前向微分必须逐个考虑每个参数的变化如何影响函数输出 $y$。下表着重展示了两种方法计算偏导数的顺序。
 
-<center>
+<div class="centered">
 
 <div aria-label="原文表格，可横向滚动" class="table-scroll" role="group" tabindex="0">
-<table>
-<thead>
-<tr>
-<th align="center" valign="top">前向微分，从 $x$ 到 $y$</th>
-<th align="center" valign="top">从 $y$ 到 $x$ 的反向微分</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td align="center" valign="top">$\frac{dy}{dx} = \frac{du}{dx}\frac{dy}{du}$</td>
-<td align="center" valign="top">$\frac{dy}{dx} = \frac{dy}{du} \frac{du}{dx}$</td>
-</tr>
-</tbody>
-</table>
+
+| 前向微分，从 $x$ 到 $y$ | 从 $y$ 到 $x$ 的反向微分 |
+|---|---|
+| $\frac{dy}{dx} = \frac{du}{dx}\frac{dy}{du}$ | $\frac{dy}{dx} = \frac{dy}{du} \frac{du}{dx}$ |
+
 </div>
 
-</center>
+</div>
 
 自动微分不在本文的讨论范围内，但这里的内容为后续文章作了准备。
 
@@ -671,7 +619,7 @@ $$
 
 下图显示了数据从 $x$ 经过一系列运算到达 $y$ 的过程：
 
-<center><a href="https://explained.ai/matrix-calculus/images/chain-tree.png"><Image src={chainTreeImg} alt="chain-tree.png" class="original-diagram" loading="eager" /></a></center>
+<div class="centered">[<Image src={chainTreeImg} alt="chain-tree.png" class="original-diagram" loading="eager" />](https://explained.ai/matrix-calculus/images/chain-tree.png)</div>
 
 到这里，我们已经可以使用链式法则，对单变量 $x$ 的嵌套表达式求导，但条件是 $x$ 只能通过一条数据流路径影响 $y$。为了处理更复杂的表达式，需要扩展这种方法，接下来就来讨论。
 
@@ -702,7 +650,7 @@ $$
 
 这里的偏导数 $\frac{\partial u_2(x,u_1)}{\partial x}$ 是错误的，因为它违反了偏导数的一个关键假设。对 $x$ 求偏导时，其他变量不能随着 $x$ 改变，否则就无法把它们当作常数。然而，$u_1(x)=x^2$ 显然是 $x$ 的函数，因此会随 $x$ 改变。由于 $\frac{\partial u_1(x)}{\partial x} \neq 0$，所以 $\frac{\partial u_2(x,u_1)}{\partial x} \neq 1 + 0$。观察 $y=u_2(x,u_1)$ 的数据流图，可以发现从 $x$ 到 $y$ 有多条路径。这说明我们必须同时考虑对 $x$ 的直接依赖，以及通过 $u_1(x)$ 的间接依赖：
 
-<center><a href="https://explained.ai/matrix-calculus/images/plus-square.png"><Image src={plusSquareImg} alt="plus-square.png" class="original-diagram" loading="eager" /></a></center>
+<div class="centered">[<Image src={plusSquareImg} alt="plus-square.png" class="original-diagram" loading="eager" />](https://explained.ai/matrix-calculus/images/plus-square.png)</div>
 
 $x$ 既作为加法的操作数，也作为平方运算的操作数，因此它的变化会通过这两种方式影响 $y$。下面的方程描述了对 $x$ 的调整如何影响输出：
 
@@ -726,7 +674,7 @@ $$
 \frac{dy}{dx} = \frac{\partial f(x)}{\partial x} = \frac{\partial u_2}{\partial x} + \frac{\partial u_2}{\partial u_1}\frac{\partial  u_1}{\partial  x} = 1 + 1 \times 2x = 1 + 2x
 $$
 
-这就是所谓<i>单变量全导数链式法则</i>的一次应用：
+这就是所谓*单变量全导数链式法则*的一次应用：
 
 $$
 \frac{\partial f(x,u_1,\ldots,u_n)}{\partial x} = \frac{\partial f}{\partial x} + \frac{\partial f}{\partial u_1}\frac{\partial  u_1}{\partial  x} + \frac{\partial f}{\partial u_2}\frac{\partial  u_2}{\partial  x} + \ldots + \frac{\partial f}{\partial u_n}\frac{\partial  u_n}{\partial x} = \frac{\partial f}{\partial x} + \sum_{i=1}^n \frac{\partial f}{\partial u_i}\frac{\partial  u_i}{\partial  x}
@@ -913,7 +861,7 @@ $$
 \frac{d}{dx} f(g(x)) = \frac{df}{dg}\frac{dg}{dx}
 $$
 
-要让这个公式适用于多个参数，即向量 $\mathbf{x}$，只需把公式中的 $x$ 换成向量 $\mathbf{x}$。这样，$\frac{\partial\mathbf{g}}{\partial \mathbf{x}}$ 和最终的 Jacobian $\frac{\partial \mathbf{f}}{\partial \mathbf{x}}$ 就从竖直向量变为矩阵。完整的<i>向量链式法则</i>为：
+要让这个公式适用于多个参数，即向量 $\mathbf{x}$，只需把公式中的 $x$ 换成向量 $\mathbf{x}$。这样，$\frac{\partial\mathbf{g}}{\partial \mathbf{x}}$ 和最终的 Jacobian $\frac{\partial \mathbf{f}}{\partial \mathbf{x}}$ 就从竖直向量变为矩阵。完整的*向量链式法则*为：
 
 $$
 \begin{array}{lllllllll}
@@ -1333,13 +1281,13 @@ $$
 
 ### 梯度与 Jacobian {/* #sec:1.8.1 */}
 
-二元函数的<i>梯度</i>是一个水平的二维向量：
+二元函数的*梯度*是一个水平的二维向量：
 
 $$
 \nabla f(x,y)  = [ \frac{\partial f(x,y)}{\partial x}, \frac{\partial f(x,y)}{\partial y}]
 $$
 
-以向量为参数的向量值函数，其 <i>Jacobian</i> 是一个 $m \times n$ 的矩阵（$m=|\mathbf{f}|$，且 $n=|\mathbf{x}|$），包含所有可能的标量偏导数：
+以向量为参数的向量值函数，其 *Jacobian* 是一个 $m \times n$ 的矩阵（$m=|\mathbf{f}|$，且 $n=|\mathbf{x}|$），包含所有可能的标量偏导数：
 
 $$
 \frac{\partial \mathbf{y}}{\partial \mathbf{x}} = \begin{bmatrix}
@@ -1364,7 +1312,7 @@ $$
 
 ### 向量的element-wise运算 {/* #sec:1.8.2 */}
 
-使用运算符 $\bigcirc$ 定义向量 $\mathbf{w}$ 与 $\mathbf{x}$ 上的一般<i>element-wise运算</i>，例如 $+$：
+使用运算符 $\bigcirc$ 定义向量 $\mathbf{w}$ 与 $\mathbf{x}$ 上的一般*element-wise运算*，例如 $+$：
 
 $$
 \begin{bmatrix}
@@ -1392,7 +1340,7 @@ J_\mathbf{w} =
 \end{bmatrix}
 $$
 
-当 $f_i(\mathbf{w})$ 和 $g_i(\mathbf{x})$ 分别最多只访问 $w_{i}$ 和 $x_{i}$，即满足<i>element-wise对角条件</i>时，Jacobian 化简为对角矩阵：
+当 $f_i(\mathbf{w})$ 和 $g_i(\mathbf{x})$ 分别最多只访问 $w_{i}$ 和 $x_{i}$，即满足*element-wise对角条件*时，Jacobian 化简为对角矩阵：
 
 $$
 \frac{\partial \mathbf{y}}{\partial \mathbf{w}} = diag \left( \frac{\partial}{\partial w_1}(f_{1}(w_1) \bigcirc g_{1}(x_1)),~ \frac{\partial}{\partial w_2}(f_{2}(w_2) \bigcirc g_{2}(x_2)),~ \ldots,~ \frac{\partial}{\partial w_n}(f_{n}(w_n) \bigcirc g_{n}(x_n)) \right)
@@ -1472,30 +1420,19 @@ $$
 
 ### 链式法则 {/* #sec:1.8.5 */}
 
-<i>向量链式法则</i>是一般形式，因为它可以退化为其他形式。当 $f$ 是单变量 $x$ 的函数，且所有中间变量 $u$ 都是单变量函数时，适用单变量链式法则。当部分或全部中间变量是多变量函数时，适用单变量全导数链式法则。在其他所有情况下，适用向量链式法则。
+*向量链式法则*是一般形式，因为它可以退化为其他形式。当 $f$ 是单变量 $x$ 的函数，且所有中间变量 $u$ 都是单变量函数时，适用单变量链式法则。当部分或全部中间变量是多变量函数时，适用单变量全导数链式法则。在其他所有情况下，适用向量链式法则。
 
-<center>
+<div class="centered">
 
 <div aria-label="原文表格，可横向滚动" class="table-scroll" role="group" tabindex="0">
-<table>
-<thead>
-<tr>
-<th align="center" valign="top">单变量规则</th>
-<th align="center" valign="top">单变量全导数规则</th>
-<th align="center" valign="top">向量规则</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td align="center" valign="top">$\frac{df}{dx} = \frac{df}{du}\frac{du}{dx}$</td>
-<td align="center" valign="top">$\frac{\partial f(u_1,\ldots,u_n)}{\partial x} = \frac{\partial f}{\partial \mathbf{u}} \frac{\partial \mathbf{u}}{\partial x}$</td>
-<td align="center" valign="top">$\frac{\partial}{\partial \mathbf{x}} \mathbf{f}(\mathbf{g}(\mathbf{x})) = \frac{\partial \mathbf{f}}{\partial \mathbf{g}}\frac{\partial\mathbf{g}}{\partial \mathbf{x}}$</td>
-</tr>
-</tbody>
-</table>
+
+| 单变量规则 | 单变量全导数规则 | 向量规则 |
+|---|---|---|
+| $\frac{df}{dx} = \frac{df}{du}\frac{du}{dx}$ | $\frac{\partial f(u_1,\ldots,u_n)}{\partial x} = \frac{\partial f}{\partial \mathbf{u}} \frac{\partial \mathbf{u}}{\partial x}$ | $\frac{\partial}{\partial \mathbf{x}} \mathbf{f}(\mathbf{g}(\mathbf{x})) = \frac{\partial \mathbf{f}}{\partial \mathbf{g}}\frac{\partial\mathbf{g}}{\partial \mathbf{x}}$ |
+
 </div>
 
-</center>
+</div>
 
 ## 符号说明 {/* #notation */}
 

@@ -15,8 +15,8 @@ article h4{scroll-margin-top:24px}
 .essay article p{margin:0 0 1.25em}
 article{overflow-wrap:break-word}
 article a{overflow-wrap:anywhere}
-/* 迁移前的页面把 <i> 显示为正体 */
-article i,.mast .lede i{font-style:normal}
+/* 迁移前的页面把 <i> 显示为正体。正文里的 *强调* 由 Markdown 生成 <em>，同样显示为正体 */
+article i,article em,.mast .lede i{font-style:normal}
 article mark{color:var(--accent); font-weight:600; background:linear-gradient(transparent 72%,var(--accent-soft) 72%); padding:0 .06em; box-decoration-break:clone; -webkit-box-decoration-break:clone}
 article li{margin:.2em 0 10px}
 article ol{padding-left:1.6em}
@@ -29,11 +29,15 @@ article li > p:first-child{margin-bottom:0}
 /* 原文的插图 */
 article img{max-width:none}
 article img.original-diagram{display:block; max-width:min(100%,420px); max-height:320px; width:auto; height:auto; object-fit:contain; margin:26px auto; padding:0}
-article center{overflow-x:auto; max-width:100%}
+/* 原文用 <center> 包住插图和表格，这里用 div.centered 代替，样式与浏览器默认的 <center> 加上原有规则相同 */
+article .centered{text-align:center; overflow-x:auto; max-width:100%}
 
 /* 原文的表格 */
 .table-scroll{overflow-x:auto; margin:24px 0; border:1px solid var(--rule); border-radius:8px; background:var(--surface)}
 article td,article th{padding:14px; min-width:120px; vertical-align:middle}
+/* 标量求导规则表：第 1 列和第 3 列的宽度，取自原文表格 <th> 的 width 属性 */
+.scalar-rules th:nth-child(1){width:20%}
+.scalar-rules th:nth-child(3){width:30%}
 
 /* Jacobian 维度示意表：用方框表示标量、列向量、行向量和矩阵的形状 */
 .shape-table-wrap{overflow-x:auto; margin:24px 0}
