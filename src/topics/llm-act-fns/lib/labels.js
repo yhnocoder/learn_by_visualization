@@ -1,19 +1,6 @@
 // 本主题的图共用的文字工具：把含 $...$ 的字符串转成 HTML 或放进 SVG。
 // 依赖浏览器端 MathJax，调用前先 await mathReady()。
 import { el, label } from '../../../lib/svg.js';
-import { mathReady } from '../../../lib/math.js';
-
-let prepared;
-/**
- * 等待浏览器端 MathJax，并把它的页面元素和样式表加进页面。
- * 布局把 MathJax 配置成 startup.typeset: false，MathJax 启动时不排版页面，也就不会插入全局字形缓存
- * （fontCache: 'global' 时 tex2svg 输出的 <use> 引用这里的字形）和隐藏辅助 MathML 的样式表；
- * 缺少它们时，脚本生成的公式不显示字形，辅助 MathML 以纯文本出现。updateDocument() 会插入这两样东西。
- */
-export function prepareMath(){
-  prepared ??= mathReady().then(() => { MathJax.startup.document.updateDocument(); });
-  return prepared;
-}
 
 const segs = src => src.split('$').map((t, i) => ({ math: i % 2 === 1, t })).filter(x => x.t);
 const esc = t => t.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));

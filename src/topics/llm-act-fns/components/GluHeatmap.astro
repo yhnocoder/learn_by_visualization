@@ -35,9 +35,9 @@ const aria = `${name} 门控的 GLU 通道输出热图，横轴 g 从 ${neg(rang
 </div>
 
 <script>
-  import { prepareMath } from '../lib/labels.js';
+  import { mathReady } from '../../../lib/math.js';
   import { initGluHeatmap } from '../lib/glu-heatmap.js';
-  await prepareMath();
+  await mathReady();
   document.querySelectorAll<HTMLElement>('.glu-heatmap').forEach(initGluHeatmap);
 </script>
 

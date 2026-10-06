@@ -1,10 +1,15 @@
 ---
 // 可折叠的补充内容，默认收起。展开动画在 src/scripts/fold.js。
-interface Props { summary: string; open?: boolean }
+// 标题写在 summary 属性里；标题需要含公式时，改写在名为 summary 的 slot 里，其中的 $...$ 在构建时渲染：
+//   <Fold>
+//     <span slot="summary">展开了解：为什么期望恰好是 $x\Phi(x)$？</span>
+//     正文……
+//   </Fold>
+interface Props { summary?: string; open?: boolean }
 const { summary, open = false } = Astro.props;
 ---
 <details class="fold" open={open}>
-  <summary>{summary}</summary>
+  <summary><slot name="summary">{summary}</slot></summary>
   <div class="body"><slot /></div>
 </details>
 

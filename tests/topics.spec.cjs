@@ -88,7 +88,8 @@ test('Activation functions: adjust the SiLU beta parameter', async ({ page }, te
     const before = await curves.evaluateAll(paths => paths.map(path => path.getAttribute('d')));
     await figure.locator('input[type="range"]').fill('2');
     await expect(figure.locator('.controls .v')).toHaveText('2.00');
-    await expect(figure.locator('.chart-status')).toHaveText('gate 过渡区：[-1.10, 1.10]；宽 2.20');
+    // 状态行里的区间是公式：负号是 U+2212，逗号后是不换行空格
+    await expect(figure.locator('.chart-status')).toHaveText(/gate 过渡区：\[[-−]1\.10,\s1\.10\]；宽 2\.20/);
     expect(await curves.evaluateAll(paths => paths.map(path => path.getAttribute('d')))).not.toEqual(before);
     await checkMath(page);
     await screenshot(page, testInfo, 'after-beta-change');

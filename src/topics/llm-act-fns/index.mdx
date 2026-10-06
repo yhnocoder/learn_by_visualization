@@ -12,7 +12,7 @@ import Callout from '../../components/layout/Callout.astro';
 import ActFnPlot from './components/ActFnPlot.astro';
 import GluHeatmap from './components/GluHeatmap.astro';
 import FfnGluDiagram from './components/FfnGluDiagram.astro';
-import MathFold from './components/MathFold.astro';
+import Fold from '../../components/layout/Fold.astro';
 import * as figures from './lib/figures.js';
 import './act-fns.css';
 
@@ -261,7 +261,7 @@ $$
 
 其中 $p(x)$ 是标准正态分布的概率密度函数。Hendrycks 和 Gimpel 的出发点是：ReLU 是把输入乘以 $\mathbb{1}[x>0]$，dropout 是把输入乘以一个伯努利随机变量，那么不妨把这个随机变量的概率设成与输入相关的 $\Phi(x)$，再对随机性取期望，得到的就是 $x\Phi(x)$。这样输入越大越可能被“保留”，越小越可能被“丢弃”，而整个过程是确定性且光滑的。
 
-<MathFold>
+<Fold>
 <span slot="summary">展开了解：为什么期望恰好是 $x\Phi(x)$？</span>
 
 这里的随机操作只有两个结果：保留输入 $x$，或者把它置为 $0$。设 $B$ 是一个取值为 $0$ 或 $1$ 的随机变量，并规定
@@ -278,7 +278,7 @@ $$
 
 例如，若某个输入的保留概率为 $0.8$，那么平均输出就是 $0.8x$。ReLU 对应 $P(B=1\mid x)=\mathbb{1}[x>0]$，dropout 对应 $P(B=1\mid x)=p$ 且与 $x$ 无关；GELU 把这个概率改成随 $x$ 单调增加的 $\Phi(x)$，再取期望，就得到确定性的 $x\Phi(x)$。
 
-</MathFold>
+</Fold>
 
 <Figure id="fig-gelu">
 <ActFnPlot {...figures.gelu} />
@@ -301,7 +301,7 @@ $$
 
 $\Phi(x)$ 可以通过误差函数 $\mathrm{erf}$ 计算。相比 ReLU，它的数值求值更复杂，因此也常使用近似形式；实际性能收益取决于硬件和实现。
 
-<MathFold>
+<Fold>
 <span slot="summary">展开了解：erf 是什么，计算机怎样计算它？</span>
 
 误差函数（error function）的定义是
@@ -332,7 +332,7 @@ $$
 
 <strong>开销主要来自更多计算。</strong>ReLU 只需比较并选择，而 erf 的求值通常需要一组乘加及可能的区间判断等操作。FFN 的每个中间元素都要计算一次，大量重复后就可能影响速度；这并不意味着 erf 天然需要大量显存。tanh 近似能否更快，还要看硬件支持、精度和内核融合方式，不能只看公式长短。
 
-</MathFold>
+</Fold>
 
 常用的近似有两个。第一个是 tanh 近似：
 

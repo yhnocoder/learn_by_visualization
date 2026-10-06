@@ -17,8 +17,8 @@ import './plot.css';
 </div>
 
 <script>
-  import { prepareMath } from '../lib/labels.js';
+  import { mathReady } from '../../../lib/math.js';
   import { initFfnGlu } from '../lib/ffn-glu.js';
-  await Promise.all([prepareMath(), document.fonts.ready]);
+  await Promise.all([mathReady(), document.fonts.ready]);
   document.querySelectorAll<HTMLElement>('.ffn-glu').forEach(initFfnGlu);
 </script>

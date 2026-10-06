@@ -42,9 +42,9 @@ const config = JSON.stringify({ fns, range, yf, yd, guides, toggle, zoom, label 
 </div>
 
 <script>
-  import { prepareMath } from '../lib/labels.js';
+  import { mathReady } from '../../../lib/math.js';
   import { initActFnPlot } from '../lib/act-fn-plot.js';
-  await Promise.all([prepareMath(), document.fonts.ready]);
+  await Promise.all([mathReady(), document.fonts.ready]);
   document.querySelectorAll<HTMLElement>('.act-fn-plot').forEach(initActFnPlot);
 </script>
 
