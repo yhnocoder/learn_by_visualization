@@ -4,6 +4,7 @@ pageTitle: word2vec - skip-gram
 description: 从分布假设出发，解释 Skip-gram 的设计，训练和预测。
 lede: 'word2vec 能把词转换成向量，让含义相近的词在向量空间中彼此接近。但<mark>训练数据只有文本</mark>，没有人告诉模型哪些词含义相近，<mark>它是怎么学会的？</mark><br>本文从这个问题出发，介绍 word2vec 的一种模型 Skip-gram：它如何利用词语周围的上下文构造<mark>预测任务</mark>，又如何通过一次次预测和参数更新，学到<mark>词的向量表示</mark>。我们会从一个具体例子开始，逐步理解模型的设计，以及<mark>负采样</mark>为什么能让训练更高效。'
 theme: blue
+fonts: [lxgw-wenkai]
 runtimeMath: true
 ---
 import Figure from '../../components/layout/Figure.astro';
@@ -13,9 +14,6 @@ import WindowDemo from './components/WindowDemo.astro';
 import SgdDemo from './components/SgdDemo.astro';
 import TrainDemo from './components/TrainDemo.astro';
 import './word2vec.css';
-
-{/* 标题字体霞鹜文楷：Base.astro 只在 rust 主题下加载它，这一页在这里单独加载 */}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/lxgwwenkai-regular.css" />
 
 ## 为什么能从上下文学到词向量 {/* #s1 */}
 

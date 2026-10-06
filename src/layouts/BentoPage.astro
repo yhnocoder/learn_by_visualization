@@ -11,10 +11,11 @@ interface Props {
   lede?: string;
   theme?: string;
   runtimeMath?: boolean;
+  fonts?: string[];
 }
-const { title, pageTitle, description, eyebrow, lede, theme, runtimeMath } = Astro.props;
+const { title, pageTitle, description, eyebrow, lede, theme, runtimeMath, fonts } = Astro.props;
 ---
-<Base title={pageTitle ?? title} description={description} theme={theme} runtimeMath={runtimeMath} bodyClass="bento-body">
+<Base title={pageTitle ?? title} description={description} theme={theme} runtimeMath={runtimeMath} fonts={fonts} bodyClass="bento-body">
   <slot name="head" slot="head" />
   <div class="bento-page">
     <header>

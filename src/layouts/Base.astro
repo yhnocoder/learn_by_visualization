@@ -14,9 +14,12 @@ interface Props {
   bodyClass?: string;
   /** 页面语言，默认中文 */
   lang?: string;
+  /** 额外加载的字体，见 src/content.config.ts 的 fonts 字段 */
+  fonts?: string[];
 }
 
-const { title, description, theme = 'blue', runtimeMath = false, bodyClass, lang = 'zh-CN' } = Astro.props;
+const { title, description, theme = 'blue', runtimeMath = false, bodyClass, lang = 'zh-CN', fonts = [] } = Astro.props;
+const wenkai = theme === 'rust' || fonts.includes('lxgw-wenkai');
 const themes = import.meta.glob<string>('../styles/themes/*.css', { query: '?raw', import: 'default', eager: true });
 const themeCss = themes[`../styles/themes/${theme}.css`];
 if (themeCss === undefined) throw new Error(`没有名为 ${theme} 的主题，可选：${Object.keys(themes).map(k => k.match(/(\w+)\.css$/)![1]).join('、')}`);
@@ -32,7 +35,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" />
-  {theme === 'rust' && <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/lxgwwenkai-regular.css" />}
+  {wenkai && <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/lxgwwenkai-regular.css" />}
   <style is:inline set:html={themeCss}></style>
   {runtimeMath && (
     <>

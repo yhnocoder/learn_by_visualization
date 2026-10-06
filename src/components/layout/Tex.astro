@@ -1,7 +1,7 @@
 ---
-// 组件模板里的行内公式，构建时渲染成 SVG。用法：<Tex t={String.raw`\mathbf{V}`} />
+// 组件模板里的行内公式，构建时渲染成 SVG，浏览器端不需要 MathJax。用法：<Tex t={String.raw`\mathbf{V}`} />
 // Astro 模板会处理字符串属性里的反斜杠转义（例如 "\times" 里的 \t 变成制表符），所以 TeX 要用 String.raw 传入。
-import { texToHtml } from '../lib/tex.js';
+import { texToHtml } from '../../lib/tex-build.js';
 interface Props { t: string }
 const { t } = Astro.props;
 ---

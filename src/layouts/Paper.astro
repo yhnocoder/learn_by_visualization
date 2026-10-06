@@ -12,10 +12,11 @@ interface Props {
   abstract?: string;
   theme?: string;
   runtimeMath?: boolean;
+  fonts?: string[];
 }
-const { title, pageTitle, description, eyebrow, authors, abstract, theme = 'print', runtimeMath } = Astro.props;
+const { title, pageTitle, description, eyebrow, authors, abstract, theme = 'print', runtimeMath, fonts } = Astro.props;
 ---
-<Base title={pageTitle ?? title} description={description} theme={theme} runtimeMath={runtimeMath} bodyClass="paper-body">
+<Base title={pageTitle ?? title} description={description} theme={theme} runtimeMath={runtimeMath} fonts={fonts} bodyClass="paper-body">
   <slot name="head" slot="head" />
   <div class="paper">
     <header class="paper-head">

@@ -1,6 +1,6 @@
 ---
 // 第 5 节的“一步更新”图：控件、步骤切换按钮、V 和 U 两个矩阵、结果列和详情区。脚本在 ../lib/sgd.js。
-import Tex from './Tex.astro';
+import Tex from '../../../components/layout/Tex.astro';
 ---
 <div class="sgd-demo">
   <div class="controls">
@@ -27,9 +27,6 @@ import Tex from './Tex.astro';
   import { mathReady } from '../../../lib/math.js';
   import { initSgdDemo } from '../lib/sgd.js';
   await mathReady();
-  // 正文公式在构建时渲染，浏览器端 MathJax 从未排版过整页，所以页面里还没有 MathJax 的样式表和全局字形缓存。
-  // sgd.js 用 tex2svg() 生成的 SVG 引用全局字形缓存里的字形，这里先把两者插入页面。
-  window.MathJax.startup.document.updateDocument();
   document.querySelectorAll('.sgd-demo').forEach(initSgdDemo);
 </script>
 <style is:global>

@@ -12,11 +12,12 @@ interface Props {
   lede?: string;
   theme?: string;
   runtimeMath?: boolean;
+  fonts?: string[];
   numbered?: boolean;
   toc?: boolean;
   tocItems?: TocItem[];
 }
-const { title, pageTitle, description, eyebrow, lede, theme, runtimeMath, numbered = true, toc = true, tocItems = [] } = Astro.props;
+const { title, pageTitle, description, eyebrow, lede, theme, runtimeMath, numbered = true, toc = true, tocItems = [], fonts } = Astro.props;
 
 // 把扁平的条目整理成两级：h2 下面挂它后面的 h3
 const tree: (TocItem & { children: TocItem[] })[] = [];
@@ -26,7 +27,7 @@ for (const item of tocItems) {
 }
 const showToc = toc && tree.length > 0;
 ---
-<Base title={pageTitle ?? title} description={description} theme={theme} runtimeMath={runtimeMath} bodyClass="essay-body">
+<Base title={pageTitle ?? title} description={description} theme={theme} runtimeMath={runtimeMath} fonts={fonts} bodyClass="essay-body">
   <slot name="head" slot="head" />
   <div class:list={['essay', { 'no-toc': !showToc, numbered }]}>
     <header class="mast">

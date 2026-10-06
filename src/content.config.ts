@@ -27,6 +27,8 @@ const topics = defineCollection({
     theme: z.string().default('blue'),
     // 图里用 tex() / label() 动态生成公式时为 true，页面会加载浏览器端 MathJax
     runtimeMath: z.boolean().default(false),
+    // 额外加载的字体。rust 主题总是加载霞鹜文楷，其他主题需要时在这里写 lxgw-wenkai
+    fonts: z.array(z.enum(['lxgw-wenkai'])).default([]),
     // 章节标题前是否自动加 01、02 这样的编号
     numbered: z.boolean().default(true),
     // essay 版式是否显示左侧目录
