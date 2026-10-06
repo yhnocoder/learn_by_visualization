@@ -102,7 +102,8 @@
       <span>Ctrl/Cmd+Enter 保存，Esc 取消</span><span class="inline-edit-message"></span></div>`;
     const textarea = panel.querySelector('textarea')!;
     textarea.value = original;
-    el.after(panel);
+    // 表格的行和单元格里插不进编辑框，编辑框放在整个表格后面
+    (el.closest('table') && el.tagName !== 'TABLE' ? el.closest('table')! : el).after(panel);
     el.classList.add('inline-edit-active');
     session = { el, file, start, end, original, originalHtml: el.innerHTML, panel, textarea, message: panel.querySelector('.inline-edit-message')! };
 
