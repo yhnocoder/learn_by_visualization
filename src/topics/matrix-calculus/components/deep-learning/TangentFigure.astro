@@ -20,9 +20,9 @@ const fns = [['cube', 'x^3'], ['sin', '\\sin x'], ['ln', '\\ln x'], ['swish', '\
 </figure>
 
 <script>
-  import { runtimeMathReady } from '../../lib/runtime-math.js';
+  import { mathReady } from '../../../../lib/math.js';
   import { initTangent } from '../../lib/tangent.js';
-  await runtimeMathReady();
+  await mathReady();
   document.querySelectorAll<HTMLElement>('figure.tan').forEach(initTangent);
 </script>
 

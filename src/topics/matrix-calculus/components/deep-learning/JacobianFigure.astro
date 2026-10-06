@@ -39,9 +39,9 @@ const W = [[1, -2, 0.5], [0.5, 1, -1]];
 </figure>
 
 <script>
-  import { runtimeMathReady } from '../../lib/runtime-math.js';
+  import { mathReady } from '../../../../lib/math.js';
   import { initJacobian } from '../../lib/jacobian.js';
-  await runtimeMathReady();
+  await mathReady();
   document.querySelectorAll<HTMLElement>('figure[data-jacobian]').forEach(initJacobian);
 </script>
 

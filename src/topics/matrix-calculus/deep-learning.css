@@ -57,13 +57,6 @@ article blockquote p + p{margin-top:8px; font-size:13px; color:var(--ink-3)}
 .refs li{margin:0 0 6px}
 .refs li::marker{color:var(--ink-3)}
 
-/* ---------- 图里由 tex() 生成的公式 ----------
-   tex() 把公式作为嵌套的 <svg class="tex"> 放进图里，用 width、height 属性给出大小。
-   graph.css 的 .model-wrap svg 与 base.css 的 .plot svg 设定了 width:100%，也作用到这些嵌套的 <svg> 上；
-   Chromium 对嵌套 <svg> 采用 CSS 的 width，公式因此被放大到整张图的宽度。
-   revert-layer 撤销作者样式里的这几个属性，嵌套 <svg> 回到 width、height 属性给出的大小。 */
-:is(.model-wrap,.plot) svg svg.tex{width:revert-layer; height:revert-layer; min-width:revert-layer; max-width:revert-layer}
-
 /* ---------- 计算图（ModelGraph、BlockGraph、TailGraph、Backprop 共用） ---------- */
 figure.model-fig{overflow-x:auto}
 .model-wrap{min-width:600px}

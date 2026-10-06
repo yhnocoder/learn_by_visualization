@@ -24,9 +24,9 @@ import { md, tex } from '../../lib/tex-build.js';
 </figure>
 
 <script>
-  import { runtimeMathReady } from '../../lib/runtime-math.js';
+  import { mathReady } from '../../../../lib/math.js';
   import { initGradient } from '../../lib/gradient.js';
-  await runtimeMathReady();
+  await mathReady();
   document.querySelectorAll<HTMLElement>('figure.grad').forEach(initGradient);
 </script>
 

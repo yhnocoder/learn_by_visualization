@@ -9,9 +9,9 @@ const { id, variant, label } = Astro.props;
 </figure>
 
 <script>
-  import { runtimeMathReady } from '../../lib/runtime-math.js';
+  import { mathReady } from '../../../../lib/math.js';
   import { buildTail } from '../../lib/model.js';
-  await runtimeMathReady();
+  await mathReady();
   document.querySelectorAll<SVGSVGElement>('svg.dl-tail').forEach(svg => {
     if(svg.dataset.variant === 'loss') buildTail(svg, 'z', 'loss');
     else buildTail(svg, 'x', 'z', { from: 'softmax', to: 'loss', label: '$\\dfrac{\\partial \\ell}{\\partial \\mathbf{z}} = \\mathbf{p} - \\mathbf{y}$' });

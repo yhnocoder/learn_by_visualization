@@ -38,9 +38,9 @@ const readout = [
 </figure>
 
 <script>
-  import { runtimeMathReady } from '../../lib/runtime-math.js';
+  import { mathReady } from '../../../../lib/math.js';
   import { initRope } from '../../lib/rope.js';
-  await runtimeMathReady();
+  await mathReady();
   document.querySelectorAll<HTMLElement>('figure.rope').forEach(initRope);
 </script>
 

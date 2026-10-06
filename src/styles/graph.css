@@ -1,5 +1,5 @@
 /* src/lib/graph.js 画出的计算图（drawChain、drawGraph）的样式。容器带 model-wrap 类。 */
-.model-wrap svg{width:100%;height:auto;display:block}
+.model-wrap svg:not(.tex){width:100%;height:auto;display:block}
 .model-wrap text{font:12.5px var(--font-sans);fill:var(--ink)}
 .model-wrap text.blk{font:11px var(--font-mono);fill:var(--ink-3);letter-spacing:.06em}
 .model-wrap text.tag{font:9.5px var(--font-mono);fill:var(--accent)}

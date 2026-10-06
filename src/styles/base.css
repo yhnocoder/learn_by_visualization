@@ -52,7 +52,7 @@ figure .tbl{margin:10px 0 6px; border-radius:8px}
 
 /* 图里常用的绘图元素与控件 */
 .plot{position:relative}
-.plot svg{width:100%; height:auto; display:block; touch-action:none; -webkit-user-select:none; user-select:none}
+.plot svg:not(.tex){width:100%; height:auto; display:block; touch-action:none; -webkit-user-select:none; user-select:none}
 .plot text{font:11px var(--font-mono); fill:var(--ink-3)}
 .plot text.lab{font-size:12px; fill:var(--ink-2)}
 .plot text.ann{font-size:11.5px; fill:var(--ink-2)}

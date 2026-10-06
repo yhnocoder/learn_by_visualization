@@ -13,9 +13,9 @@
 </figure>
 
 <script>
-  import { runtimeMathReady } from '../../lib/runtime-math.js';
+  import { mathReady } from '../../../../lib/math.js';
   import { initBackprop } from '../../lib/model.js';
-  await runtimeMathReady();
+  await mathReady();
   document.querySelectorAll<HTMLElement>('figure.bp').forEach(initBackprop);
 </script>
 

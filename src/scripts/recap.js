@@ -1,5 +1,5 @@
 // 前文笔记侧边栏：按正文的阅读位置，显示已经读过的小节的笔记。
-// 用法：在页面里使用 Recap 组件，它输出下面的结构并引入本文件。笔记里的公式由页面自己的 MathJax 排版。
+// 用法：在页面里使用 Recap 组件，它输出下面的结构并引入本文件。笔记写在 MDX 里时，其中的公式在构建时渲染。
 //   <nav class="recap" aria-label="前文笔记" data-drawer-below="1240"><ol>
 //     <li class="recap-part"><a href="#chapter">章标题</a></li>
 //     <li><a href="#section">小节标题<div class="recap-note">笔记，可以含公式、图片、SVG</div></a></li>

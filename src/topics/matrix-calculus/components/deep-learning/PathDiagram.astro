@@ -9,9 +9,9 @@ const height = kind === 'chain' ? 104 : 200;
 </figure>
 
 <script>
-  import { runtimeMathReady } from '../../lib/runtime-math.js';
+  import { mathReady } from '../../../../lib/math.js';
   import { drawPaths } from '../../lib/paths.js';
-  await runtimeMathReady();
+  await mathReady();
   document.querySelectorAll<SVGSVGElement>('svg.dl-paths').forEach(drawPaths);
 </script>
 

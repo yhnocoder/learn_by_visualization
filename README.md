@@ -32,7 +32,7 @@ src/
     Essay.astro                 从前往后读的长文：左侧目录、正文、右侧边注栏
     Paper.astro                 论文式双栏
     BentoPage.astro             卡片网格
-  components/layout/            排版组件：Figure、Caption、Wide、MarginNote、Columns、Callout、Fold、Video、Bento、Card、Recap
+  components/layout/            排版组件：Figure、Caption、Wide、MarginNote、Columns、Callout、Fold、Video、Bento、Card、Recap、Tex
   lib/                          多个主题共用的浏览器端脚本（ES module）
   scripts/                      版式和排版组件自带的浏览器端脚本（目录高亮、折叠动画、前文笔记）
   styles/
@@ -40,6 +40,7 @@ src/
     themes/*.css                主题：只覆盖强调色和字体
     base.css                    正文、表格、图、控件的样式
   plugins/headings.mjs          标题 id、章节 <section>、目录的生成
+  plugins/mathjax.mjs           构建时把正文公式渲染成 SVG（同一页的公式共用一份字形定义）
   data/topics.ts                首页的分类与主题列表
 public/                         原样复制到站点根目录的文件（favicon、MathJax）
 tests/                          Playwright 测试
@@ -84,6 +85,8 @@ $$
 $$
 ```
 
+组件的 props 字符串不经过 MDX，其中的 `$...$` 不会被渲染。图题写在 `<Caption>` 里，组件模板里的静态公式用 `<Tex>`。
+
 MDX 会把 `{`、`}`、`<` 当作 JSX 解析，所以公式以外的正文里出现这几个字符时，写成 `\{`、`\}`、`&lt;`。公式内部不受影响。
 
 ### 排版组件
@@ -98,7 +101,8 @@ MDX 会把 `{`、`}`、`<` 当作 JSX 解析，所以公式以外的正文里出
 | `<MarginNote label>` | 边注：宽屏时在右侧边注栏，窄屏时回到正文里 |
 | `<Columns ratio="2:1">` + `<Column>` | 并排的多栏，窄屏时上下排列 |
 | `<Callout label tone>` | 浅底色的注释块 |
-| `<Fold summary>` | 默认收起的补充内容 |
+| `<Fold summary>` | 默认收起的补充内容；标题含公式时写在 `slot="summary"` 里 |
+| `<Tex t={String.raw\`...\`} />` | 在 .astro 组件模板里写构建时渲染的行内公式 |
 | `<Video src loop>` | 视频；`loop` 用于自动循环播放的演示动画 |
 | `<Bento columns>` + `<Card span="2x1" title>` | 卡片网格 |
 
@@ -134,6 +138,10 @@ const { id } = Astro.props;
 
 主题（`theme`）和版式（`format`）是两个独立的选项。主题只是一份 token 文件，决定颜色和字体；版式是 `.astro` 模板，决定栏数、目录和标题区。某一页需要额外的 token 或样式时，在主题目录里写一个 CSS 文件，在 MDX 里 `import './topic.css';`。
 
+标题字体用霞鹜文楷时，主题选 `rust`，或在 frontmatter 里写 `fonts: [lxgw-wenkai]`。
+
 颜色一律用 `tokens.css` 里的 token，例如 `var(--ink-2)`、`var(--s1)`。token 用 `light-dark()` 同时定义亮色和暗色的值，组件不需要再写暗色样式。
+
+同一份正文可以换版式显示：`src/topics/matrix-calculus/paper.mdx` 引用 `index.mdx` 的正文，用 Paper 版式排成论文式双栏。`src/topics/llm-act-fns/cheatsheet.mdx` 是 Bento 版式的样例，卡片里复用正文页的 `ActFnPlot` 组件。
 
 整页都需要自定义的主题，可以不使用任何版式，在 `src/pages/topics/<slug>/index.astro` 里直接写页面，只套 `Base.astro`。

@@ -35,9 +35,9 @@ const data = variant === 'outer'
 )}
 
 <script>
-  import { runtimeMathReady } from '../../lib/runtime-math.js';
+  import { mathReady } from '../../../../lib/math.js';
   import { initOuter } from '../../lib/outer.js';
-  await runtimeMathReady();
+  await mathReady();
   document.querySelectorAll<HTMLElement>('figure.dl-outer').forEach(fig => initOuter(fig, JSON.parse(fig.dataset.x!), JSON.parse(fig.dataset.g!)));
 </script>
 

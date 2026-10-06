@@ -13,9 +13,9 @@ const spec = {
 </figure>
 
 <script>
-  import { runtimeMathReady } from '../../lib/runtime-math.js';
+  import { mathReady } from '../../../../lib/math.js';
   import { buildFfn, buildAttn } from '../../lib/model.js';
-  await runtimeMathReady();
+  await mathReady();
   document.querySelectorAll<SVGSVGElement>('svg.dl-block').forEach(svg => (svg.dataset.kind === 'ffn' ? buildFfn : buildAttn)(svg));
 </script>
 

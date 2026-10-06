@@ -8,8 +8,8 @@ const { id, label } = Astro.props;
 </figure>
 
 <script>
-  import { runtimeMathReady } from '../../lib/runtime-math.js';
+  import { mathReady } from '../../../../lib/math.js';
   import { buildModelCollapsed } from '../../lib/model.js';
-  await runtimeMathReady();
+  await mathReady();
   document.querySelectorAll<SVGSVGElement>('svg.dl-model').forEach(svg => buildModelCollapsed(svg));
 </script>

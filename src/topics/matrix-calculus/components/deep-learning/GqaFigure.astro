@@ -6,9 +6,9 @@
 </figure>
 
 <script>
-  import { runtimeMathReady } from '../../lib/runtime-math.js';
+  import { mathReady } from '../../../../lib/math.js';
   import { drawGqa } from '../../lib/gqa.js';
-  await runtimeMathReady();
+  await mathReady();
   document.querySelectorAll<SVGSVGElement>('svg.dl-gqa').forEach(drawGqa);
 </script>
 
