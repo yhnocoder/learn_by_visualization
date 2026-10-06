@@ -1,0 +1,61 @@
+---
+// GLU 单个通道的输出 φ(g)·u 的热力图：横轴是门控分支 g，纵轴是线性分支 u，颜色是乘积（发散色阶）。
+// 页面 frontmatter 需要 runtimeMath: true。
+//   <GluHeatmap gate="silu" range={4} limit={8} title="SwiGLU 单个通道的输出 SiLU(g)·u" />
+// gate 是 lib/fns.js 里 REGISTRY 的键；range 是两个轴的范围 ±range；limit 是色阶两端对应的值 ±limit，超出的值取端点颜色。
+import './plot.css';
+import { REGISTRY } from '../lib/fns.js';
+
+interface Props { gate?: string; range?: number; limit?: number; title?: string }
+const { gate = 'silu', range = 4, limit = 8, title } = Astro.props;
+const entry = REGISTRY[gate as keyof typeof REGISTRY];
+if(!entry) throw new Error(`GluHeatmap：没有名为 ${gate} 的函数`);
+const neg = (v: number) => '−' + v;
+const name = entry.name.replace(/\$/g, '');
+const aria = `${name} 门控的 GLU 通道输出热图，横轴 g 从 ${neg(range)} 到 ${range}，纵轴 u 从下到上为 ${neg(range)} 到 ${range}`;
+---
+{title && <h4 class="glu-view-title">{title}</h4>}
+<div class="glu-heatmap" data-config={JSON.stringify({ gate, range, limit })}>
+  <div class="plotwrap">
+    <div class="heat-y-title"></div>
+    <div class="heat-image">
+      <canvas aria-label={aria}></canvas>
+      <div class="heat-y-ticks"><span>{range}</span><span>0</span><span>{neg(range)}</span></div>
+      <div class="tip" hidden></div>
+    </div>
+    <div class="heat-x-ticks"><span>{neg(range)}</span><span>0</span><span>{range}</span></div>
+    <div class="heat-x-label"></div>
+  </div>
+  <div class="cbar">
+    <span class="cbar-max">+{limit}</span>
+    <div class="bar"></div>
+    <span class="cbar-min">{neg(limit)}</span>
+    <span class="cbar-title"></span>
+  </div>
+</div>
+
+<script>
+  import { prepareMath } from '../lib/labels.js';
+  import { initGluHeatmap } from '../lib/glu-heatmap.js';
+  await prepareMath();
+  document.querySelectorAll<HTMLElement>('.glu-heatmap').forEach(initGluHeatmap);
+</script>
+
+<style>
+  .glu-view-title{font-size:16px; font-weight:600; margin:20px 0 10px; color:var(--ink)}
+  .glu-view-title:first-child{margin-top:0}
+  /* 左列是热力图与坐标轴，右列是色条；两列共用四行（轴标题、图、刻度、轴名），色条的刻度与图的上下边缘对齐 */
+  .glu-heatmap{display:grid; grid-template-columns:minmax(0,420px) auto; grid-template-rows:repeat(4,auto); column-gap:20px; row-gap:0; justify-content:start}
+  canvas{width:100%; height:auto; display:block; border-radius:4px; image-rendering:auto}
+  .plotwrap{min-width:0; padding-left:32px; display:grid; grid-row:1 / span 4; grid-template-rows:subgrid}
+  .heat-image{position:relative}
+  .heat-x-ticks{display:flex; justify-content:space-between; margin-top:6px; font:11px var(--font-mono); color:var(--ink-3)}
+  .heat-x-label{text-align:center; margin-top:8px; font-size:12px; color:var(--ink-2)}
+  .heat-y-ticks{position:absolute; left:-32px; top:0; bottom:0; display:flex; flex-direction:column; justify-content:space-between; align-items:flex-end; width:25px; font:11px var(--font-mono); color:var(--ink-3)}
+  .heat-y-title{font-size:12px; color:var(--ink-2); margin-bottom:6px}
+  .cbar{display:grid; grid-row:1 / span 4; grid-template-rows:subgrid; justify-items:center; font-family:var(--font-mono); font-size:12px; color:var(--ink-2)}
+  .bar{width:14px; border-radius:3px; background:linear-gradient(to top,var(--div-neg),var(--div-mid),var(--div-pos))}
+  .cbar-max{align-self:end; margin-bottom:6px}
+  .cbar-min{align-self:start; margin-top:6px}
+  .cbar-title{margin-top:8px; text-align:center}
+</style>

@@ -1,0 +1,24 @@
+---
+// 普通 FFN 与 GLU 的一次前向计算对照：上面是 Y=φ(XW_1)W_2，下面是 Y=(φ(XW_g)⊙XW_u)W_d。
+// 参数矩阵按真实比例绘制，两者的参数量都是 8d²。页面 frontmatter 需要 runtimeMath: true。
+import './plot.css';
+---
+<div class="ffn-glu">
+  <div class="panels">
+    <div class="panel">
+      <h4 data-title="普通 FFN：$Y=\phi(XW_1)\,W_2$"></h4>
+      <div class="plotwrap"><svg role="img" aria-label="普通 FFN 的前向计算：X 乘 W1 得 Z，Z 经过激活函数得 H，H 乘 W2 得 Y。W1 与 W2 按真实比例绘制"></svg></div>
+    </div>
+    <div class="panel">
+      <h4 data-title="GLU：$Y=(\phi(XW_g)\odot XW_u)\,W_d$"></h4>
+      <div class="plotwrap"><svg role="img" aria-label="GLU 的前向计算：X 分别乘 Wg 与 Wu 得 G 与 U，G 经过激活函数后与 U 逐元素相乘得 H，H 乘 Wd 得 Y。三个参数矩阵按真实比例绘制"></svg></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { prepareMath } from '../lib/labels.js';
+  import { initFfnGlu } from '../lib/ffn-glu.js';
+  await Promise.all([prepareMath(), document.fonts.ready]);
+  document.querySelectorAll<HTMLElement>('.ffn-glu').forEach(initFfnGlu);
+</script>
