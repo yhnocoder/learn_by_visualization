@@ -1,0 +1,25 @@
+---
+// 第三节的演示：GradScaler 的 scale 随迭代变化，可单步或连续前进。prefix 是各元素 id 的前缀，默认 d。
+interface Props { prefix?: string }
+const { prefix = 'd' } = Astro.props;
+const id = (s: string) => `${prefix}-${s}`;
+---
+<div class="dynamic-scaling" data-prefix={prefix}>
+  <div class="controls">
+    <label>growth_interval <input type="range" id={id('gi')} min="1" max="200" step="1" value="20" /> <span class="v" id={id('gi-v')}></span></label>
+    <label>典型最大梯度 2^μ，μ <input type="range" id={id('mu')} min="-16" max="0" step="1" value="-8" /> <span class="v" id={id('mu-v')}></span></label>
+    <label>梯度尖峰概率 <input type="range" id={id('p')} min="0" max="0.2" step="0.01" value="0.03" /> <span class="v" id={id('p-v')}></span></label>
+    <button class="btn primary" type="button" id={id('step1')}>前进 1 步</button>
+    <button class="btn" type="button" id={id('step50')}>前进 50 步</button>
+    <button class="btn" type="button" id={id('reset')}>重置</button>
+  </div>
+  <div class="legend"><span><i class="line" style="--c:var(--s1)"></i>log₂ scale</span><span><i class="line" style="--c:var(--bad)"></i>本步跳过（发现 inf/NaN）</span><span><i class="line" style="--c:var(--axis)"></i>溢出边界 log₂(65504 / 2^μ)</span></div>
+  <div class="plot" id={id('plot')}></div>
+  <div class="status" id={id('status')}></div>
+  <div class="tbl"><table id={id('table')}></table></div>
+</div>
+
+<script>
+  import { initDynamicScaling } from '../lib/dynamic.js';
+  document.querySelectorAll('.dynamic-scaling').forEach(initDynamicScaling);
+</script>

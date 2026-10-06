@@ -1,0 +1,22 @@
+---
+// 第六节的按钮：在第二节的更新演示里载入一个 fp16 能保留、bf16 会吸收的更新，并滚动到该演示。
+// target 是更新演示的 id 前缀，figure 是滚动目标的 id。
+interface Props { target?: string; figure?: string }
+const { target = 'up', figure = 'fig-update' } = Astro.props;
+---
+<p class="bf16-jump-row"><button class="btn primary bf16-jump" type="button" id="bf-jump" data-target={target} data-figure={figure}><slot /></button></p>
+
+<script>
+  import { setUpdateDemo } from '../lib/update.js';
+  document.querySelectorAll<HTMLButtonElement>('.bf16-jump').forEach(button => {
+    button.addEventListener('click', () => {
+      const root = document.querySelector<HTMLElement>(`.update-demo[data-prefix="${button.dataset.target}"]`);
+      if(root) setUpdateDemo(root, '0.5', '1e-3', '0', '6');
+      document.getElementById(button.dataset.figure!)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+</script>
+
+<style>
+  .bf16-jump-row{margin-bottom:1.6em}
+</style>

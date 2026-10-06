@@ -1,0 +1,21 @@
+---
+// 第三节的演示：loss scale、分布中心与格式可调的梯度直方图。prefix 是各元素 id 的前缀，默认 h。
+interface Props { prefix?: string }
+const { prefix = 'h' } = Astro.props;
+const id = (s: string) => `${prefix}-${s}`;
+---
+<div class="grad-histogram" data-prefix={prefix}>
+  <div class="controls">
+    <label>loss scale S = 2^k，k <input type="range" id={id('k')} min="0" max="24" step="1" value="0" /> <span class="v" id={id('k-v')}></span></label>
+    <label>分布中心 μ（log₂）<input type="range" id={id('mu')} min="-40" max="-10" step="1" value="-26" /> <span class="v" id={id('mu-v')}></span></label>
+    <label>格式 <select id={id('fmt')}><option value="fp16">fp16</option><option value="bf16">bf16</option></select></label>
+  </div>
+  <div class="legend"><span><i style="--c:var(--bad-soft)"></i>归零</span><span><i style="--c:var(--warn-soft)"></i>subnormal</span><span><i style="--c:var(--ok-soft)"></i>规格化</span><span><i style="--c:var(--bad-soft)"></i>溢出</span><span><i style="--c:var(--s1)"></i>非零梯度的分布</span></div>
+  <div class="plot" id={id('plot')}></div>
+  <div class="status" id={id('status')}></div>
+</div>
+
+<script>
+  import { initGradHistogram } from '../lib/histogram.js';
+  document.querySelectorAll('.grad-histogram').forEach(initGradHistogram);
+</script>
