@@ -1,0 +1,126 @@
+---
+// BPE 演示：整页是一个交互程序，不使用 Essay 等版式，只套 Base.astro。
+// 页面脚本在 src/topics/bpe/bpe.js，样式在 src/topics/bpe/bpe.css。
+import Base from '../../../layouts/Base.astro';
+import '../../../topics/bpe/bpe.css';
+---
+<Base title="BPE-Sennrich" bodyClass="bpe-page">
+
+<h1>BPE 演示</h1>
+<p class="sub">按 Sennrich et al. (2016) 的算法：训练阶段反复合并语料中最高频的相邻符号对，推理阶段按训练得到的合并顺序切分新词。词尾用 <code>&lt;/w&gt;</code> 标记。</p>
+
+<div class="tabs" role="tablist">
+  <button class="tab" role="tab" aria-selected="true" data-tab="train">训练</button>
+  <button class="tab" role="tab" aria-selected="false" data-tab="infer">推理</button>
+</div>
+
+<!-- ================= 训练 ================= -->
+<div class="panel on" id="train">
+<div class="grid">
+  <div>
+    <section>
+      <h2>语料<small>每行一个词，后面可跟频次；不写频次就按出现次数统计</small></h2>
+      <div class="box">
+        <textarea id="corpus" rows="5" spellcheck="false">low 5
+lower 2
+newest 6
+widest 3</textarea>
+        <div class="row">
+          <button class="btn quiet" id="btnReset">重新开始</button>
+          <label class="inline">目标合并次数 <input type="number" id="maxMerges" min="1" max="200" value="10"></label>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>词典状态<small>每个词已拆成符号序列</small></h2>
+      <div class="box">
+        <table>
+          <thead><tr><th>词</th><th>符号序列</th><th class="num">频次</th></tr></thead>
+          <tbody id="wordTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>相邻符号对频次<small>按频次排序，最高的那一对将被合并</small></h2>
+      <div class="box">
+        <div class="pairs" id="pairs"></div>
+        <div class="row">
+          <button class="btn quiet" id="btnBack" disabled>上一步</button>
+          <button class="btn" id="btnStep">合并一次</button>
+          <button class="btn quiet" id="btnAuto">自动播放</button>
+          <button class="btn quiet" id="btnTrainAll">合并到目标次数</button>
+          <span class="hint" id="trainStatus"></span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div>
+    <section>
+      <h2>合并规则<small>按学到的顺序</small></h2>
+      <div class="box"><ol class="merges" id="mergeList"></ol><div class="empty" id="mergeEmpty">还没有合并。</div></div>
+    </section>
+    <section>
+      <h2>当前词表<small id="vocabCount"></small></h2>
+      <div class="box"><div class="vocab" id="vocab"></div></div>
+    </section>
+  </div>
+</div>
+</div>
+
+<!-- ================= 推理 ================= -->
+<div class="panel" id="infer">
+<div class="grid">
+  <div>
+    <section>
+      <h2>输入新词</h2>
+      <div class="box">
+        <input type="text" id="word" value="lowest" spellcheck="false">
+        <div class="row">
+          <label class="inline"><input type="radio" name="mode" value="scan" checked> 按规则顺序扫描</label>
+          <label class="inline"><input type="radio" name="mode" value="prio"> 每次取优先级最高的对</label>
+        </div>
+        <div class="row">
+          <button class="btn" id="btnTok">开始切分</button>
+          <button class="btn quiet" id="btnNext" disabled>下一条规则</button>
+          <button class="btn quiet" id="btnInferAll" disabled>全部执行</button>
+          <span class="hint" id="inferStatus"></span>
+        </div>
+        <div class="hint">推理不再统计频次，只看训练学到的规则顺序。两种模式结果相同：“扫描”是从第 1 条规则起逐条试；“取优先级最高”是 Sennrich 参考实现的做法，每次在当前序列里找排名最靠前的相邻对合并，直到没有规则可用。</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>当前序列的相邻符号对<small>标注命中的规则序号；没在规则表里的对标为未见过</small></h2>
+      <div class="box"><div class="pairs" id="inferPairs"><span class="empty">还没开始。</span></div></div>
+    </section>
+
+    <section>
+      <h2>逐规则过程</h2>
+      <div class="box">
+        <ol class="steps" id="steps"></ol>
+        <div class="empty" id="stepsEmpty">先训练几步，再回来切分。</div>
+        <div class="result" id="result" hidden><span class="lbl">结果</span><span id="resultSyms"></span></div>
+      </div>
+    </section>
+  </div>
+
+  <div>
+    <section>
+      <h2>合并规则<small>来自训练</small></h2>
+      <div class="box"><ol class="merges" id="mergeList2"></ol><div class="empty" id="mergeEmpty2">还没有合并规则。</div></div>
+    </section>
+    <section>
+      <h2>当前词表<small id="vocabCount2"></small></h2>
+      <div class="box"><div class="vocab" id="vocab2"></div></div>
+    </section>
+  </div>
+</div>
+</div>
+
+<script>
+  import '../../../topics/bpe/bpe.js';
+</script>
+</Base>
