@@ -1,0 +1,15 @@
+/* 混合精度训练页面独有的样式。组件自己的样式写在各组件的 <style> 里。 */
+
+/* 第五节“四种实现”下的各实现标题。前四个是带 data-impl 属性的 h3（进入目录），最后一个是 h4，外观与原页面的 h4 相同。 */
+article h3[data-impl], article h4.impl-h{font-family:var(--font-sans); font-size:1em; font-weight:700; line-height:1.85; margin:34px 0 1.33em; padding-top:14px; border-top:1px solid var(--rule)}
+
+/* 迭代演示的外框 */
+figure.iter-fig{margin-top:10px}
+
+/* 正文里的列表：条目间距与原页面相同 */
+article section > ul li{margin:0 0 .35em}
+
+/* 参考文献 */
+.refs{font-size:14px; color:var(--ink-2); line-height:1.75}
+.refs ol{padding-left:1.6em; margin:0}
+.refs li{margin-bottom:6px}

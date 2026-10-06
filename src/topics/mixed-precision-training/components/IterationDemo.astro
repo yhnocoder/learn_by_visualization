@@ -1,0 +1,80 @@
+---
+// 第五节：按一种实现逐步执行一次迭代。左侧是模块图，右侧是按源码展开的 torch 代码，
+// 下方是当前步骤的说明、显存构成与整个迭代的显存时间线。内容由 ../lib/iteration.js 生成。
+// variant 是实现的键：amp、ds、mlm、mlmpa；元素 id 是 it-{variant}-{名称}，图的 id 是 fig-iter-{variant}。
+import Figure from '../../../components/layout/Figure.astro';
+import Caption from '../../../components/layout/Caption.astro';
+
+interface Props { variant: 'amp' | 'ds' | 'mlm' | 'mlmpa'; title: string }
+const { variant, title } = Astro.props;
+const id = (s: string) => `it-${variant}-${s}`;
+---
+<Figure id={`fig-iter-${variant}`} title={title} class="iter-fig" wide>
+  <div class="iter-demo" data-variant={variant}>
+    <div class="stepbar">
+      <button class="btn" type="button" id={id('prev')}>上一步</button>
+      <button class="btn primary" type="button" id={id('next')}>下一步</button>
+      <button class="btn" type="button" id={id('phase')}>前进到阶段末</button>
+      <button class="btn" type="button" id={id('reset')}>回到开头</button>
+      <span class="n" id={id('n')}></span>
+    </div>
+    <div class="iter-grid">
+      <div class="iter-diagram"><div class="iter-title">模块图（圆点为精度类型；激活值为反向传播需要保留的输入）</div><div class="plot" id={id('diagram')}></div></div>
+      <div class="iter-code"><div class="iter-title">按源码展开的 torch 代码（高亮为当前步骤执行的行）</div><pre id={id('code')}></pre></div>
+    </div>
+    <div class="iter-step" id={id('step')}></div>
+    <div class="iter-title timeline-title">整个迭代的显存时间线（竖线为当前步骤）</div>
+    <div class="legend" id={id('legend')}></div>
+    <div class="plot" id={id('timeline')}></div>
+  </div>
+  <Caption><p>前向阶段只展开第 1 层的 12 个模块，其余层合并为一步；反向阶段同样处理。四个演示的激活值按同一口径计算（反向需要的输入张量，每元素 2 字节），以便比较权重与梯度的差别；torch.autocast 下不在 fp16 列表里的算子（embedding、RMSNorm 的乘法、残差相加、softmax）输出 fp32，实际激活值会更大。所有数字都由当前配置实时计算，不含 CUDA 上下文、通信缓冲和框架自身的临时缓冲。</p></Caption>
+</Figure>
+
+<script>
+  import { initIteration } from '../lib/iteration.js';
+  initIteration();
+</script>
+
+<style>
+  .iter-demo .stepbar{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:8px 0 10px}
+  .iter-demo .stepbar .n{font-family:var(--font-mono); font-size:12.5px; color:var(--ink-3); margin-left:auto}
+  .iter-grid{display:grid; grid-template-columns:340px minmax(0,1fr); gap:14px; align-items:start; margin-top:6px}
+  /* 窄屏时上下排列；代码栏宽度不超过图的宽度，过长的代码行在代码框内横向滚动 */
+  @media (max-width:760px){ .iter-grid{grid-template-columns:minmax(0,1fr)} }
+  .iter-title{font-size:12.5px; color:var(--ink-3); font-family:var(--font-mono); letter-spacing:.04em; margin:0 0 6px}
+  .timeline-title{margin-top:14px}
+  .iter-code pre{margin:0; overflow-x:auto; font-size:12px; line-height:1.55; padding:10px 12px; background:var(--code-bg); border:1px solid var(--rule); border-radius:8px}
+
+  /* 以下元素由脚本生成，所以用 :global 选择 */
+  .iter-code :global(.cl){display:block; padding:0 6px; margin:0 -6px; border-radius:3px; white-space:pre}
+  .iter-code :global(.ln){display:inline-block; width:2.2em; color:var(--ink-3); user-select:none}
+  .iter-code :global(.cl.hl){background:var(--accent-soft); box-shadow:inset 3px 0 0 var(--accent)}
+  .iter-diagram :global(svg){width:100%; height:auto; display:block}
+  .iter-diagram :global(.mb rect){fill:var(--surface); stroke:var(--rule-2); stroke-width:1; transition:fill .15s,stroke .15s}
+  .iter-diagram :global(.mb text){font:11px var(--font-mono); fill:var(--ink)}
+  .iter-diagram :global(.mb text.w){font-size:10px; fill:var(--ink-3)}
+  .iter-diagram :global(.mb text.a){font-size:10px; fill:var(--s4)}
+  .iter-diagram :global(.hdr){font:10px var(--font-mono); fill:var(--ink-3); letter-spacing:.06em}
+  .iter-diagram :global(.mb.done rect:first-child){fill:color-mix(in srgb,var(--accent) 9%,var(--surface)); stroke:color-mix(in srgb,var(--accent) 45%,var(--rule-2))}
+  .iter-diagram :global(.mb.released rect:first-child){fill:var(--surface-2); stroke:var(--rule)}
+  .iter-diagram :global(.mb.released text){fill:var(--ink-3)}
+  .iter-diagram :global(.mb.on-fwd rect:first-child){fill:var(--accent-soft); stroke:var(--accent); stroke-width:1.8}
+  .iter-diagram :global(.mb.on-bwd rect:first-child){fill:var(--bad-soft); stroke:var(--s2); stroke-width:1.8}
+  .iter-diagram :global(.card){fill:var(--surface-2); stroke:var(--rule-2); stroke-width:1}
+  .iter-diagram :global(.cardt){font:11px var(--font-mono); fill:var(--ink-2)}
+  .iter-diagram :global(.grpt){font:10px var(--font-mono); fill:var(--ink-3); letter-spacing:.06em}
+  .iter-diagram :global(.spine){stroke:var(--rule-2); stroke-width:1.5}
+  .iter-step{margin-top:14px; background:var(--surface-2); border-radius:8px; padding:12px 14px; font-size:14px; line-height:1.7}
+  .iter-step :global(.hd){display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:6px}
+  .iter-step :global(.hd .t){font-weight:600; font-size:15px}
+  .iter-step :global(p){margin:0 0 8px}
+  .iter-step :global(.dl){display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px}
+  .iter-step :global(.pill.mode-fwd){background:var(--accent-soft); border-color:transparent; color:var(--accent)}
+  .iter-step :global(.pill.mode-bwd){background:var(--bad-soft); border-color:transparent; color:var(--s2)}
+  .iter-step :global(.pill.mode-opt){background:var(--ok-soft); border-color:transparent; color:var(--ok)}
+  .iter-step :global(.pill.mode-pre){background:var(--surface); border-color:var(--rule-2); color:var(--ink-2)}
+  .iter-step :global(.membar){display:flex; height:16px; border-radius:4px; overflow:hidden; background:var(--surface); border:1px solid var(--rule)}
+  .iter-step :global(.membar i){display:block; height:100%}
+  .iter-step :global(.legend.memparts){margin:8px 0 0; font-size:12.5px}
+  .iter-step :global(.legend.memparts b){color:var(--ink); font-weight:500}
+</style>

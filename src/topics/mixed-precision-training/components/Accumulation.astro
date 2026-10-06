@@ -1,0 +1,20 @@
+---
+// 第四节的演示：三种加数分布下 fp16 与 fp32 的顺序累加。prefix 是各元素 id 的前缀，默认 a。
+interface Props { prefix?: string }
+const { prefix = 'a' } = Astro.props;
+const id = (s: string) => `${prefix}-${s}`;
+---
+<div class="accumulation" data-prefix={prefix}>
+  <div class="controls">
+    <label>加数分布 <select id={id('mode')}><option value="uniform">均匀分布 [0, 1)</option><option value="signed">零均值 N(0, 1) × 0.1</option><option value="prod">两个 fp16 向量的逐元素乘积</option></select></label>
+    <button class="btn" type="button" id={id('resample')}>重新采样</button>
+  </div>
+  <div class="legend"><span><i class="line" style="--c:var(--s2)"></i>fp16 累加</span><span><i class="line" style="--c:var(--s1)"></i>fp32 累加</span><span><i class="line" style="--c:var(--ink-3)"></i>精确值（float64）</span></div>
+  <div class="plot" id={id('plot')}></div>
+  <div class="tbl"><table id={id('table')}></table></div>
+</div>
+
+<script>
+  import { initAccumulation } from '../lib/accumulate.js';
+  document.querySelectorAll('.accumulation').forEach(initAccumulation);
+</script>

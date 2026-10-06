@@ -1,0 +1,16 @@
+---
+// 第五节四个迭代演示共用的模型配置控件和精度类型图例。脚本见 ../lib/iteration.js。
+---
+<div class="controls" id="it-controls">
+  <label>模型 <select id="it-model"><option>0.6B</option><option>1.7B</option><option>4B</option><option selected>8B</option><option>14B</option><option>32B</option></select></label>
+  <label>序列长度 s <select id="it-s"><option>512</option><option>1024</option><option selected>2048</option><option>4096</option><option>8192</option></select></label>
+  <label>micro-batch b <input type="range" id="it-b" min="1" max="8" step="1" value="1" /> <span class="v" id="it-b-v"></span></label>
+  <label>注意力实现 <select id="it-attn"><option value="flash">FlashAttention（不保留概率矩阵）</option><option value="naive">朴素实现（保留 softmax 输出）</option></select></label>
+  <label>AdamW 矩的精度 <select id="it-opt"><option value="fp32">fp32</option><option value="bf16">bf16</option></select></label>
+</div>
+<div class="legend prec" id="it-prec-legend"></div>
+
+<script>
+  import { initIteration } from '../lib/iteration.js';
+  initIteration();
+</script>

@@ -1,0 +1,36 @@
+---
+// 第二节的演示：权重、学习率、梯度与更新次数可调，表格比较 fp16、bf16、fp32 中的更新结果，下方是位视图。
+// prefix 是各元素 id 的前缀，默认 up（测试与第六节的按钮依赖 #up-w、#up-table 等 id）。
+interface Props { prefix?: string }
+const { prefix = 'up' } = Astro.props;
+const id = (s: string) => `${prefix}-${s}`;
+---
+<div class="update-demo" data-prefix={prefix}>
+  <div class="controls">
+    <label>权重 w <input type="text" id={id('w')} value="0.5" /></label>
+    <label>学习率 η <input type="text" id={id('lr')} value="1e-3" /></label>
+    <label>梯度 g = 2^k，k <input type="range" id={id('g')} min="-30" max="4" step="1" value="0" /> <span class="v" id={id('g-v')}></span></label>
+    <label>连续更新次数 N <input type="range" id={id('n')} min="0" max="12" step="1" value="6" /> <span class="v" id={id('n-v')}></span></label>
+    <button class="btn" type="button" id={id('preset-fp16')}>fp16 吸收示例</button>
+    <button class="btn" type="button" id={id('preset-bf16')}>bf16 吸收示例</button>
+  </div>
+  <div class="status" id={id('status')}></div>
+  <div class="tbl"><table id={id('table')}></table></div>
+  <div id={id('bits')}></div>
+</div>
+
+<script>
+  import { initUpdateDemo } from '../lib/update.js';
+  document.querySelectorAll('.update-demo').forEach(initUpdateDemo);
+</script>
+
+<style>
+  /* 位视图由脚本生成，所以用 :global 选择 */
+  .update-demo :global(.bits){font-family:var(--font-mono); font-size:12.5px; letter-spacing:.04em; white-space:nowrap}
+  .update-demo :global(.bits .s){color:var(--s2)}
+  .update-demo :global(.bits .e){color:var(--s1)}
+  .update-demo :global(.bits .f){color:var(--ink)}
+  .update-demo :global(.bits .chg){background:var(--warn-soft); border-radius:2px}
+  .update-demo :global(.bitrows){display:grid; grid-template-columns:auto 1fr; gap:4px 14px; font-size:13px; margin:6px 0 4px; align-items:center}
+  .update-demo :global(.bitrows .k){color:var(--ink-3); font-family:var(--font-mono); font-size:12px}
+</style>

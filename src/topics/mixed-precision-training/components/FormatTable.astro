@@ -1,0 +1,16 @@
+---
+// 第一节：五种浮点格式的参数表与说明。内容由 ../lib/formats.js 在浏览器里计算后填入。
+---
+<div class="format-table">
+  <div class="tbl fmt-table" id="fmt-table"></div>
+  <ul class="fmt-notes" id="fmt-notes"></ul>
+</div>
+
+<script>
+  import { initFormatTable } from '../lib/formats.js';
+  document.querySelectorAll('.format-table').forEach(initFormatTable);
+</script>
+
+<style>
+  .fmt-notes :global(li){margin-bottom:.35em}
+</style>
