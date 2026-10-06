@@ -12,16 +12,18 @@ interface Props {
   runtimeMath?: boolean;
   /** 加在 <body> 上的类名，版式用它限定自己的样式 */
   bodyClass?: string;
+  /** 页面语言，默认中文 */
+  lang?: string;
 }
 
-const { title, description, theme = 'blue', runtimeMath = false, bodyClass } = Astro.props;
+const { title, description, theme = 'blue', runtimeMath = false, bodyClass, lang = 'zh-CN' } = Astro.props;
 const themes = import.meta.glob<string>('../styles/themes/*.css', { query: '?raw', import: 'default', eager: true });
 const themeCss = themes[`../styles/themes/${theme}.css`];
 if (themeCss === undefined) throw new Error(`没有名为 ${theme} 的主题，可选：${Object.keys(themes).map(k => k.match(/(\w+)\.css$/)![1]).join('、')}`);
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 ---
 <!doctype html>
-<html lang="zh-CN" data-theme-name={theme}>
+<html lang={lang} data-theme-name={theme}>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />

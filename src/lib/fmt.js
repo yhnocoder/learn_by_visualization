@@ -201,4 +201,4 @@ function parseValue(str) {
 	return Number(str);
 }
 
-export { FORMATS, KIND_NOTES, fmtByName, decode, encode, exactDecimal, exactDelta, exactMid, valueString, rawMag, parseValue, fields, join, maxExp, maxMant, maxCode, maxFiniteCode, hasSign, signBit, nanCode };
+export { pow2, FORMATS, KIND_NOTES, fmtByName, decode, encode, exactDecimal, exactDelta, exactMid, valueString, rawMag, parseValue, fields, join, maxExp, maxMant, maxCode, maxFiniteCode, hasSign, signBit, nanCode };

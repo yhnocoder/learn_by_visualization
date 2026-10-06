@@ -1,12 +1,9 @@
 /* 浮点数格式浏览器的界面：格式切换、位模式、各字段输入框、数轴、码点网格与精确值。
    编码与解码由共用模块 src/lib/fmt.js 提供。页面结构见 src/pages/topics/floating_points/index.astro。 */
 import {
-	FORMATS, KIND_NOTES, fmtByName, decode, encode, exactDecimal, exactDelta, exactMid, valueString, rawMag, parseValue,
+	pow2, FORMATS, KIND_NOTES, fmtByName, decode, encode, exactDecimal, exactDelta, exactMid, valueString, rawMag, parseValue,
 	fields, join, maxExp, maxMant, maxCode, maxFiniteCode, hasSign, signBit, nanCode,
 } from "../../lib/fmt.js";
-
-/* fmt.js 没有导出 pow2，这里单独定义一份 */
-function pow2(n) { return Math.pow(2, n); }
 
 var $ = function (id) { return document.getElementById(id); };
 var GROUPS = ["fp4", "fp6", "fp8", "fp16", "fp32"];
