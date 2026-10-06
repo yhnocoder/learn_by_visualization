@@ -1,0 +1,38 @@
+---
+// 开发时从页面跳到源文件：按住 Alt（macOS 上是 Option）时，鼠标下的元素加上轮廓线，点击后在编辑器里打开它的源文件和行号。
+// 正文元素的位置来自 src/plugins/source-lines.mjs 加的 data-source；组件模板里的元素来自 astro dev 自带的
+// data-astro-source-file 和 data-astro-source-loc。两者都只在 astro dev 里存在，构建出的页面里这段脚本不起作用。
+// 编辑器默认是 VS Code；在浏览器控制台执行 localStorage.setItem('source-jump-editor', 'cursor') 可以改用 Cursor。
+---
+<script>
+  const EDITORS: Record<string, string> = { vscode: 'vscode://file', cursor: 'cursor://file', zed: 'zed://file' };
+
+  function sourceOf(target: Element | null){
+    const el = target?.closest('[data-source], [data-astro-source-file]');
+    if(!el) return null;
+    if(el instanceof HTMLElement && el.dataset.source) return { el, loc: el.dataset.source };
+    const file = el.getAttribute('data-astro-source-file'), pos = el.getAttribute('data-astro-source-loc') || '1:1';
+    return { el, loc: `${file}:${pos}` };
+  }
+
+  let outlined: HTMLElement | null = null;
+  function outline(el: Element | null){
+    if(outlined) outlined.style.outline = '';
+    outlined = el instanceof HTMLElement ? el : null;
+    if(outlined) outlined.style.outline = '2px dashed var(--accent)';
+  }
+
+  if(document.querySelector('[data-source], [data-astro-source-file]')){
+    addEventListener('mousemove', e => outline(e.altKey ? sourceOf(e.target as Element)?.el ?? null : null), { passive: true });
+    addEventListener('keyup', e => { if(e.key === 'Alt') outline(null); });
+    addEventListener('click', e => {
+      if(!e.altKey) return;
+      const src = sourceOf(e.target as Element);
+      if(!src) return;
+      e.preventDefault(); e.stopPropagation();
+      let editor = 'vscode';
+      try{ editor = localStorage.getItem('source-jump-editor') || editor; }catch{}
+      location.href = `${EDITORS[editor] ?? EDITORS.vscode}${src.loc.startsWith('/') ? '' : '/'}${src.loc}`;
+    }, true);
+  }
+</script>

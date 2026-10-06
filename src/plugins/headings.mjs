@@ -72,6 +72,12 @@ export function rehypeSections(){
   };
 }
 
+// 公式插件把公式换成带 data.html 的 MDX 节点，hast-util-to-html 不能输出 MDX 节点，换回 HTML 字符串
+function toRaw(node){
+  if(typeof node.data?.html === 'string') return { type: 'raw', value: node.data.html };
+  return node.children ? { ...node, children: node.children.map(toRaw) } : node;
+}
+
 export function rehypeCollectToc(){
   return (tree, file) => {
     const index = tree.children.findIndex(c => c.type === 'element' && c.properties?.dataTocCollect);
@@ -81,7 +87,7 @@ export function rehypeCollectToc(){
     const toc = holder.children.map(li => ({
       depth: Number(li.properties.dataDepth),
       id: li.properties.dataId,
-      html: toHtml({ type: 'root', children: li.children }).trim(),
+      html: toHtml({ type: 'root', children: li.children.map(toRaw) }, { allowDangerousHtml: true }).trim(),
     }));
     const astro = (file.data.astro ??= {});
     astro.frontmatter = { ...astro.frontmatter, toc };

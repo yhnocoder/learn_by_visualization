@@ -13,6 +13,15 @@
 
 部署到 GitHub Pages 的项目页时，站点位于 `/learn_by_visualization/` 下，构建时设置 `BASE_PATH=/learn_by_visualization/`。见 `.github/workflows/deploy.yml`。
 
+## 在页面上编辑
+
+`npm run dev` 打开的页面上有两个只在开发服务器里存在的工具，构建出的站点不包含它们：
+
+- **页面内编辑**：点右下角的“编辑正文”，再点一个段落、标题、列表项、引用或表格，下方出现这一段的 MDX 源码。输入时页面上这一段同步更新，公式也会重新渲染；Ctrl+Enter（macOS 上是 Cmd+Enter）保存并写回 MDX 文件，Esc 取消。预览只按 Markdown 渲染这一段，段落里的 MDX 组件在保存、页面刷新后才显示。
+- **跳到源文件**：按住 Alt（macOS 上是 Option）点击页面上的任意元素，在编辑器里打开它的源文件和行号：正文打开 MDX，图和控件打开组件的 `.astro` 文件。默认使用 VS Code，在浏览器控制台执行 `localStorage.setItem('source-jump-editor', 'cursor')` 改用 Cursor（也可以写 `zed`）。
+
+实现在 `src/plugins/source-lines.mjs`（给正文元素标上源码位置）、`src/plugins/inline-edit-server.mjs`（读取、预览、保存的接口）和 `src/components/dev/`。
+
 ## 目录结构
 
 ```
@@ -32,6 +41,7 @@ src/
     Essay.astro                 从前往后读的长文：左侧目录、正文、右侧边注栏
     Paper.astro                 论文式双栏
     BentoPage.astro             卡片网格
+  components/dev/               开发时的页面内编辑和跳到源文件
   components/layout/            排版组件：Figure、Caption、Wide、MarginNote、Columns、Callout、Fold、Video、Bento、Card、Recap、Tex
   lib/                          多个主题共用的浏览器端脚本（ES module）
   scripts/                      版式和排版组件自带的浏览器端脚本（目录高亮、折叠动画、前文笔记）
@@ -40,7 +50,10 @@ src/
     themes/*.css                主题：只覆盖强调色和字体
     base.css                    正文、表格、图、控件的样式
   plugins/headings.mjs          标题 id、章节 <section>、目录的生成
-  plugins/mathjax.mjs           构建时把正文公式渲染成 SVG（同一页的公式共用一份字形定义）
+  plugins/mathjax.mjs           构建时把正文公式渲染成 SVG（同一页的公式共用一份字形定义；渲染结果按公式缓存）
+  plugins/raw-location.mjs      减少 Astro 的 MDX 流程里 rehype-raw 的耗时
+  plugins/source-lines.mjs      开发时给正文元素标上源码位置
+  plugins/inline-edit-server.mjs  开发时页面内编辑的服务端接口
   data/topics.ts                首页的分类与主题列表
 public/                         原样复制到站点根目录的文件（favicon、MathJax）
 tests/                          Playwright 测试

@@ -5,6 +5,9 @@ import { unified } from '@astrojs/markdown-remark';
 import remarkMath from 'remark-math';
 import rehypeMathSvg from './src/plugins/mathjax.mjs';
 import { remarkHeadingId, rehypeSections, rehypeCollectToc } from './src/plugins/headings.mjs';
+import rehypeSourceLines from './src/plugins/source-lines.mjs';
+import { remarkHideSource, rehypeRestoreSource } from './src/plugins/raw-location.mjs';
+import inlineEdit from './src/plugins/inline-edit-server.mjs';
 
 // 部署到 GitHub Pages 的项目页时，站点位于 /learn_by_visualization/ 下，由部署流程通过 BASE_PATH 传入。
 // 本地开发和测试时 BASE_PATH 为空，站点位于根路径。
@@ -21,12 +24,12 @@ export default defineConfig({
     },
   },
   trailingSlash: 'ignore',
-  integrations: [mdx()],
+  integrations: [mdx(), inlineEdit()],
   markdown: {
     processor: unified({
       // 正文里的 $...$ 和 $$...$$ 在构建时由 MathJax 渲染成 SVG，浏览器端不需要再排版正文公式。
-      remarkPlugins: [remarkMath, remarkHeadingId],
-      rehypePlugins: [rehypeSections, rehypeMathSvg, rehypeCollectToc],
+      remarkPlugins: [remarkMath, remarkHeadingId, remarkHideSource],
+      rehypePlugins: [rehypeRestoreSource, rehypeSourceLines, rehypeSections, rehypeMathSvg, rehypeCollectToc],
       // 正文里的中文引号已经写好，不需要把英文引号自动换成弯引号
       smartypants: false,
     }),

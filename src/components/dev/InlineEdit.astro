@@ -1,0 +1,163 @@
+---
+// 页面内编辑：在 astro dev 打开的页面上直接修改正文，保存后写回 MDX 源文件。
+//
+// 点右下角的“编辑正文”进入编辑模式，再点一个段落、标题、列表项、引用或表格，它的下方出现这一段的 MDX 源码。
+// 输入时，这一段在页面上的显示随之更新（公式也会重新渲染）；Ctrl+Enter（macOS 上是 Cmd+Enter）保存，Esc 取消。
+// 保存后开发服务器重新编译这一页并刷新浏览器。
+//
+// 预览只用 Markdown 渲染这一段：交互图组件和 <Tex> 等 MDX 组件不会出现在预览里，保存刷新后才显示。
+// 组件本身（图、控件）不能在页面上编辑，按住 Alt 点击它可以在编辑器里打开组件的源文件（见 SourceJump.astro）。
+// 服务端接口在 src/plugins/inline-edit-server.mjs。
+---
+<button type="button" class="inline-edit-toggle" hidden>编辑正文</button>
+<div class="inline-edit-glyphs" hidden></div>
+
+<style is:inline>
+  .inline-edit-toggle {
+    position: fixed; right: 16px; bottom: 16px; z-index: 1000;
+    font: 600 13px/1 var(--font-sans); padding: 9px 14px; border-radius: 999px;
+    border: 1px solid var(--rule); background: var(--surface); color: var(--ink);
+    box-shadow: 0 2px 10px rgb(0 0 0 / .12); cursor: pointer;
+  }
+  .inline-edit-toggle[aria-pressed="true"] { background: var(--accent); border-color: transparent; color: #fff; }
+  .inline-edit-on [data-source-range] { cursor: text; }
+  .inline-edit-on [data-source-range]:hover { outline: 1px dashed var(--accent); outline-offset: 3px; }
+  .inline-edit-on [data-source-range]:has([data-source-range]:hover) { outline: none; }
+  .inline-edit-active { outline: 2px solid var(--accent) !important; outline-offset: 3px; }
+  .inline-edit-panel {
+    display: block; margin: 8px 0 16px; padding: 8px; border-radius: 6px;
+    background: var(--surface-2); border: 1px solid var(--rule); list-style: none;
+  }
+  .inline-edit-panel textarea {
+    display: block; box-sizing: border-box; width: 100%; resize: vertical;
+    font: 13px/1.6 var(--font-mono); color: var(--ink); background: var(--surface);
+    border: 1px solid var(--rule); border-radius: 4px; padding: 8px;
+  }
+  .inline-edit-bar { display: flex; gap: 8px; align-items: center; margin-top: 6px; font: 12px/1.4 var(--font-sans); color: var(--ink-3); }
+  .inline-edit-bar button { font: inherit; padding: 4px 10px; border-radius: 4px; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); cursor: pointer; }
+  .inline-edit-bar .inline-edit-save { background: var(--accent); border-color: transparent; color: #fff; }
+  .inline-edit-bar .inline-edit-message { margin-left: auto; }
+</style>
+
+<script>
+  interface Session {
+    el: HTMLElement; file: string; start: number; end: number;
+    original: string; originalHtml: string; panel: HTMLElement; textarea: HTMLTextAreaElement; message: HTMLElement;
+  }
+
+  const toggle = document.querySelector<HTMLButtonElement>('.inline-edit-toggle')!;
+  const glyphHolder = document.querySelector<HTMLElement>('.inline-edit-glyphs')!;
+  let session: Session | null = null;
+  let previewTimer = 0, previewSeq = 0;
+
+  async function post(endpoint: string, body: unknown){
+    const res = await fetch(`/__inline-edit/${endpoint}`, { method: 'POST', body: JSON.stringify(body) });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || res.statusText);
+    return data;
+  }
+
+  function setMode(on: boolean){
+    document.documentElement.classList.toggle('inline-edit-on', on);
+    toggle.setAttribute('aria-pressed', String(on));
+    try{ sessionStorage.setItem('inline-edit-on', on ? '1' : ''); }catch{}
+    if(!on) close(true);
+  }
+
+  // 预览的 HTML 换进正文元素：外层标签相同时只换内容，保留元素自身的 id、class 和 data 属性
+  function showPreview(el: HTMLElement, html: string){
+    const template = document.createElement('template');
+    template.innerHTML = html.trim();
+    const first = template.content.firstElementChild;
+    const single = template.content.childElementCount === 1 && first?.tagName === el.tagName;
+    el.innerHTML = single ? first!.innerHTML : html;
+  }
+
+  async function updatePreview(){
+    if(!session) return;
+    const { el, textarea } = session, seq = ++previewSeq;
+    try{
+      const { html, glyphs } = await post('preview', { text: textarea.value });
+      if(seq !== previewSeq || session?.el !== el) return;
+      if(glyphs) glyphHolder.insertAdjacentHTML('beforeend', glyphs);
+      showPreview(el, html);
+      session.message.textContent = '';
+    }catch(error){
+      if(session) session.message.textContent = `预览失败：${(error as Error).message}`;
+    }
+  }
+
+  async function open(el: HTMLElement){
+    close(true);
+    const [start, end] = el.dataset.sourceRange!.split('-').map(Number);
+    const file = el.dataset.source!.replace(/:\d+:\d+$/, '');
+    let original: string;
+    try{ ({ text: original } = await post('source', { file, start, end })); }
+    catch(error){ alert(`无法读取源码：${(error as Error).message}`); return; }
+
+    const panel = document.createElement(el.tagName === 'LI' ? 'li' : 'div');
+    panel.className = 'inline-edit-panel';
+    panel.innerHTML = `<textarea spellcheck="false"></textarea>
+      <div class="inline-edit-bar"><button type="button" class="inline-edit-save">保存</button><button type="button" class="inline-edit-cancel">取消</button>
+      <span>Ctrl/Cmd+Enter 保存，Esc 取消</span><span class="inline-edit-message"></span></div>`;
+    const textarea = panel.querySelector('textarea')!;
+    textarea.value = original;
+    el.after(panel);
+    el.classList.add('inline-edit-active');
+    session = { el, file, start, end, original, originalHtml: el.innerHTML, panel, textarea, message: panel.querySelector('.inline-edit-message')! };
+
+    const fit = () => { textarea.style.height = 'auto'; textarea.style.height = `${textarea.scrollHeight + 2}px`; };
+    fit();
+    textarea.focus();
+    textarea.addEventListener('input', () => { fit(); clearTimeout(previewTimer); previewTimer = window.setTimeout(updatePreview, 120); });
+    textarea.addEventListener('keydown', e => {
+      if(e.key === 'Escape'){ e.preventDefault(); close(true); }
+      else if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); save(); }
+    });
+    panel.querySelector('.inline-edit-save')!.addEventListener('click', save);
+    panel.querySelector('.inline-edit-cancel')!.addEventListener('click', () => close(true));
+  }
+
+  // restore 为 true 时把正文元素恢复成编辑前的样子
+  function close(restore: boolean){
+    if(!session) return;
+    clearTimeout(previewTimer);
+    previewSeq++;
+    if(restore) session.el.innerHTML = session.originalHtml;
+    session.el.classList.remove('inline-edit-active');
+    session.panel.remove();
+    session = null;
+  }
+
+  async function save(){
+    if(!session) return;
+    const s = session;
+    if(s.textarea.value === s.original){ close(true); return; }
+    s.message.textContent = '正在保存……';
+    try{
+      await post('save', { file: s.file, start: s.start, end: s.end, original: s.original, text: s.textarea.value });
+      // 开发服务器检测到文件变化后会刷新页面；刷新之前页面上显示的是预览
+      clearTimeout(previewTimer);
+      await updatePreview();
+      s.message.textContent = '已保存，页面即将刷新';
+      s.textarea.disabled = true;
+    }catch(error){
+      s.message.textContent = `保存失败：${(error as Error).message}`;
+    }
+  }
+
+  if(document.querySelector('[data-source-range]')){
+    toggle.hidden = false;
+    toggle.addEventListener('click', () => setMode(!document.documentElement.classList.contains('inline-edit-on')));
+    try{ if(sessionStorage.getItem('inline-edit-on')) setMode(true); }catch{}
+    addEventListener('click', e => {
+      if(!document.documentElement.classList.contains('inline-edit-on') || e.altKey) return;
+      const target = e.target as Element;
+      if(target.closest('.inline-edit-panel, .inline-edit-toggle')) return;
+      const el = target.closest<HTMLElement>('[data-source-range]');
+      if(!el || el === session?.el) return;
+      e.preventDefault(); e.stopPropagation();
+      open(el);
+    }, true);
+  }
+</script>
