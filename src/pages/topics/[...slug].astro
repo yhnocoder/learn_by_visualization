@@ -1,5 +1,5 @@
 ---
-// 每个 src/topics/**/*.mdx 生成一个页面，按 frontmatter 的 layout 选择版式。
+// 每个 src/topics/**/*.mdx 生成一个页面，按 frontmatter 的 format 选择版式。
 import { getCollection, render } from 'astro:content';
 import Essay from '../../layouts/Essay.astro';
 import Paper from '../../layouts/Paper.astro';
@@ -14,9 +14,9 @@ const { entry } = Astro.props;
 const { Content, remarkPluginFrontmatter } = await render(entry);
 const data = entry.data;
 ---
-{data.layout === 'paper' ? (
+{data.format === 'paper' ? (
   <Paper {...data}><Content /></Paper>
-) : data.layout === 'bento' ? (
+) : data.format === 'bento' ? (
   <BentoPage {...data}><Content /></BentoPage>
 ) : (
   <Essay {...data} tocItems={remarkPluginFrontmatter.toc ?? []}><Content /></Essay>

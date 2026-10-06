@@ -20,8 +20,9 @@ const topics = defineCollection({
     eyebrow: z.string().optional(),
     // 标题下方的导语，支持行内 HTML（例如 <mark>）
     lede: z.string().optional(),
-    // 版式：essay 是从前往后读的单栏长文，左侧有目录；paper 是论文式双栏；bento 是卡片网格
-    layout: z.enum(['essay', 'paper', 'bento']).default('essay'),
+    // 版式：essay 是从前往后读的单栏长文，左侧有目录；paper 是论文式双栏；bento 是卡片网格。
+    // 字段不叫 layout，因为 Astro 会把 MDX frontmatter 里的 layout 当作布局文件的路径去导入。
+    format: z.enum(['essay', 'paper', 'bento']).default('essay'),
     // 主题：src/styles/themes/ 下的文件名
     theme: z.string().default('blue'),
     // 图里用 tex() / label() 动态生成公式时为 true，页面会加载浏览器端 MathJax

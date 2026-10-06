@@ -12,6 +12,14 @@ const base = process.env.BASE_PATH || '/';
 
 export default defineConfig({
   base,
+  vite: {
+    build: {
+      rolldownOptions: {
+        // Astro 给引入了组件的 MDX 加的 "use astro:head-inject" 指令会被打包工具报告为模块级指令，这条警告不影响结果
+        onwarn(warning, warn){ if(warning.code !== 'MODULE_LEVEL_DIRECTIVE') warn(warning); },
+      },
+    },
+  },
   trailingSlash: 'ignore',
   integrations: [mdx()],
   markdown: {

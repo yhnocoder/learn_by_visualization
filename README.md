@@ -54,7 +54,7 @@ tests/                          Playwright 测试
    title: 大模型里的激活函数
    eyebrow: LLM Architecture Notes · 2026-09
    lede: 本文介绍激活函数如何引入非线性……
-   layout: essay        # essay | paper | bento
+   format: essay        # 版式：essay | paper | bento
    theme: blue          # src/styles/themes/ 下的文件名
    runtimeMath: true    # 交互图里用 tex() / label() 动态生成公式时打开
    ---
@@ -132,7 +132,7 @@ const { id } = Astro.props;
 
 ### 主题与版式
 
-主题（`theme`）和版式（`layout`）是两个独立的选项。主题只是一份 token 文件，决定颜色和字体；版式是 `.astro` 模板，决定栏数、目录和标题区。某一页需要额外的 token 或样式时，在主题目录里写一个 CSS 文件，在 MDX 里 `import './topic.css';`。
+主题（`theme`）和版式（`format`）是两个独立的选项。主题只是一份 token 文件，决定颜色和字体；版式是 `.astro` 模板，决定栏数、目录和标题区。某一页需要额外的 token 或样式时，在主题目录里写一个 CSS 文件，在 MDX 里 `import './topic.css';`。
 
 颜色一律用 `tokens.css` 里的 token，例如 `var(--ink-2)`、`var(--s1)`。token 用 `light-dark()` 同时定义亮色和暗色的值，组件不需要再写暗色样式。
 
