@@ -68,11 +68,84 @@ function send(res, status, body){
   res.end(JSON.stringify(body));
 }
 
+// 用 MDX 渲染一段源码，段落里的组件（<Tex>、<MarginNote> 等）也能预览。
+//
+// 预览的源码放在一个不存在的文件里：路径与被编辑的 MDX 在同一目录，内容是原文件的 import 语句加上这一段，
+// 由下面的 Vite 插件在内存里提供。这样相对路径的 import 照常解析，文件系统里不产生任何文件，
+// 也不会触发开发服务器的文件监听和页面刷新。渲染用 Astro 的 Container API，在开发服务器的 SSR 环境里执行。
+const PREVIEW = '__inline-edit-preview__.mdx';
+const RENDERER = '/__inline-edit-render__.mjs';
+const previews = new Map();
+
+const RENDERER_CODE = `
+import { experimental_AstroContainer } from 'astro/container';
+import mdxRenderer from '@astrojs/mdx/server.js';
+let container;
+export async function render(component){
+  if(!container){
+    container = await experimental_AstroContainer.create();
+    container.addServerRenderer({ name: 'astro:jsx', renderer: mdxRenderer });
+  }
+  return container.renderToString(component);
+}
+`;
+
+function previewPlugin(){
+  return {
+    name: 'inline-edit-preview',
+    enforce: 'pre',
+    resolveId(id){
+      if(id === RENDERER) return id;
+      if(previews.has(id)) return id;
+    },
+    load(id){
+      if(id === RENDERER) return RENDERER_CODE;
+      if(previews.has(id)) return previews.get(id);
+    },
+  };
+}
+
+// MDX 文件开头的 import 语句（只取 ESM 部分，正文里不会出现以 import 开头的行）
+function importsOf(source){
+  const body = source.replace(/^---\n[\s\S]*?\n---\n/, '');
+  return body.split('\n').filter(line => /^import\s/.test(line)).join('\n');
+}
+
+async function renderMdxPreview(server, full, text){
+  const environment = server.environments.ssr;
+  const id = path.join(path.dirname(full), PREVIEW);
+  const source = await fs.readFile(full, 'utf8');
+  previews.set(id, `${importsOf(source)}\n\n${text}\n`);
+  const node = environment.moduleGraph.getModuleById(id);
+  if(node) environment.moduleGraph.invalidateModule(node);
+  const runner = environment.runner;
+  const [{ render }, mod] = await Promise.all([runner.import(RENDERER), runner.import(id)]);
+  // 预览里的元素不应带源码位置：这些位置指向不存在的预览文件。
+  // 组件的 <script> 也去掉：页面已经加载过这些脚本，再插入不会执行；交互图在保存、页面刷新后才初始化
+  let html = (await render(mod.default))
+    .replace(/ data-source(-range)?="[^"]*"/g, '')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '');
+  let glyphs = '';
+  const at = html.indexOf('<svg id="MJX-SVG-build-cache"');
+  if(at >= 0){
+    // 公式插件在末尾加的样式和字形定义：字形定义单独返回，样式页面里已经有了
+    // （公式插件把两者连在一起输出，<style> 紧挨在 <svg> 前面）
+    const styleAt = html.lastIndexOf('<style', at);
+    const end = styleAt >= 0 && html.slice(styleAt, at).endsWith('</style>') ? styleAt : at;
+    glyphs = html.slice(at).replace('id="MJX-SVG-build-cache"', '');
+    html = html.slice(0, end);
+  }
+  return { html, glyphs };
+}
+
 export default function inlineEdit(){
   let srcDir = '';
   return {
     name: 'inline-edit',
     hooks: {
+      'astro:config:setup': ({ command, updateConfig }) => {
+        if(command === 'dev') updateConfig({ vite: { plugins: [previewPlugin()] } });
+      },
       'astro:config:done': ({ config }) => { srcDir = fileURLToPath(config.srcDir); },
       'astro:server:setup': ({ server }) => {
         // 返回 src/ 下的 .mdx 文件的绝对路径，其他路径返回 null
@@ -97,7 +170,16 @@ export default function inlineEdit(){
               return range ? send(res, 200, { text: range.text }) : send(res, 400, { error: '文件或位置无效' });
             }
             if(req.url === '/preview'){
-              return send(res, 200, await renderPreview(String(body.text ?? '')));
+              const text = String(body.text ?? '');
+              const full = body.file ? resolveFile(body.file) : null;
+              if(full){
+                try{ return send(res, 200, { ...(await renderMdxPreview(server, full, text)), mode: 'mdx' }); }
+                catch(error){
+                  // 输入到一半时 MDX 常常不完整（例如标签还没闭合），这时退回只按 Markdown 渲染
+                  return send(res, 200, { ...(await renderPreview(text)), mode: 'markdown', warning: String(error?.message ?? error).split('\n')[0] });
+                }
+              }
+              return send(res, 200, await renderPreview(text));
             }
             if(req.url === '/save'){
               const range = await readRange(body);

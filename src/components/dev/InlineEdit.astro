@@ -77,11 +77,11 @@
     if(!session) return;
     const { el, textarea } = session, seq = ++previewSeq;
     try{
-      const { html, glyphs } = await post('preview', { text: textarea.value });
+      const { html, glyphs, warning } = await post('preview', { file: session.file, text: textarea.value });
       if(seq !== previewSeq || session?.el !== el) return;
       if(glyphs) glyphHolder.insertAdjacentHTML('beforeend', glyphs);
       showPreview(el, html);
-      session.message.textContent = '';
+      session.message.textContent = warning ? `MDX 暂时无法编译，按 Markdown 预览：${warning}` : '';
     }catch(error){
       if(session) session.message.textContent = `预览失败：${(error as Error).message}`;
     }
