@@ -351,18 +351,18 @@ $$
 <section id="partials">
 <h2>标量对向量</h2>
 
-<p>前面讨论的函数只有一个输入，例如 $y = f(x)$。但神经网络中的一个输出通常同时依赖许多量。例如 LM head 的一个 logit：</p>
+<p>前面讨论的函数只有一个标量输入，例如 $y = f(x)$。但神经网络中的一个输出通常同时依赖许多量，我们一般写成 $y = f(\mathbf{x})$。例如 LM head 的一个 logit：</p>
 $$z_j = \sum_{k=1}^{d} x_k W_{kj}$$
 <p>$z_j$ 同时依赖 $x_1, \ldots, x_d$ 和 $W_{1j}, \ldots, W_{dj}$。如果我们只想知道其中某一个量变化时 $z_j$ 如何变化，就需要在其他量保持不变的情况下对它求导。这就是偏导数。</p>
 <p>我们先用一个只有两个输入的函数把这个概念讲清楚，再回到上面的 LM head。</p>
 
 <h3 id="partial">偏导数</h3>
 
-<p>对多元函数，只改变其中一个自变量、保持其他自变量不变时得到的导数称为偏导数，通常用 $\partial$ 表示，写作 $\dfrac{\partial f}{\partial x}$，在 $(x_0, y_0)$ 处的值写作 $\left.\dfrac{\partial f}{\partial x}\right|_{(x_0,y_0)}$。</p>
+<p>对多元函数，<mark>只改变其中一个自变量、保持其他自变量不变</mark>时得到的导数称为偏导数，通常用 $\partial$ 表示，写作 $\dfrac{\partial f}{\partial x}$，在 $(x_0, y_0)$ 处的值写作 $\left.\dfrac{\partial f}{\partial x}\right|_{(x_0,y_0)}$。</p>
 
 <p>举个例子：设 $f(x, y) = 3x^2 y$ 有两个输入，可以沿 $x$ 方向改变，也可以沿 $y$。我们先只让一个输入变化。</p>
 
-<p><mark>固定 $y$，只让 $x$ 变化</mark>。固定 $y = y_0$ 后，$x \mapsto f(x, y_0)$ 就成为一个关于 $x$ 的单变量函数，因此可以直接使用前面的一元求导规则。它的图像是一条单变量曲线 $z = f(x, y_0)$，这条曲线在 $x = x_0$ 处的切线斜率，就是 $x$ 变化时 $f$ 的变化率。</p>
+<p><mark>固定 $y$，只让 $x$ 变化</mark>。固定 $y = y_0$ 后，$x \mapsto f(x, y_0)$ 就成为一个关于 $x$ 的单变量函数，因此可以直接使用前面的一元求导规则。它的图像是一条单变量曲线 $z = f(x, y_0)$。</p>
 
 <p>计算时把 $y$ 当作常数：</p>
 $$\frac{\partial}{\partial x}\,3x^2y = 3y \cdot \frac{d}{dx}x^2 = 3y \cdot 2x = 6xy$$
@@ -405,36 +405,97 @@ $$\frac{\partial z_j}{\partial x_k} = W_{kj}$$
 <p>$x_k$ 增加一个很小的量时，它对 $z_j$ 的影响会被权重 $W_{kj}$ 缩放。同样，如果只改变权重 $W_{kj}$，其他变量保持不变：</p>
 $$\frac{\partial z_j}{\partial W_{kj}} = x_k$$
 <p>所以在线性层里，输入对输出的影响由权重决定，而权重对输出的影响由对应的输入决定。</p>
-<p>例如 $z_j = x_1W_{1j} + x_2W_{2j} + x_3W_{3j}$，那么</p>
-$$\frac{\partial z_j}{\partial x_1} = W_{1j},\qquad \frac{\partial z_j}{\partial x_2} = W_{2j},\qquad \frac{\partial z_j}{\partial x_3} = W_{3j}$$
-<p>到这里，我们仍然是在一次研究一个标量输入。但实际反向传播不会只问 $\dfrac{\partial z_j}{\partial x_1}$ 是多少，它通常需要同时知道 $z_j$ 对整个输入向量 $\mathbf{x} = [\,x_1\ \ \cdots\ \ x_d\,]$ 的变化率。也就是说，我们想把 $\dfrac{\partial z_j}{\partial x_1}, \dfrac{\partial z_j}{\partial x_2}, \ldots, \dfrac{\partial z_j}{\partial x_d}$ 一次组织起来。这组偏导数组成的向量，就是下一节要讨论的梯度。</p>
+
+<p>到这里，我们每次只考察一个输入分量：固定其他分量，观察这个分量变化时 $z_j$ 如何变化。但实际反向传播不会只问 $\dfrac{\partial z_j}{\partial x_1}$ 是多少，它通常需要同时知道 $z_j$ 对整个输入向量 $\mathbf{x} = [\,x_1\ \ \cdots\ \ x_d\,]$ 的变化率。也因此希望把：</p>
+$$
+\dfrac{\partial z_j}{\partial x_1}, \dfrac{\partial z_j}{\partial x_2}, \ldots, \dfrac{\partial z_j}{\partial x_d}
+$$
+<p>组织成一个向量。这就是下一节要讨论的梯度。</p>
 
 <h3 id="gradient">梯度</h3>
 
-<p>偏导数一次只描述一个输入分量变化时，函数如何变化。但训练模型时，参数通常会同时改变。我们还需要知道：当多个输入一起发生微小变化时，输出会怎样变化。</p>
-<p>设 $f = f(x, y)$。当 $x, y$ 分别发生很小的变化 $dx, dy$ 时，$f$ 的一阶变化为</p>
-$$df = \frac{\partial f}{\partial x}\,dx + \frac{\partial f}{\partial y}\,dy$$
-<p>把两个输入写成行向量：</p>
+偏导数描述的是：保持其他输入不变，只改变其中一个输入分量时，输出如何变化。但训练模型时，多个参数通常会同时更新。我们还需要知道：当多个输入一起发生微小变化时，它们对输出的影响应该怎样组合？
+先看前面的例子：
+$$f(x,y)=3x^2y
 $$
-\mathbf{x} = [\,x\ \ y\,]\qquad d\mathbf{x} = [\,dx\ \ dy\,]
+我们已经知道
+$$
+\frac{\partial f}{\partial x}=6xy\qquad\frac{\partial f}{\partial y}=3x^2
 $$
 
-<p>再把两个偏导数排成一个行向量：</p>
-$$\nabla f = \frac{\partial f}{\partial \mathbf{x}} = \Big[\,\frac{\partial f}{\partial x}\quad \frac{\partial f}{\partial y}\,\Big]$$
-<p>这个向量称为 $f$ 的梯度，记作 $\nabla f$ 或 $\dfrac{\partial f}{\partial \mathbf{x}}$，$\nabla$ 读作 nabla。于是全微分可以写成点积：</p>
-$$df = \nabla f \cdot d\mathbf{x}$$
-<p>例如前面的函数 $f(x, y) = 3x^2y$ 有 $\dfrac{\partial f}{\partial x} = 6xy$，$\dfrac{\partial f}{\partial y} = 3x^2$，因此</p>
-$$\nabla f = [\,6xy\quad 3x^2\,]$$
-<p>梯度把“<mark>每个输入分量分别如何影响 $f$</mark>”收集到了一个向量中。而 $df = \nabla f \cdot d\mathbf{x}$ 进一步告诉我们：给定输入变化 $d\mathbf{x}$，可以直接由梯度算出 $f$ 的一阶变化。</p>
-<p>梯度还有一个重要的几何意义。若沿等值线移动，那么 $f$ 不变，因此 $df = \nabla f \cdot d\mathbf{x} = 0$，所以<mark>梯度与等值线垂直</mark>。另一方面，</p>
-$$df = \|\nabla f\|\,\|d\mathbf{x}\|\cos\theta$$
-<p>其中 $\theta$ 是梯度与移动方向之间的夹角。在 $\nabla f$ 和移动距离 $\|d\mathbf{x}\|$ 固定时，$\theta = 0$ 时 $df$ 最大。因此，<mark>梯度指向函数局部增长最快的方向</mark>，也就是说，$d\mathbf{x}$ 的方向和 $\nabla f$ 一样的时候，$df$ 增长最快。同样的，<mark>负梯度则指向下降最快的方向</mark>。</p>
-<blockquote><p>通俗的讲</p><p>我允许 $d\mathbf x$ 指向任意方向，然后把所有方向造成的 $df$ 拿来比较。在移动距离相同的条件下，当 $d\mathbf x$ 与 $\nabla f$ 同方向时，$df$ 最大。因此 $\nabla f$ 指向函数增长最快的方向。</p></blockquote>
-<p>这一点正好对应模型训练。若标量 Loss 为 $L = L(\mathbf{w})$，其中 $\mathbf{w} = [\,w_1\ \ w_2\ \ \cdots\ \ w_n\,]$，那么</p>
-$$\nabla_{\mathbf{w}}L = \frac{\partial L}{\partial \mathbf{w}} = \Big[\,\frac{\partial L}{\partial w_1}\quad \frac{\partial L}{\partial w_2}\quad \cdots\quad \frac{\partial L}{\partial w_n}\,\Big]$$
-<p>梯度中的第 $i$ 个分量，就是参数 $w_i$ 发生微小变化时 Loss 的变化率。梯度下降沿负梯度方向更新参数：</p>
-$$\mathbf{w} \leftarrow \mathbf{w} - \eta\,\nabla_{\mathbf{w}}L$$
-<p>这里先把参数写成向量只是为了方便说明。实际的 PyTorch 参数可以是任意维 Tensor；后面会看到，标量 Loss 对一个 Tensor 求导时，得到的梯度与这个 Tensor 具有相同的形状。</p>
+现在让它们同时变化，输入从 $(x,y)$ 变成 $(x+\Delta x,y+\Delta y)$，输出的实际变化为
+
+$$\begin{aligned}
+\Delta f
+&=f(x+\Delta x,y+\Delta y)-f(x,y)\\
+&=3(x+\Delta x)^2(y+\Delta y)-3x^2y\\
+&=6xy\,\Delta x+3x^2\,\Delta y\\
+&\quad+3y(\Delta x)^2
++6x\,\Delta x\,\Delta y
++3(\Delta x)^2\Delta y
+\end{aligned}
+$$
+
+前两项分别是两个偏导数乘以对应的输入变化。后面几项则包含变化量的<mark>平方或乘积</mark>：当 $\Delta x$ 和 $\Delta y$ 一起趋近于零时，这些项相对于输入变化的大小会<mark>更快趋近于零</mark>。因此，保留一阶项，就得到
+
+$$\Delta f
+\approx
+6xy\,\Delta x+3x^2\,\Delta y
+=
+\frac{\partial f}{\partial x}\Delta x
++
+\frac{\partial f}{\partial y}\Delta y
+$$
+
+这说明，对于这个函数，多个输入同时发生微小变化时，<mark>输出的变化可以近似为各个输入的一阶影响之和</mark>。 输入之间共同变化产生的额外影响仍然存在，只是在这里落入了高阶项。
+更一般地，若 $f=f(x_1,\ldots,x_n)$ 在当前点可微，就有这样的一阶近似：
+$$
+\begin{aligned}
+\Delta f &= \sum_{i=1}^{n} \frac{\partial f}{\partial x_i}\Delta x_i + o(\|\Delta\mathbf{x}\|)\\
+&=
+\left[ \frac{\partial f}{\partial x_1}\ \cdots\ \frac{\partial f}{\partial x_n}\right] \cdot \left[\Delta x_1 \cdots \Delta x_n\right]
+ + o(\|\Delta\mathbf{x}\|)
+\end{aligned}
+$$
+
+为了统一表示这些局部变化率，我们把偏导数按照输入分量的顺序排成一个向量，称为 <mark>$f$ 的梯度</mark>。沿用这里的行向量约定：
+
+$$\mathbf{x}=[x_1\ \cdots\ x_n],
+\qquad
+\boxed{
+\nabla_{\mathbf{x}}f
+=
+\left[
+\frac{\partial f}{\partial x_1}
+\ \cdots\
+\frac{\partial f}{\partial x_n}
+\right]}
+$$
+
+于是，上面的一阶近似可以写成点积：
+
+$$\Delta f\approx \nabla_{\mathbf{x}}f\cdot\Delta\mathbf{x}
+$$
+
+例如，对于 $f(x,y)=3x^2y$，
+$$\nabla f=[6xy\quad 3x^2]
+$$
+
+令 $d\mathbf{x}$ 表示输入增量，则
+
+$$
+\boxed{df=\nabla_{\mathbf{x}}f\cdot d\mathbf{x}}
+$$
+
+<p>我们把这个用于近似实际变化的线性部分称为<mark>全微分</mark>，记作 $df$。</p>
+
+梯度还有一个重要的几何意义。由点积公式，
+$$df
+=
+\|\nabla f\|\,\|d\mathbf{x}\|\cos\theta
+$$
+
+<p>其中 $\theta$ 是梯度与输入变化方向之间的夹角。在当前点梯度非零、输入变化的欧氏长度 $|d\mathbf{x}|$ 固定时，沿梯度方向移动，一阶变化最大。因此，<mark>梯度指向函数局部增长最快的方向，负梯度指向局部下降最快的方向</mark>。</p>
 
 <h3 id="chain-paths">全导数链式法则</h3>
 
