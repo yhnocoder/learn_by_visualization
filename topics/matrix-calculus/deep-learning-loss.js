@@ -14,7 +14,7 @@
     figure.querySelector('#lpLogits').innerHTML = logits.map((z, i) => `
       <div class="lp-cell" data-index="${i}">
         <button type="button" data-target="${i}" aria-label="设 token ${i + 1} 为目标">Token ${i + 1}</button>
-        <div class="lp-logit-control"><div class="lp-bar-plot signed"><span class="lp-bar"></span></div>
+        <div class="lp-logit-control"><span class="lp-limit lp-limit-top" aria-hidden="true">+6</span><span class="lp-limit lp-limit-bottom" aria-hidden="true">−6</span><div class="lp-bar-plot signed"><span class="lp-bar"></span><span class="lp-handle"></span></div>
         <input type="range" id="lpLogit${i}" aria-label="Token ${i + 1} 的 logit" min="-6" max="6" step="0.1" value="${z}" data-logit="${i}"></div>
         <output for="lpLogit${i}" class="lp-z"></output>
       </div>`).join('');
@@ -42,6 +42,7 @@
       logit.querySelector('button').textContent = `${i === target ? '目标' : 'Token'} ${i + 1}`;
       logit.querySelector('.lp-z').textContent = z.toFixed(1);
       signedBar(logit.querySelector('.lp-bar'), z, 6);
+      logit.querySelector('.lp-handle').style.bottom = `${(z + 6) / 12 * 100}%`;
       const pair = figure.querySelectorAll('#lpCombined .lp-cell')[i];
       pair.querySelector('.lp-p').textContent = probabilities[i].toFixed(3);
       pair.querySelector('.lp-g').textContent = `${gradients[i] < 0 ? '−' : '+'}${Math.abs(gradients[i]).toFixed(3)}`;
