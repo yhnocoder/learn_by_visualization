@@ -126,19 +126,29 @@ mark{color:var(--accent);font-weight:500;background:linear-gradient(transparent 
 .paths>svg>path.f{opacity:.35}
 .paths>svg>rect.bg{fill:var(--surface);stroke:none}
 .paths svg.tex{overflow:visible;color:var(--ink)}
+.swiglu .wrap{overflow-x:auto}.swiglu svg#swigluSvg{min-width:540px;max-width:660px;width:100%;height:auto;display:block;margin:0 auto 10px}
+.swiglu .wrap svg text{font:13px "Noto Sans SC","PingFang SC",system-ui,sans-serif;fill:var(--ink)}
+.swiglu .wrap svg svg.tex{overflow:visible;color:var(--ink)}
+.swiglu g.nd>rect{fill:var(--surface-2);stroke:var(--rule-2);rx:8}
+.swiglu g.nd>rect.gate{fill:color-mix(in srgb,var(--s2) 12%,var(--surface));stroke:var(--s2)}
+.swiglu g.nd>rect.up{fill:color-mix(in srgb,var(--s3) 12%,var(--surface));stroke:var(--s3)}
+.swiglu path.ln{fill:none;stroke-width:1.8}
+.swiglu path.fwd{stroke:var(--ink-3);stroke-width:1.2}.swiglu path.gate{stroke:var(--s2)}.swiglu path.up{stroke:var(--s3)}.swiglu path.down{stroke:var(--ink)}
+.swiglu g.bw{opacity:0;transition:opacity .25s}.swiglu g.bw.on{opacity:.3}.swiglu g.bw.path{opacity:1}
+.swiglu g.bw.cur path.ln{stroke-width:2.6}
 .gqa{overflow-x:auto}.gqa>svg{min-width:560px;width:100%;height:auto;display:block}
 #gqaSvg text{font:13px "Noto Sans SC","PingFang SC",system-ui,sans-serif;fill:var(--ink-2)}
 #gqaSvg rect{fill:var(--surface-2);stroke:var(--rule-2);rx:6}
 #gqaSvg path{fill:none;stroke:var(--ink-3);stroke-width:1.3}
 #gqaSvg rect.g1,#gqaSvg path.g1{stroke:var(--s1)}#gqaSvg rect.g2,#gqaSvg path.g2{stroke:var(--s2)}
 #gqaSvg svg.tex{overflow:visible;color:var(--ink)}
-.bp .nav{display:flex;align-items:center;gap:12px;margin:4px 0 10px}
-.bp .nav .cnt{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:13px;color:var(--ink-2);min-width:5em}
-.bp .step{padding:12px 16px;background:var(--surface-2);border-radius:8px;font-size:14.5px;line-height:1.8;min-height:7em}
-.bp .step p{margin:0 0 .5em}.bp .step p:last-child{margin:0}
-.bp .step .t{color:var(--accent);font-weight:500}
-.bp .step mjx-container[display="true"]{margin:.3em 0 .5em !important;overflow-x:auto;overflow-y:hidden;max-width:100%}
-.model-wrap rect.hlrect{fill:var(--accent);fill-opacity:.12;stroke:var(--accent);stroke-width:1.5}
+.swiglu .nav,.bp .nav{display:flex;align-items:center;gap:12px;margin:4px 0 10px}
+:is(.bp,.swiglu) .nav .cnt{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:13px;color:var(--ink-2);min-width:5em}
+:is(.bp,.swiglu) .step{padding:12px 16px;background:var(--surface-2);border-radius:8px;font-size:14.5px;line-height:1.8;min-height:7em}
+:is(.bp,.swiglu) .step p{margin:0 0 .5em}:is(.bp,.swiglu) .step p:last-child{margin:0}
+:is(.bp,.swiglu) .step .t{color:var(--accent);font-weight:500}
+:is(.bp,.swiglu) .step mjx-container[display="true"]{margin:.3em 0 .5em !important;overflow-x:auto;overflow-y:hidden;max-width:100%}
+.model-wrap rect.hlrect,.swiglu rect.hlrect{fill:var(--accent);fill-opacity:.12;stroke:var(--accent);stroke-width:1.5}
 .cheat table{font-size:14px}.cheat td,.cheat th{vertical-align:middle;padding:10px 12px}
 .cheat td:first-child{white-space:nowrap;font-weight:500}
 .refs{font-size:14px;color:var(--ink-2);line-height:1.75}.refs ol{padding-left:1.6em;margin:0}.refs li{margin-bottom:6px}.refs li::marker{color:var(--ink-3)}
@@ -217,3 +227,7 @@ blockquote p+p{margin-top:8px;font-size:13px;color:var(--ink-3)}
 #lpLogits .lp-limit{position:absolute;left:4px;font:10px ui-monospace,monospace;color:var(--ink-3);line-height:1}
 #lpLogits .lp-limit-top{top:-4px}#lpLogits .lp-limit-bottom{bottom:-4px}
 #lpLogits .lp-z{font-size:14px;color:var(--lp-color)}
+.gc .mat .c{cursor:pointer}
+.gc .readout{display:grid;grid-template-columns:auto auto;justify-content:start;gap:6px 18px;font-size:14px;padding:10px 14px;background:var(--surface-2);border-radius:8px;align-items:baseline}
+.gc .readout b{font-family:"JetBrains Mono",ui-monospace,monospace;font-weight:500;font-variant-numeric:tabular-nums}
+.gc .readout .a{color:var(--s2)}.gc .readout .p{color:var(--s1)}
