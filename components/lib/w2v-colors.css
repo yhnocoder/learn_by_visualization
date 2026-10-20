@@ -1,0 +1,12 @@
+.w2v-root {
+  --w2v-center: var(--series-8);
+  --w2v-center-soft: color-mix(in srgb, var(--series-8) 15%, var(--surface));
+  --w2v-context: var(--series-1);
+  --w2v-context-soft: color-mix(in srgb, var(--series-1) 16%, var(--surface));
+  --w2v-noise: var(--series-4);
+  --w2v-noise-soft: color-mix(in srgb, var(--series-4) 18%, var(--surface));
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink);
+}

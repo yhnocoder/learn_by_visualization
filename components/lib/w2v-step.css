@@ -1,0 +1,220 @@
+.w2v-step {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  color: var(--ink);
+}
+
+.w2v-step .bk-kit-controls {
+  margin: 4px 0 0;
+}
+
+.w2v-step-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  font-size: 13px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.w2v-step-select select {
+  padding: 2px 6px;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.w2v-step-select select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.w2v-step-modes {
+  margin: 14px 0 16px;
+}
+
+.w2v-step-flow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.12fr;
+  gap: 16px;
+}
+
+.w2v-step-flow section {
+  min-width: 0;
+}
+
+.w2v-step-flow h4 {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-height: 24px;
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.w2v-step-flow h4 small {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ink-2);
+}
+
+.w2v-step-row,
+.w2v-step-output {
+  display: grid;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  height: 38px;
+  padding: 3px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  font: 12px var(--font-mono);
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.w2v-step-row {
+  grid-template-columns: minmax(60px, 1fr) 46px 46px;
+}
+
+.w2v-step-output {
+  grid-template-columns: minmax(64px, 1fr) 1.4fr;
+}
+
+.w2v-step-row > span:first-child,
+.w2v-step-output > span:first-child {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.w2v-step-row.w2v-step-selected,
+.w2v-step-output.w2v-step-selected {
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--w2v-context) 5%, transparent);
+  box-shadow: inset 2px 0 color-mix(in srgb, var(--w2v-context) 55%, transparent);
+}
+
+.w2v-step-row.w2v-step-selected > span:first-child,
+.w2v-step-output.w2v-step-selected > span:first-child {
+  padding-left: 5px;
+}
+
+.w2v-step-row:focus,
+.w2v-step-output:focus {
+  outline: none;
+}
+
+.w2v-step-row:focus-visible,
+.w2v-step-output:focus-visible {
+  outline: 2px solid var(--w2v-context);
+  outline-offset: 2px;
+}
+
+.w2v-step-cell {
+  padding: 5px 0;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--w2v-tone) calc(var(--w2v-strength) * 100%), transparent);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.w2v-step-note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.w2v-step-pair {
+  font-size: 11px;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.w2v-step-probability {
+  position: relative;
+  height: 25px;
+  background: color-mix(in srgb, var(--w2v-context) 7%, transparent);
+}
+
+.w2v-step-probability i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: color-mix(in srgb, var(--w2v-context) 40%, transparent);
+  transition: width 0.25s;
+}
+
+.w2v-step-probability b {
+  position: relative;
+  display: block;
+  padding: 3px 5px;
+  font-weight: 400;
+  text-align: right;
+}
+
+.w2v-step-detail {
+  flex: 1 1 0;
+  min-height: 0;
+  margin-top: 16px;
+  padding: 14px 16px;
+  overflow: auto;
+  background: color-mix(in srgb, var(--w2v-context) 5%, transparent);
+  font-size: 13px;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+
+.w2v-step-detail strong {
+  font-weight: 600;
+}
+
+.w2v-step-detail > div {
+  padding: 4px 0;
+  overflow-x: auto;
+}
+
+.w2v-step-detail > div.w2v-step-continued {
+  margin-top: -4px;
+  padding-top: 0;
+  padding-left: 2.4em;
+}
+
+.w2v-step-status {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+
+@media (max-width: 599px) {
+  .w2v-step-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .w2v-step-flow h4 {
+    margin-bottom: 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .w2v-step-probability i {
+    transition: none;
+  }
+}
+
+.w2v-step-status .bk-kit-tex,
+.w2v-step-note .bk-kit-tex {
+  min-height: 0;
+  vertical-align: middle;
+}

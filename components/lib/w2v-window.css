@@ -1,0 +1,132 @@
+.w2v-window {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  color: var(--ink-2);
+}
+
+.w2v-window .bk-kit-controls {
+  margin: 4px 0 12px;
+}
+
+.w2v-window-plot {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.w2v-window-plot svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.w2v-window-token {
+  cursor: pointer;
+}
+
+.w2v-window-token rect {
+  fill: var(--surface-2);
+  stroke: var(--line-2);
+  stroke-width: 1;
+}
+
+.w2v-window-token text {
+  fill: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+.w2v-window-token.w2v-window-context rect {
+  fill: var(--w2v-context-soft);
+  stroke: var(--w2v-context);
+}
+
+.w2v-window-token.w2v-window-center rect {
+  fill: var(--w2v-center-soft);
+  stroke: var(--w2v-center);
+  stroke-width: 1.5;
+}
+
+.w2v-window-token.w2v-window-center text {
+  font-weight: 500;
+}
+
+.w2v-window-token:hover rect {
+  stroke: var(--ink-2);
+}
+
+.w2v-window-token:focus {
+  outline: none;
+}
+
+.w2v-window-token:focus-visible rect {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.w2v-window-token .w2v-window-index {
+  fill: var(--ink-3);
+  font-size: 11px;
+}
+
+.w2v-window-arc {
+  fill: none;
+  stroke: var(--w2v-context);
+  stroke-width: 1.4;
+}
+
+.w2v-window-label {
+  fill: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
+.w2v-window-brace {
+  fill: none;
+  stroke: var(--ink-3);
+  stroke-width: 1;
+}
+
+.w2v-window-caption {
+  fill: var(--ink-2);
+  font-size: 12px;
+}
+
+.w2v-window-caption.w2v-window-caption-center {
+  fill: var(--w2v-center);
+}
+
+.w2v-window-pairs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0 4px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.w2v-window-pairs span {
+  padding: 2px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 99px;
+  background: var(--surface-2);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.w2v-window-pairs b {
+  font-weight: 400;
+  color: var(--w2v-center);
+}
+
+.w2v-window-pairs i {
+  font-style: normal;
+  color: var(--w2v-context);
+}
+
+.w2v-window-status {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}

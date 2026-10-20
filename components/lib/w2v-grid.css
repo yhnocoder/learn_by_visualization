@@ -1,0 +1,34 @@
+.w2v-grid {
+  display: grid;
+  gap: 1px;
+  border: 1px solid var(--line-2);
+  border-radius: 3px;
+  background: var(--line-2);
+  overflow: hidden;
+}
+
+.w2v-grid i {
+  display: block;
+  width: var(--w2v-cell, 16px);
+  height: var(--w2v-cell, 16px);
+  background: var(--surface);
+}
+
+.w2v-grid i.w2v-cell-center {
+  background: var(--w2v-center-soft);
+  box-shadow: inset 0 0 0 1.5px var(--w2v-center);
+}
+
+.w2v-grid i.w2v-cell-context {
+  background: var(--w2v-context-soft);
+  box-shadow: inset 0 0 0 1.5px var(--w2v-context);
+}
+
+.w2v-grid i.w2v-cell-updated {
+  background: var(--w2v-context-soft);
+}
+
+.w2v-grid i.w2v-cell-noise {
+  background: var(--w2v-noise-soft);
+  box-shadow: inset 0 0 0 1.5px var(--w2v-noise);
+}
