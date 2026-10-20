@@ -1,7 +1,6 @@
 .w2v-step {
   display: flex;
   flex-direction: column;
-  height: 100%;
   color: var(--ink);
 }
 
@@ -164,11 +163,8 @@
 }
 
 .w2v-step-detail {
-  flex: 1 1 0;
-  min-height: 0;
   margin-top: 16px;
   padding: 14px 16px;
-  overflow: auto;
   background: color-mix(in srgb, var(--w2v-context) 5%, transparent);
   font-size: 13px;
   line-height: 1.9;

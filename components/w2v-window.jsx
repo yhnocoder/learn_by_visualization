@@ -13,6 +13,7 @@ export const layout = {
   width: 'body',
   height: 380,
   narrowHeight: 360,
+  autoHeight: true,
 };
 
 const WIDTH = 720;

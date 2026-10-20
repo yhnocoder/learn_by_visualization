@@ -9,6 +9,7 @@ export const layout = {
   width: 'body',
   height: 290,
   narrowHeight: 560,
+  autoHeight: true,
 };
 
 const NOISE = [0, 3, 5, 8];

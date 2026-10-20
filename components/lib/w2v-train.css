@@ -1,7 +1,6 @@
 .w2v-train {
   display: flex;
   flex-direction: column;
-  height: 100%;
   color: var(--ink-2);
 }
 
@@ -38,15 +37,10 @@
   background: none;
 }
 
-.w2v-train-plot {
-  flex: 1 1 0;
-  min-height: 0;
-}
-
 .w2v-train-plot svg {
   display: block;
   width: 100%;
-  height: 100%;
+  height: auto;
 }
 
 .w2v-train-background {

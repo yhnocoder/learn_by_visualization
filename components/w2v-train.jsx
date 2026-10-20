@@ -14,6 +14,7 @@ export const layout = {
   width: 'body',
   height: 666,
   narrowHeight: 560,
+  autoHeight: true,
 };
 
 const GROUPS = [

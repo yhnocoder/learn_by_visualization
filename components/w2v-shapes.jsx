@@ -8,6 +8,7 @@ export const layout = {
   width: 'body',
   height: 300,
   narrowHeight: 520,
+  autoHeight: true,
 };
 
 function Arrow(props) {

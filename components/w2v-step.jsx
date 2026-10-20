@@ -14,6 +14,7 @@ export const layout = {
   width: 'body',
   height: 760,
   narrowHeight: 1660,
+  autoHeight: true,
 };
 
 const COUNT = SENTENCE.length;
