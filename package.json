@@ -1,12 +1,12 @@
 {
-  "name": "interactive-htmls",
+  "name": "learn-by-visualization",
   "private": true,
+  "type": "module",
   "scripts": {
-    "test": "playwright test",
-    "test:report": "playwright show-report"
+    "dev": "bake dev",
+    "build": "bake build"
   },
-  "devDependencies": {
-    "@playwright/test": "1.63.0",
-    "http-server": "14.1.1"
+  "dependencies": {
+    "bake": "github:yhnocoder/bake#b04d20b319efeb2881c78cb10103497e9680b0e5"
   }
 }
