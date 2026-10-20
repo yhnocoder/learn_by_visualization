@@ -7,6 +7,6 @@
     "build": "bake build"
   },
   "dependencies": {
-    "@yhnocoder/bake": "github:yhnocoder/bake#7600b7e5f27fe15270d38d741d1ec43ae5adf695"
+    "@yhnocoder/bake": "github:yhnocoder/bake#b59185dd490c4968022feb6fb6c88eaa66a63834"
   }
 }
