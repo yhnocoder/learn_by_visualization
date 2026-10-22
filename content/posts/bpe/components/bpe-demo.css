@@ -1,0 +1,72 @@
+bpe-demo {
+  --paper: var(--surface);
+  --rule: var(--line);
+  --slate: var(--accent);
+  --slate-soft: var(--accent-soft);
+  --sage-deep: var(--series-3);
+  --focus: var(--accent);
+  --mono: var(--font-mono);
+  --sans: var(--font-sans);
+  display: block;
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.6;
+}
+bpe-demo .sym { background: color-mix(in srgb, var(--tone) 16%, var(--surface)); color: var(--ink); }
+bpe-demo .tabs{display:flex;gap:2px;border-bottom:1px solid var(--rule);margin-bottom:22px}
+bpe-demo .tab{background:none;border:0;padding:8px 14px 10px;font:inherit;font-size:15px;color:var(--ink-2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+bpe-demo .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--slate);font-weight:600}
+bpe-demo .tab:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:3px}
+bpe-demo .panel{display:none}
+bpe-demo .panel.on{display:block}
+bpe-demo .grid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:26px;align-items:start}
+@media (max-width:860px){bpe-demo .grid{grid-template-columns:1fr}}
+bpe-demo section{margin-bottom:22px}
+bpe-demo h2{font-size:14px;font-weight:600;margin:0 0 8px;color:var(--ink)}
+bpe-demo h2 small{font-weight:400;color:var(--ink-2);margin-left:8px}
+bpe-demo .box{background:var(--paper);border:1px solid var(--rule);border-radius:6px;padding:14px 16px}
+bpe-demo textarea,bpe-demo input[type=text]{font:inherit;font-family:var(--mono);font-size:13.5px;width:100%;border:1px solid var(--rule);border-radius:4px;padding:8px 10px;background:var(--surface);color:var(--ink);resize:vertical}
+bpe-demo textarea:focus,bpe-demo input:focus{outline:2px solid var(--focus);outline-offset:1px;border-color:transparent}
+bpe-demo .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+bpe-demo button.btn{font:inherit;font-size:14px;padding:6px 14px;border-radius:4px;border:1px solid var(--slate);background:var(--slate);color:var(--surface);cursor:pointer}
+bpe-demo button.btn.quiet{background:transparent;color:var(--slate)}
+bpe-demo button.btn:disabled{opacity:.4;cursor:default}
+bpe-demo button.btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+bpe-demo label.inline{display:inline-flex;align-items:center;gap:6px;color:var(--ink-2);font-size:14px}
+bpe-demo input[type=number]{font:inherit;width:64px;padding:4px 6px;border:1px solid var(--rule);border-radius:4px}
+bpe-demo .hint{color:var(--ink-2);font-size:13px;margin-top:8px}
+bpe-demo table{border-collapse:collapse;width:100%;font-size:14px}
+bpe-demo th{text-align:left;font-weight:500;color:var(--ink-2);padding:4px 8px 6px;border-bottom:1px solid var(--rule)}
+bpe-demo td{padding:5px 8px;vertical-align:middle;border-bottom:1px solid var(--line)}
+bpe-demo tr:last-child td{border-bottom:0}
+bpe-demo td.num,bpe-demo th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+bpe-demo td.w{font-family:var(--mono);font-size:13px;color:var(--ink-2)}
+bpe-demo .sym{display:inline-block;font-family:var(--mono);font-size:13px;padding:1px 6px;border-radius:3px;margin:1px 2px 1px 0;border:1px solid var(--line);line-height:1.5}
+bpe-demo .sym.hit{box-shadow:0 0 0 2px var(--slate);position:relative}
+bpe-demo .sym.new{animation:bpe-pop .6s ease-out}
+@keyframes bpe-pop{0%{background:var(--sage-deep);color:var(--surface)}100%{}}
+@media (prefers-reduced-motion:reduce){bpe-demo .sym.new{animation:none}}
+bpe-demo .pairs{display:flex;flex-wrap:wrap;gap:6px}
+bpe-demo .pair{font-family:var(--mono);font-size:13px;padding:3px 8px;border:1px solid var(--rule);border-radius:4px;background:var(--surface);color:var(--ink-2)}
+bpe-demo .pair b{font-weight:500;color:var(--ink)}
+bpe-demo .pair.top{border-color:var(--slate);background:var(--slate-soft);color:var(--ink)}
+bpe-demo .pair .n{margin-left:6px;font-size:12px}
+bpe-demo .pair.unk{color:var(--ink-3);border-style:dashed}
+bpe-demo ol.merges{margin:0;padding-left:26px;font-family:var(--mono);font-size:13px}
+bpe-demo ol.merges li{padding:2px 0;color:var(--ink-2)}
+bpe-demo ol.merges li.cur{color:var(--ink);font-weight:600}
+bpe-demo ol.merges li.done{color:var(--ink)}
+bpe-demo ol.merges li .arrow{margin:0 6px;color:var(--ink-2);font-weight:400}
+bpe-demo .vocab{display:flex;flex-wrap:wrap;gap:3px}
+bpe-demo .empty{color:var(--ink-2);font-size:13px}
+bpe-demo .steps{list-style:none;margin:0;padding:0}
+bpe-demo .steps li{display:grid;grid-template-columns:44px 1fr;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);align-items:start}
+bpe-demo .steps li:last-child{border-bottom:0}
+bpe-demo .steps .k{font-family:var(--mono);font-size:12px;color:var(--ink-2);padding-top:3px}
+bpe-demo .steps .rule{font-family:var(--mono);font-size:13px;margin-bottom:3px}
+bpe-demo .steps .skip .rule{color:var(--ink-2)}
+bpe-demo .steps .skip .rule::after{content:"  未命中，跳过";font-family:var(--sans);font-size:12px}
+bpe-demo .steps .apply .rule::after{content:"  命中";font-family:var(--sans);font-size:12px;color:var(--sage-deep)}
+bpe-demo .result{margin-top:12px;padding-top:12px;border-top:1px solid var(--rule)}
+bpe-demo .result .lbl{color:var(--ink-2);font-size:13px;margin-right:8px}
+bpe-demo .note{background:var(--slate-soft);border-radius:6px;padding:10px 14px;font-size:14px;color:var(--ink);margin-top:14px}

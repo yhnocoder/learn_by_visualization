@@ -1,0 +1,115 @@
+/* Colours, controls and status lines shared by the figures written as plain custom elements. */
+.figure {
+  --center: var(--series-8);
+  --center-soft: light-dark(#fbe3e2, #3d2626);
+  --ctx: var(--series-1);
+  --ctx-soft: light-dark(#dbe8f8, #1f2e42);
+  --neg: light-dark(#c98500, #eda100);
+  --neg-soft: light-dark(#fbeed0, #3a3018);
+  --rule: var(--line);
+  --rule-2: var(--line-2);
+  display: block;
+  color: var(--ink);
+  font-size: 14.5px;
+  line-height: 1.7;
+}
+
+.figure .figure-tex svg {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.figure .controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  align-items: center;
+  margin: 4px 0 12px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.figure .controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.figure .controls input[type='range'] {
+  width: 150px;
+  accent-color: var(--accent);
+}
+
+.figure .controls input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+}
+
+.figure .controls select {
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--rule-2);
+  border-radius: 6px;
+}
+
+.figure .controls .v {
+  min-width: 2em;
+  font-family: var(--font-mono);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.figure .btn {
+  padding: 5px 14px;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--surface);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.figure .btn.quiet {
+  color: var(--accent);
+  background: transparent;
+}
+
+.figure .btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.figure .plotwrap > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.figure .chart-status {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.figure .legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 2px 0 8px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+.figure .legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

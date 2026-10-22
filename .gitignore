@@ -1,5 +1,8 @@
-.DS_Store
 node_modules/
+dist/
+.dist-staging/
+.dist-previous/
 playwright-report/
 test-results/
+.DS_Store
 .local/agent-work/

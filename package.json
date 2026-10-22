@@ -1,12 +1,15 @@
 {
-  "name": "interactive-htmls",
+  "name": "learn-by-visualization",
   "private": true,
+  "type": "module",
   "scripts": {
-    "test": "playwright test",
-    "test:report": "playwright show-report"
+    "dev": "bake dev",
+    "build": "bake build",
+    "preview": "bake preview",
+    "test": "playwright test"
   },
   "devDependencies": {
-    "@playwright/test": "1.63.0",
-    "http-server": "14.1.1"
+    "@playwright/test": "1.56.1",
+    "@yhnocoder/bake": "^0.2.1"
   }
 }
