@@ -399,7 +399,7 @@ export function makeDemo(V,fig){
     <div class="stepbar"><button class="btn" type="button" id="${id('prev')}">上一步</button><button class="btn primary" type="button" id="${id('next')}">下一步</button><button class="btn" type="button" id="${id('phase')}">前进到阶段末</button><button class="btn" type="button" id="${id('reset')}">回到开头</button><span class="n" id="${id('n')}"></span></div>
     <div class="iter-grid"><div class="iter-diagram"><div class="iter-title">模块图（圆点为精度类型；激活值为反向传播需要保留的输入）</div><div class="plot" id="${id('diagram')}"></div></div><div class="iter-code"><div class="iter-title">按源码展开的 torch 代码（高亮为当前步骤执行的行）</div><pre id="${id('code')}"></pre></div></div>
     <div class="iter-step" id="${id('step')}"></div>
-    <div class="iter-title" style="margin-top:14px">整个迭代的显存时间线（竖线为当前步骤）</div><div class="legend" id="${id('legend')}"></div><div class="plot" id="${id('timeline')}"></div>
+    <div class="iter-title" style="margin-top:14px">整个迭代的显存时间线（竖线为当前步骤）</div><div class="legend" id="${id('legend')}"></div><div class="plot iter-timeline" id="${id('timeline')}"></div>
     <figcaption><p>前向阶段只展开第 1 层的 12 个模块，其余层合并为一步；反向阶段同样处理。四个演示的激活值按同一口径计算（反向需要的输入张量，每元素 2 字节），以便比较权重与梯度的差别；torch.autocast 下不在 fp16 列表里的算子（embedding、RMSNorm 的乘法、残差相加、softmax）输出 fp32，实际激活值会更大。所有数字都由当前配置实时计算，不含 CUDA 上下文、通信缓冲和框架自身的临时缓冲。</p></figcaption>`;
   const codeEl=$(id('code')), diaHost=$(id('diagram')), stepEl=$(id('step')), tlHost=$(id('timeline'));
   $(id('legend')).innerHTML=V.cats.map(c=>`<span><i style="--c:${c.c}"></i>${c.n}</span>`).join('');

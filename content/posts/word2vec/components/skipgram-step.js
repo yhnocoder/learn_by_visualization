@@ -44,7 +44,7 @@ export default class SkipgramStep extends HTMLElement {
     oSel.value = 4
     const fmt = (x) => x.toFixed(3)
     const row = (M, w) => Array.from(M.slice(w * 2, w * 2 + 2))
-    const vector = (a) => String.raw`\left(${a.map(fmt).join(',\;')}\right)^{\!\top}`
+    const vector = (a) => String.raw`\left(${a.map(fmt).join(',\\;')}\right)^{\!\top}`
     const state = () => {
       const c = +cSel.value, o = +oSel.value, vc = row(V, c), p = softmaxDist(V, U, n, d, c)
       const g = Array.from(p, (x, w) => x - (w === o ? 1 : 0))

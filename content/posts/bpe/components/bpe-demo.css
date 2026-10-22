@@ -44,7 +44,8 @@ bpe-demo td.w{font-family:var(--mono);font-size:13px;color:var(--ink-2)}
 bpe-demo .sym{display:inline-block;font-family:var(--mono);font-size:13px;padding:1px 6px;border-radius:3px;margin:1px 2px 1px 0;border:1px solid var(--line);line-height:1.5}
 bpe-demo .sym.hit{box-shadow:0 0 0 2px var(--slate);position:relative}
 bpe-demo .sym.new{animation:bpe-pop .6s ease-out}
-@keyframes bpe-pop{0%{background:var(--sage-deep);color:var(--surface)}100%{}}
+/* Chromium computes an invalid colour halfway when the end keyframe is implicit and the background is a color-mix() of light-dark() colours, so the end keyframe repeats the .sym colours. */
+@keyframes bpe-pop{0%{background:var(--sage-deep);color:var(--surface)}100%{background:color-mix(in srgb, var(--tone) 16%, var(--surface));color:var(--ink)}}
 @media (prefers-reduced-motion:reduce){bpe-demo .sym.new{animation:none}}
 bpe-demo .pairs{display:flex;flex-wrap:wrap;gap:6px}
 bpe-demo .pair{font-family:var(--mono);font-size:13px;padding:3px 8px;border:1px solid var(--rule);border-radius:4px;background:var(--surface);color:var(--ink-2)}
