@@ -1,0 +1,13 @@
+jacobian-shapes { display: block; }
+jacobian-shapes .shape-table-wrap { overflow-x: auto; }
+jacobian-shapes .shape-table { width: max-content; margin: auto; border-collapse: collapse; font-size: 16px; line-height: 1.2; }
+jacobian-shapes .shape-table td { padding: 5px 7px; white-space: nowrap; text-align: center; border: 0; vertical-align: bottom; }
+jacobian-shapes .shape-table td:first-child { border-right: 1px solid var(--ink-2); padding-inline: 12px; }
+jacobian-shapes .shape-table tr:nth-last-child(2) td { border-top: 1px solid var(--ink-2); }
+jacobian-shapes .shape-table tr:nth-last-child(-n+2) td { vertical-align: top; }
+jacobian-shapes .shape-label { font-family: "Times New Roman", serif; font-size: 18px; color: var(--ink); margin-bottom: 3px; line-height: 1.1; }
+jacobian-shapes .math-shape { display: inline-flex; align-items: center; justify-content: center; vertical-align: top; border: 1px solid var(--ink-2); width: 28px; height: 28px; margin: 0 2px; font-size: 16px; line-height: 1; }
+jacobian-shapes .math-shape.column { height: 60px; }
+jacobian-shapes .math-shape.row { width: 60px; }
+jacobian-shapes .math-shape.matrix { width: 60px; height: 60px; }
+jacobian-shapes .figure-tex svg { display: inline-block; vertical-align: middle; }

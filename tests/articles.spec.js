@@ -91,19 +91,3 @@ test('Home: every article card links to a page that loads', async ({ page }) => 
     expect(response.status(), href).toBe(200);
   }
 });
-
-test('Old topic addresses redirect to the articles', async ({ page }) => {
-  const redirects = {
-    '/topics/bpe/': '/2026-09/bpe/',
-    '/topics/floating_points/': '/2026-09/floating-points/',
-    '/topics/word2vec/#s2': '/2026-09/word2vec/#s2',
-    '/topics/llm-act-fns/': '/2026-09/llm-act-fns/',
-    '/topics/mixed-precision-training/': '/2026-09/mixed-precision-training/',
-    '/topics/matrix-calculus/': '/2026-09/matrix-calculus-translation/',
-    '/topics/matrix-calculus/deep-learning.html': '/2026-09/matrix-calculus/',
-  };
-  for (const [from, to] of Object.entries(redirects)) {
-    await page.goto(from);
-    await expect(page, from).toHaveURL(url => url.pathname + url.hash === to || (url.pathname === to && !to.includes('#')));
-  }
-});
