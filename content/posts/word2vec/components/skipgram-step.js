@@ -1,6 +1,6 @@
-import { tex, typeset } from '../../../../components/lib/typeset.js'
+import { typeset } from 'bake/kit'
 import { mulberry32, softmaxDist, stepSoftmax } from './lib/skipgram.js'
-import { styleFigure } from '../../../../components/lib/figure.js'
+import '../../../../components/lib/figure.css'
 import './skipgram-step.css'
 
 export const layout = { placeholder: { narrow: 1100, wide: 720 } }
@@ -10,7 +10,7 @@ const WORDS = ['problems', 'turning', 'into', 'banking', 'crises', 'as', 'has', 
 export default class SkipgramStep extends HTMLElement {
   connectedCallback() {
     if (this.childElementCount > 0) return
-    styleFigure(this)
+    this.classList.add('figure')
     this.innerHTML = `
       <div class="controls">
         <label>中心词 $c$ <select data-id="c"></select></label>
@@ -87,11 +87,11 @@ export default class SkipgramStep extends HTMLElement {
       $('result-note').textContent = mode === 'forward' ? '条形长度表示概率（0 至 1）' : mode === 'gradient' ? '每行显示两个偏导数，不是标量系数' : '预览下一次更新；左侧是当前参数'
       $('detail').innerHTML =
         mode === 'forward'
-          ? `<strong>${WORDS[w]}：点积 → 概率</strong><div>${tex(String.raw`s_w = (${fmt(uw[0])})\times(${fmt(vc[0])})`)}</div><div class="cont">${tex(String.raw`+\, (${fmt(uw[1])})\times(${fmt(vc[1])})`)}</div><div class="cont">${tex(String.raw`= ${fmt(score)}`)}</div><div>${tex(String.raw`p_w = \frac{e^{${fmt(score)}}}{${fmt(Z)}} = ${fmt(p[w])}`)} <span class="sg-note">（分母为全部 8 个 ${tex(String.raw`e^{s_j}`)} 之和）</span></div>`
+          ? `<strong>${WORDS[w]}：点积 → 概率</strong><div>$${String.raw`s_w = (${fmt(uw[0])})\times(${fmt(vc[0])})`}$</div><div class="cont">$${String.raw`+\, (${fmt(uw[1])})\times(${fmt(vc[1])})`}$</div><div class="cont">$${String.raw`= ${fmt(score)}`}$</div><div>$${String.raw`p_w = \frac{e^{${fmt(score)}}}{${fmt(Z)}} = ${fmt(p[w])}`}$ <span class="sg-note">（分母为全部 8 个 $${String.raw`e^{s_j}`}$ 之和）</span></div>`
           : mode === 'gradient'
-            ? `<strong>${WORDS[w]}：系数 ${tex(String.raw`p_w-y_w=${fmt(p[w])}-${w === o ? 1 : 0}=${fmt(g[w])}`)}</strong><div>${tex(String.raw`\frac{\partial\ell}{\partial u_w} = ${fmt(g[w])}\times ${vector(vc)}`)}</div><div class="cont">${tex(String.raw`= ${vector(gu[w])}`)}</div><div>对 ${tex(String.raw`\frac{\partial\ell}{\partial v_c}`)} 的贡献：${tex(String.raw`${fmt(g[w])}\times ${vector(uw)}`)}</div><div class="cont">${tex(String.raw`= ${vector(parts[w])}`)}</div><div>${tex(String.raw`\frac{\partial\ell}{\partial v_c} = \sum_{w=1}^{8}(p_w-y_w)u_w`)}</div><div class="cont">${tex(String.raw`= ${vector(gv)}`)}</div>`
-            : `<strong>下一次更新 · ${tex(String.raw`\eta = ${lr.toFixed(2)}`)}</strong><div>${tex(String.raw`u_{\mathrm{${WORDS[w]}}}^{\mathrm{new}} = ${vector(uw)} - ${lr.toFixed(2)}\times ${vector(gu[w])}`)}</div><div class="cont">${tex(String.raw`= ${vector(uw.map((x, k) => x - lr * gu[w][k]))}`)}</div><div>${tex(String.raw`v_{\mathrm{${WORDS[c]}}}^{\mathrm{new}} = ${vector(vc)} - ${lr.toFixed(2)}\times ${vector(gv)}`)}</div><div class="cont">${tex(String.raw`= ${vector(vc.map((x, k) => x - lr * gv[k]))}`)}</div><div class="sg-note">V 的其他 7 行保持不变；U 的全部 8 行按各自梯度更新。</div>`
-      $('status').innerHTML = `${last}当前 ${tex(String.raw`\ell = -\log P(\mathrm{${WORDS[o]}}\mid\mathrm{${WORDS[c]}}) = ${(-Math.log(p[o])).toFixed(3)}`)}。`
+            ? `<strong>${WORDS[w]}：系数 $${String.raw`p_w-y_w=${fmt(p[w])}-${w === o ? 1 : 0}=${fmt(g[w])}`}$</strong><div>$${String.raw`\frac{\partial\ell}{\partial u_w} = ${fmt(g[w])}\times ${vector(vc)}`}$</div><div class="cont">$${String.raw`= ${vector(gu[w])}`}$</div><div>对 $${String.raw`\frac{\partial\ell}{\partial v_c}`}$ 的贡献：$${String.raw`${fmt(g[w])}\times ${vector(uw)}`}$</div><div class="cont">$${String.raw`= ${vector(parts[w])}`}$</div><div>$${String.raw`\frac{\partial\ell}{\partial v_c} = \sum_{w=1}^{8}(p_w-y_w)u_w`}$</div><div class="cont">$${String.raw`= ${vector(gv)}`}$</div>`
+            : `<strong>下一次更新 · $${String.raw`\eta = ${lr.toFixed(2)}`}$</strong><div>$${String.raw`u_{\mathrm{${WORDS[w]}}}^{\mathrm{new}} = ${vector(uw)} - ${lr.toFixed(2)}\times ${vector(gu[w])}`}$</div><div class="cont">$${String.raw`= ${vector(uw.map((x, k) => x - lr * gu[w][k]))}`}$</div><div>$${String.raw`v_{\mathrm{${WORDS[c]}}}^{\mathrm{new}} = ${vector(vc)} - ${lr.toFixed(2)}\times ${vector(gv)}`}$</div><div class="cont">$${String.raw`= ${vector(vc.map((x, k) => x - lr * gv[k]))}`}$</div><div class="sg-note">V 的其他 7 行保持不变；U 的全部 8 行按各自梯度更新。</div>`
+      $('status').innerHTML = `${last}当前 $${String.raw`\ell = -\log P(\mathrm{${WORDS[o]}}\mid\mathrm{${WORDS[c]}}) = ${(-Math.log(p[o])).toFixed(3)}`}$。`
       typeset($('detail'))
       typeset($('status'))
     }

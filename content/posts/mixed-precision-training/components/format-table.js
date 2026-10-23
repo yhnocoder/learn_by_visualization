@@ -1,7 +1,7 @@
 import { F16, BF16, F32, E4M3, E5M2, rt, ulpOf, num, esc, mulberry32, gauss, ncdf, mkPlot } from './lib/common.js'
 import { decode, encode, fields, maxFiniteCode, parseValue, pow2 } from './lib/fmt.js'
-import { typeset } from '../../../../components/lib/typeset.js'
-import { styleFigure } from './lib/figure.js'
+import { typeset } from 'bake/kit'
+import './lib/figure.css'
 
 export const layout = { placeholder: { narrow: 420, wide: 330 } }
 
@@ -10,7 +10,7 @@ const $=id=>document.getElementById(id);
 export default class FormatTable extends HTMLElement {
   connectedCallback() {
     if (this.childElementCount > 0) return
-    styleFigure(this)
+    this.classList.add('mp-figure')
     this.innerHTML = `<div class="tbl" id="fmt-table"></div><ul class="plain" id="fmt-notes"></ul>`
   const rows=[[F32,'fp32'],[F16,'fp16'],[BF16,'bf16'],[E4M3,'fp8 e4m3'],[E5M2,'fp8 e5m2']];
   let h='<table><thead><tr><th>格式</th><th class="r">位数</th><th class="r">指数位</th><th class="r">尾数位</th><th class="r">偏置</th><th>最大有限值</th><th>最小规格化数</th><th>最小 subnormal</th><th>ulp(1)</th></tr></thead><tbody>';

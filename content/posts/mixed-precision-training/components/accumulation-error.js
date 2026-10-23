@@ -1,7 +1,7 @@
 import { F16, BF16, F32, E4M3, E5M2, rt, ulpOf, num, esc, mulberry32, gauss, ncdf, mkPlot } from './lib/common.js'
 import { decode, encode, fields, maxFiniteCode, parseValue, pow2 } from './lib/fmt.js'
-import { typeset } from '../../../../components/lib/typeset.js'
-import { styleFigure } from './lib/figure.js'
+import { typeset } from 'bake/kit'
+import './lib/figure.css'
 
 export const layout = { placeholder: { narrow: 560, wide: 560 } }
 
@@ -10,7 +10,7 @@ const $=id=>document.getElementById(id);
 export default class AccumulationError extends HTMLElement {
   connectedCallback() {
     if (this.childElementCount > 0) return
-    styleFigure(this)
+    this.classList.add('mp-figure')
     this.innerHTML = `<h4>演示：同一串数在 fp16 与 fp32 中顺序累加</h4>
     <div class="controls">
       <label>加数分布 <select id="a-mode"><option value="uniform">均匀分布 [0, 1)</option><option value="signed">零均值 N(0, 1) × 0.1</option><option value="prod">两个 fp16 向量的逐元素乘积</option></select></label>

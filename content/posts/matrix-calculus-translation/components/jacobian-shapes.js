@@ -1,4 +1,4 @@
-import { typeset } from '../../../../components/lib/typeset.js'
+import { typeset } from 'bake/kit'
 import './jacobian-shapes.css'
 
 export const params = { variant: { label: '内容', type: 'enum', options: ['single', 'chain'], default: 'single' } }

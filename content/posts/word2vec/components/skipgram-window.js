@@ -1,5 +1,5 @@
-import { typeset } from '../../../../components/lib/typeset.js'
-import { styleFigure } from '../../../../components/lib/figure.js'
+import { typeset } from 'bake/kit'
+import '../../../../components/lib/figure.css'
 import './skipgram-window.css'
 
 export const layout = { placeholder: { narrow: 330, wide: 400 } }
@@ -16,7 +16,7 @@ const el = (name, attrs, text) => {
 export default class SkipgramWindow extends HTMLElement {
   connectedCallback() {
     if (this.childElementCount > 0) return
-    styleFigure(this)
+    this.classList.add('figure')
     this.innerHTML = `
       <div class="controls">
         <label>中心词位置 $t$ <input type="range" data-id="t" min="1" max="${WORDS.length}" value="4" step="1"><span class="v" data-id="t-value">4</span></label>

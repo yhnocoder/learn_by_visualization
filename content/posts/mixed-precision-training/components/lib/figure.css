@@ -9,7 +9,6 @@
 }
 .mp-figure p { margin: 0 0 8px; }
 .mp-figure h4 { margin: 0 0 10px; font-size: 15px; font-weight: 600; }
-.mp-figure .figure-tex svg { display: inline-block; vertical-align: middle; }
 .mp-figure h4{margin:0 0 10px; font-size:15px; font-weight:600; color:var(--ink)}
 .mp-figure .plot{position:relative}
 .mp-figure .plot svg{width:100%; height:auto; display:block; touch-action:none}

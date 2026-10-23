@@ -10,4 +10,3 @@ jacobian-shapes .math-shape { display: inline-flex; align-items: center; justify
 jacobian-shapes .math-shape.column { height: 60px; }
 jacobian-shapes .math-shape.row { width: 60px; }
 jacobian-shapes .math-shape.matrix { width: 60px; height: 60px; }
-jacobian-shapes .figure-tex svg { display: inline-block; vertical-align: middle; }

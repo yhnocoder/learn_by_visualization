@@ -1,7 +1,7 @@
 import { F16, BF16, F32, E4M3, E5M2, rt, ulpOf, num, esc, mulberry32, gauss, ncdf, mkPlot } from './lib/common.js'
 import { decode, encode, fields, maxFiniteCode, parseValue, pow2 } from './lib/fmt.js'
-import { typeset } from '../../../../components/lib/typeset.js'
-import { styleFigure } from './lib/figure.js'
+import { typeset } from 'bake/kit'
+import './lib/figure.css'
 
 export const layout = { placeholder: { narrow: 480, wide: 460 } }
 
@@ -10,7 +10,7 @@ const $=id=>document.getElementById(id);
 export default class GradientHistogram extends HTMLElement {
   connectedCallback() {
     if (this.childElementCount > 0) return
-    styleFigure(this)
+    this.classList.add('mp-figure')
     this.innerHTML = `<h4>演示：loss scale 把梯度直方图平移到可表示范围内</h4>
     <div class="controls">
       <label>loss scale S = 2^k，k <input type="range" id="h-k" min="0" max="24" step="1" value="0"> <span class="v" id="h-k-v"></span></label>

@@ -1,6 +1,6 @@
-import { typeset } from '../../../../components/lib/typeset.js'
+import { typeset } from 'bake/kit'
 import { fillGrids } from './lib/grid.js'
-import { styleFigure } from '../../../../components/lib/figure.js'
+import '../../../../components/lib/figure.css'
 import './skipgram-shapes.css'
 
 export const layout = { placeholder: { narrow: 560, wide: 330 } }
@@ -10,7 +10,7 @@ const ARROW = '<svg viewBox="0 0 44 10"><line x1="0" y1="5" x2="38" y2="5"/><pat
 export default class SkipgramShapes extends HTMLElement {
   connectedCallback() {
     if (this.childElementCount > 0) return
-    styleFigure(this)
+    this.classList.add('figure')
     this.innerHTML = `
       <div class="shapes-wrap"><div class="shapes" role="img" aria-label="Skip-gram 前向过程的形状图">
         <div class="shapes-group">

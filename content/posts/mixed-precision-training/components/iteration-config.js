@@ -1,12 +1,12 @@
 import { PREC, config, setConfig } from './lib/iteration.js'
-import { styleFigure } from './lib/figure.js'
+import './lib/figure.css'
 
 export const layout = { placeholder: { narrow: 260, wide: 140 }, frame: false }
 
 export default class IterationConfig extends HTMLElement {
   connectedCallback() {
     if (this.childElementCount > 0) return
-    styleFigure(this)
+    this.classList.add('mp-figure')
     const options = (values, chosen) => values.map((value) => `<option value="${value}"${value === String(chosen) ? ' selected' : ''}>${value}</option>`).join('')
     this.innerHTML = `
       <div class="controls">

@@ -1,6 +1,6 @@
-import { typeset } from '../../../../components/lib/typeset.js'
+import { typeset } from 'bake/kit'
 import { fillGrids } from './lib/grid.js'
-import { styleFigure } from '../../../../components/lib/figure.js'
+import '../../../../components/lib/figure.css'
 import './negative-sampling-rows.css'
 
 export const layout = { placeholder: { narrow: 560, wide: 300 } }
@@ -8,7 +8,7 @@ export const layout = { placeholder: { narrow: 560, wide: 300 } }
 export default class NegativeSamplingRows extends HTMLElement {
   connectedCallback() {
     if (this.childElementCount > 0) return
-    styleFigure(this)
+    this.classList.add('figure')
     this.innerHTML = `
       <div class="ns-cmp">
         <div class="panel">

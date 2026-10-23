@@ -1,5 +1,5 @@
 import { mulberry32, sigmoid, stepSoftmax } from './lib/skipgram.js'
-import { styleFigure } from '../../../../components/lib/figure.js'
+import '../../../../components/lib/figure.css'
 import './skipgram-training.css'
 
 export const layout = { placeholder: { narrow: 560, wide: 640 } }
@@ -22,7 +22,7 @@ const el = (name, attrs, text) => {
 export default class SkipgramTraining extends HTMLElement {
   connectedCallback() {
     if (this.childElementCount > 0) return
-    styleFigure(this)
+    this.classList.add('figure')
     this.innerHTML = `
       <div class="controls">
         <label>目标函数 <select data-id="mode"><option value="softmax">完整 softmax</option><option value="ns">负采样，k = 10</option></select></label>

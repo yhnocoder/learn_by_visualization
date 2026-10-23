@@ -1,7 +1,7 @@
 import { F16, BF16, F32, E4M3, E5M2, rt, ulpOf, num, esc, mulberry32, gauss, ncdf, mkPlot } from './lib/common.js'
 import { decode, encode, fields, maxFiniteCode, parseValue, pow2 } from './lib/fmt.js'
-import { typeset } from '../../../../components/lib/typeset.js'
-import { styleFigure } from './lib/figure.js'
+import { typeset } from 'bake/kit'
+import './lib/figure.css'
 
 export const layout = { placeholder: { narrow: 900, wide: 620 } }
 
@@ -10,7 +10,7 @@ const $=id=>document.getElementById(id);
 export default class UpdateAbsorption extends HTMLElement {
   connectedCallback() {
     if (this.childElementCount > 0) return
-    styleFigure(this)
+    this.classList.add('mp-figure')
     this.innerHTML = `<h4>演示：同一次更新在 fp16、bf16、fp32 中分别发生了什么</h4>
     <div class="controls">
       <label>权重 w <input type="text" id="up-w" value="0.5"></label>
