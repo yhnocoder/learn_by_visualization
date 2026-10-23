@@ -1,0 +1,17 @@
+skipgram-training .legend i { display: inline-block; width: 10px; height: 10px; background: var(--c); border-radius: 50%; }
+skipgram-training .legend i.u { background: none; border: 1.5px solid var(--ink-3); }
+skipgram-training svg { background: var(--surface-2); border-radius: 6px; }
+skipgram-training svg .axis { stroke: var(--rule-2); stroke-width: 1; }
+skipgram-training svg .pt { stroke: var(--surface); stroke-width: 1.2; }
+skipgram-training svg .pu { fill: none; stroke-width: 1.6; }
+skipgram-training svg .lab { font-family: var(--font-mono); font-size: 10.5px; fill: var(--ink-2); pointer-events: none; }
+skipgram-training svg .lab.u { fill: var(--ink-3); font-style: italic; }
+skipgram-training .tr-progress-wrap { margin: 16px 0 10px; }
+skipgram-training .tr-progress-wrap label { display: block; margin-bottom: 6px; font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+skipgram-training [data-id='progress'] { display: block; width: 100%; height: 24px; margin: 0; background: transparent; cursor: pointer; appearance: none; }
+skipgram-training [data-id='progress']::-webkit-slider-runnable-track { height: 7px; background: linear-gradient(to right, var(--ctx) var(--progress, 0%), var(--rule) var(--progress, 0%)); border-radius: 4px; }
+skipgram-training [data-id='progress']::-webkit-slider-thumb { width: 15px; height: 15px; margin-top: -4px; background: var(--ctx); border: 2px solid var(--surface); border-radius: 50%; box-shadow: 0 0 0 1px var(--ctx); appearance: none; }
+skipgram-training [data-id='progress']::-moz-range-track { height: 7px; background: var(--rule); border-radius: 4px; }
+skipgram-training [data-id='progress']::-moz-range-progress { height: 7px; background: var(--ctx); }
+skipgram-training [data-id='progress']::-moz-range-thumb { width: 12px; height: 12px; background: var(--ctx); border: 2px solid var(--surface); border-radius: 50%; }
+skipgram-training [data-id='progress']:disabled { cursor: default; opacity: 0.65; }

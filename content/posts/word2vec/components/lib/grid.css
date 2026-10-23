@@ -1,0 +1,7 @@
+:is(skipgram-shapes, negative-sampling-rows) .shapes { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 16px 4px; margin: 0 auto; padding: 0 12px; }
+:is(skipgram-shapes, negative-sampling-rows) .g { display: grid; gap: 1px; overflow: hidden; background: var(--rule-2); border: 1px solid var(--rule-2); border-radius: 3px; }
+:is(skipgram-shapes, negative-sampling-rows) .g i { display: block; width: 16px; height: 16px; background: var(--surface); }
+:is(skipgram-shapes, negative-sampling-rows) .g i.c { background: var(--center-soft); box-shadow: inset 0 0 0 1.5px var(--center); }
+:is(skipgram-shapes, negative-sampling-rows) .g i.o { background: var(--ctx-soft); box-shadow: inset 0 0 0 1.5px var(--ctx); }
+:is(skipgram-shapes, negative-sampling-rows) .g i.u { background: var(--ctx-soft); }
+:is(skipgram-shapes, negative-sampling-rows) .g i.k { background: var(--neg-soft); box-shadow: inset 0 0 0 1.5px var(--neg); }

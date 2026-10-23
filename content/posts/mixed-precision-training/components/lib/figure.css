@@ -1,0 +1,98 @@
+/* Styles of the mixed precision figures, which add the class mp-figure to their element. */
+.mp-figure {
+  --s1: var(--series-1); --s2: var(--series-2); --s3: var(--series-3); --s4: var(--series-4);
+  --s5: var(--series-5); --s6: var(--series-6); --s7: var(--series-7); --s8: var(--series-8);
+  --bad: var(--series-8); --ok: var(--series-3); --warn: light-dark(#c98500, #eda100);
+  --bad-soft: light-dark(#fbe7e6, #3a2323); --ok-soft: light-dark(#e3f5ee, #1d3129); --warn-soft: light-dark(#fbf1da, #3a3019);
+  --rule: var(--line); --rule-2: var(--line-2);
+  display: block; color: var(--ink); font-size: 14.5px; line-height: 1.7;
+}
+.mp-figure p { margin: 0 0 8px; }
+.mp-figure h4 { margin: 0 0 10px; font-size: 15px; font-weight: 600; }
+.mp-figure h4{margin:0 0 10px; font-size:15px; font-weight:600; color:var(--ink)}
+.mp-figure .plot{position:relative}
+.mp-figure .plot svg{width:100%; height:auto; display:block; touch-action:none}
+.mp-figure .plot text{font:11px var(--font-mono); fill:var(--ink-3)}
+.mp-figure .plot text.lab{font-size:12px; fill:var(--ink-2)}
+.mp-figure .plot text.ann{font-size:11.5px; fill:var(--ink-2)}
+.mp-figure .legend{display:flex; flex-wrap:wrap; gap:6px 18px; font-size:13px; color:var(--ink-2); margin:6px 0 10px; font-family:var(--font-mono)}
+.mp-figure .legend span{display:inline-flex; align-items:center; gap:7px}
+.mp-figure .legend i{display:inline-block; width:14px; height:10px; background:var(--c); border-radius:2px}
+.mp-figure .legend i.line{height:2px}
+.mp-figure .controls{display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center; font-size:13.5px; margin:4px 0 12px; color:var(--ink-2)}
+.mp-figure .controls label{display:inline-flex; align-items:center; gap:8px; cursor:pointer}
+.mp-figure .controls input[type=range]{width:150px; accent-color:var(--accent)}
+.mp-figure .controls input[type=number],.mp-figure .controls input[type=text]{font:inherit; font-family:var(--font-mono); font-size:13px; width:8.5em; color:var(--ink); background:var(--surface); border:1px solid var(--rule-2); border-radius:4px; padding:3px 6px}
+.mp-figure .controls select{font:inherit; font-size:13px; color:var(--ink); background:var(--surface); border:1px solid var(--rule-2); border-radius:4px; padding:3px 6px}
+.mp-figure .controls .v{font-family:var(--font-mono); min-width:3.2em; color:var(--ink); font-variant-numeric:tabular-nums}
+.mp-figure .btn{font:inherit; font-size:13px; color:var(--ink); background:var(--surface); border:1px solid var(--rule-2); border-radius:6px; padding:5px 12px; cursor:pointer}
+.mp-figure .btn:hover{border-color:var(--accent); color:var(--accent)}
+.mp-figure .btn.primary{background:var(--accent); border-color:var(--accent); color:var(--surface)}
+.mp-figure .btn.primary:hover{color:var(--surface); filter:brightness(1.08)}
+.mp-figure .status{font-size:13px; color:var(--ink-2); margin:6px 0 10px; font-family:var(--font-mono); line-height:1.7}
+.mp-figure .status b{color:var(--ink); font-weight:500}
+.mp-figure .tbl{overflow-x:auto; margin:22px 0 28px; border:1px solid var(--rule); border-radius:10px; background:var(--surface)}
+.mp-figure .tbl{margin:10px 0 6px; border-radius:8px}
+.mp-figure table{border-collapse:collapse; width:100%; font-size:14.5px; line-height:1.6}
+.mp-figure th,.mp-figure td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--rule); vertical-align:top}
+.mp-figure th{font-weight:500; color:var(--ink-3); font-size:12.5px; letter-spacing:.06em; font-family:var(--font-mono); background:var(--surface-2); white-space:nowrap}
+.mp-figure tr:last-child td{border-bottom:0}
+.mp-figure td.m{font-family:var(--font-mono); font-size:13px; white-space:nowrap; font-variant-numeric:tabular-nums}
+.mp-figure td.r,.mp-figure th.r{text-align:right}
+.mp-figure .pill{display:inline-block; font-size:11.5px; font-family:var(--font-mono); padding:1px 8px; border-radius:99px; border:1px solid var(--rule-2); color:var(--ink-2); white-space:nowrap}
+.mp-figure .pill.bad{background:var(--bad-soft); border-color:transparent; color:var(--bad)}
+.mp-figure .pill.ok{background:var(--ok-soft); border-color:transparent; color:var(--ok)}
+.mp-figure .pill.warn{background:var(--warn-soft); border-color:transparent; color:var(--warn)}
+.mp-figure .bits{font-family:var(--font-mono); font-size:12.5px; letter-spacing:.04em; white-space:nowrap}
+.mp-figure .bits .s{color:var(--s2)}
+.mp-figure .bits .e{color:var(--s1)}
+.mp-figure .bits .f{color:var(--ink)}
+.mp-figure .bits .chg{background:var(--warn-soft); border-radius:2px}
+.mp-figure .bitrows{display:grid; grid-template-columns:auto 1fr; gap:4px 14px; font-size:13px; margin:6px 0 4px; align-items:center}
+.mp-figure .bitrows .k{color:var(--ink-3); font-family:var(--font-mono); font-size:12px}
+.mp-figure .iter-grid{display:grid; grid-template-columns:340px minmax(0,1fr); gap:14px; align-items:start; margin-top:6px}
+@media (max-width:760px){ .mp-figure .iter-grid{grid-template-columns:minmax(0,1fr)} }
+.mp-figure .iter-title{font-size:12.5px; color:var(--ink-3); font-family:var(--font-mono); letter-spacing:.04em; margin:0 0 6px}
+.mp-figure .iter-code pre{margin:0; overflow-x:auto; font-size:12px; line-height:1.55; padding:10px 12px; background:var(--surface-2); border:1px solid var(--rule); border-radius:8px}
+.mp-figure .iter-code .cl{display:block; padding:0 6px; margin:0 -6px; border-radius:3px; white-space:pre}
+.mp-figure .iter-code .ln{display:inline-block; width:2.2em; color:var(--ink-3); user-select:none}
+.mp-figure .iter-code .cl.hl{background:var(--accent-soft); box-shadow:inset 3px 0 0 var(--accent)}
+.mp-figure .iter-diagram svg{width:100%; height:auto; display:block}
+.mp-figure .mb rect{fill:var(--surface); stroke:var(--rule-2); stroke-width:1; transition:fill .15s,stroke .15s}
+.mp-figure .mb text{font:11px var(--font-mono); fill:var(--ink)}
+.mp-figure .mb text.w{font-size:10px; fill:var(--ink-3)}
+.mp-figure .mb text.a{font-size:10px; fill:var(--s4)}
+.mp-figure .hdr{font:10px var(--font-mono); fill:var(--ink-3); letter-spacing:.06em}
+.mp-figure .mb rect.abg{fill:var(--grid); stroke:none}
+.mp-figure .mb rect.ab{fill:var(--s4); stroke:none}
+.mp-figure .mb.done rect:first-child{fill:color-mix(in srgb,var(--accent) 9%,var(--surface)); stroke:color-mix(in srgb,var(--accent) 45%,var(--rule-2))}
+.mp-figure .mb.released rect:first-child{fill:var(--surface-2); stroke:var(--rule)}
+.mp-figure .mb.released text{fill:var(--ink-3)}
+.mp-figure .mb.on-fwd rect:first-child{fill:var(--accent-soft); stroke:var(--accent); stroke-width:1.8}
+.mp-figure .mb.on-bwd rect:first-child{fill:var(--bad-soft); stroke:var(--s2); stroke-width:1.8}
+.mp-figure .card{fill:var(--surface-2); stroke:var(--rule-2); stroke-width:1}
+.mp-figure .cardt{font:11px var(--font-mono); fill:var(--ink-2)}
+.mp-figure .grpt{font:10px var(--font-mono); fill:var(--ink-3); letter-spacing:.06em}
+.mp-figure .spine{stroke:var(--rule-2); stroke-width:1.5}
+.mp-figure .iter-step{margin-top:14px; background:var(--surface-2); border-radius:8px; padding:12px 14px; font-size:14px; line-height:1.7}
+.mp-figure .iter-step .hd{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:6px}
+.mp-figure .iter-step .hd .t{font-weight:600; font-size:15px}
+.mp-figure .iter-step p{margin:0 0 8px}
+.mp-figure .iter-step .dl{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px}
+.mp-figure .pill.mode-fwd{background:var(--accent-soft); border-color:transparent; color:var(--accent)}
+.mp-figure .pill.mode-bwd{background:var(--bad-soft); border-color:transparent; color:var(--s2)}
+.mp-figure .pill.mode-opt{background:var(--ok-soft); border-color:transparent; color:var(--ok)}
+.mp-figure .pill.mode-pre{background:var(--surface); border-color:var(--rule-2); color:var(--ink-2)}
+.mp-figure .impl-h{margin-top:34px; padding-top:14px; border-top:1px solid var(--rule)}
+.mp-figure .iter-fig{margin-top:10px}
+.mp-figure .compare table{table-layout:fixed; width:100%; font-size:12.5px}
+.mp-figure .compare th:first-child{width:11%}
+.mp-figure .compare td,.mp-figure .compare th{overflow-wrap:anywhere; white-space:normal; padding:8px 8px}
+.mp-figure .membar{display:flex; height:16px; border-radius:4px; overflow:hidden; background:var(--surface); border:1px solid var(--rule)}
+.mp-figure .membar i{display:block; height:100%}
+.mp-figure .legend.memparts{margin:8px 0 0; font-size:12.5px}
+.mp-figure .legend.memparts b{color:var(--ink); font-weight:500}
+.mp-figure .stepbar{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:8px 0 10px}
+.mp-figure .stepbar .n{font-family:var(--font-mono); font-size:12.5px; color:var(--ink-3); margin-left:auto}
+/* The timeline text is sized in viewBox units, so a full-width timeline at wide screens draws it larger than the article text. */
+.mp-figure .iter-timeline{max-width:860px}
