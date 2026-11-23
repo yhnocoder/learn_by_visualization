@@ -73,7 +73,7 @@ test('Floating point: encode 1.5 as fp32', async ({ page }, testInfo) => {
     await page.locator('#mode_section').getByText('fp32', { exact: true }).click();
     await page.locator('#float_value_field').fill('1.5');
     await page.locator('#float_value_field').press('Enter');
-    await expect(page.locator('#exact_10')).toHaveText('1.5');
+    await expect(page.locator('#float_value_field')).toHaveValue('1.5');
     await expect(page).toHaveURL(/#float32:0x3fc00000$/);
     await expect(page.locator('#bits_container .bit_label')).toHaveCount(32);
     await screenshot(page, testInfo, 'after-fp32-input');

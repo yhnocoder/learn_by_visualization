@@ -26,14 +26,6 @@ var FORMATS = [
    e8m0 : unsigned, no mantissa, value = 2^(code-127); nan = 0xFF; no zero.
    direct: numpy converts float64 → this format directly; every other format goes float64 → float32 → format. */
 
-var KIND_NOTES = {
-	ieee: "IEEE-754 style: exp=all 1s → mant=0 is ±inf, otherwise NaN. Signed zero.",
-	fn:   "Finite only, NaN = S.1111.111 (mant all 1s with exp all 1s). Signed zero. No inf.",
-	fnuz: "Finite only, single NaN = 0x80 (sign=1, everything else 0). Unsigned zero (no −0). No inf.",
-	mx:   "OCP Microscaling element type: no inf, no NaN, saturating conversion. Signed zero.",
-	e8m0: "OCP MX scale type: unsigned, 8 exponent bits, no mantissa. value = 2^(E−127). NaN = 0xFF. No zero, no inf.",
-};
-
 function fmtByName(name) {
 	for (var i = 0; i < FORMATS.length; i++) if (FORMATS[i].name === name) return FORMATS[i];
 }
@@ -200,4 +192,4 @@ function parseValue(str) {
 	return Number(str);
 }
 
-if (typeof module !== "undefined") module.exports = { FORMATS, KIND_NOTES, fmtByName, decode, encode, exactDecimal, exactDelta, exactMid, valueString, rawMag, parseValue, fields, join, maxExp, maxMant, maxCode, maxFiniteCode, hasSign, signBit, nanCode };
+if (typeof module !== "undefined") module.exports = { FORMATS, fmtByName, decode, encode, exactDecimal, exactDelta, exactMid, valueString, rawMag, parseValue, fields, join, maxExp, maxMant, maxCode, maxFiniteCode, hasSign, signBit, nanCode };
