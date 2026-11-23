@@ -1,54 +1,181 @@
-/* UI for the ml_dtypes narrow-float explorer. Depends on fmt.js. */
+/* UI for the ml_dtypes narrow-float explorer. Depends on fmt.js and MathJax (tex-svg). */
 (function () {
 	var $ = function (id) { return document.getElementById(id); };
+	var NS = "http://www.w3.org/2000/svg";
 	var GROUPS = ["fp4", "fp6", "fp8", "fp16", "fp32"];
-	var ROWS = [
-		{ id: "sign", title: "Sign",                      cls: "float_sign" },
-		{ id: "exp",  title: "Exponent",                  cls: "float_exponent" },
-		{ id: "mant", title: "Significand",               cls: "float_mantissa" },
-		{ id: "hex",  title: "Raw Hexadecimal Integer Value" },
-		{ id: "dec",  title: "Raw Decimal Integer Value" },
-	];
-	var fmt, code, rows = {}, bitLabels = [];
+	var C_SIGN = "#e83e5d", C_EXP = "#41ba63", C_MANT = "#577ec7";
+	var fmt, code, bitLabels = [];
 	var mainField = $("float_value_field");
 
-	/* ---------- tabs ---------- */
-	function tabs(container, items, current, onPick) {
-		container.innerHTML = "";
-		items.forEach(function (it, i) {
-			var b = document.createElement("span");
-			b.className = "mode_button non_selectable" + (i === 0 ? " left_round" : "") + (i === items.length - 1 ? " right_round" : "") + (it === current ? " on" : "");
-			b.textContent = it;
-			b.onclick = function () { onPick(it); };
-			container.appendChild(b);
+	function mk(tag, cls, parent) { var e = document.createElement(tag); if (cls) e.className = cls; if (parent) parent.appendChild(e); return e; }
+	function svgEl(svg, tag, attrs, text) {
+		var e = document.createElementNS(NS, tag);
+		for (var k in attrs) e.setAttribute(k, attrs[k]);
+		if (text != null) e.textContent = text;
+		svg.appendChild(e);
+		return e;
+	}
+
+	/* ---------- TeX (MathJax SVG output) ---------- */
+	/* The vendored MathJax bundle has only the base and ams packages (no color extension),
+	   so colored numbers are written as \\mmlToken{mn}[mathcolor="..."]{...}; see col(). */
+	function mj(t, display) { return MathJax.tex2svg(t, { display: !!display }); }
+	var texCache = {};
+	function texSvg(t) {
+		if (!texCache[t]) texCache[t] = mj(t).querySelector("svg");
+		return texCache[t].cloneNode(true);
+	}
+	/* Place TeX inside an SVG chart. fs: font size in px; y: baseline; align: start | middle | end. */
+	function texAt(svg, t, x, y, align, fs, color) {
+		var node = texSvg(t), ex = fs * 0.45;
+		var w = parseFloat(node.getAttribute("width")) * ex, h = parseFloat(node.getAttribute("height")) * ex;
+		var m = /vertical-align:\s*(-?[\d.]+)ex/.exec(node.getAttribute("style") || ""), shift = m ? parseFloat(m[1]) * ex : 0;
+		node.setAttribute("width", w); node.setAttribute("height", h);
+		node.setAttribute("x", align === "middle" ? x - w / 2 : align === "end" ? x - w : x);
+		node.setAttribute("y", y - h - shift);
+		node.removeAttribute("style");
+		node.style.color = color || "#888";
+		node.style.overflow = "visible";
+		svg.appendChild(node);
+		return node;
+	}
+	/* Replace the content of an HTML element with one TeX formula. */
+	function texInto(el, t, display) {
+		el.innerHTML = "";
+		el.appendChild(mj(t, display));
+	}
+	/* HTML text with $...$ TeX segments. */
+	function rich(el, s) {
+		el.innerHTML = "";
+		s.split("$").forEach(function (seg, i) {
+			if (!seg) return;
+			if (i % 2) el.appendChild(mj(seg));
+			else el.appendChild(document.createTextNode(seg));
 		});
 	}
+	/* bigForm pow2 strings ("23×2^-6", "−2^-5") and decimal strings → TeX */
+	function tx(s) { return s.replace(/−/g, "-").replace(/×/g, "\\times ").replace(/2\^(-?\d+)/g, "2^{$1}"); }
+
+	/* ---------- format tabs ---------- */
+	/* Top row: a track with one white thumb that slides to the selected group. Built once, then only updated. */
+	var groupBtns = {}, groupThumb;
+	function moveThumb(thumb, target, animate) {
+		if (!animate) thumb.style.transition = "none";
+		thumb.style.width = target.offsetWidth + "px";
+		thumb.style.transform = "translateX(" + target.offsetLeft + "px)";
+		if (!animate) { void thumb.offsetWidth; thumb.style.transition = ""; }
+	}
+	function updateGroups(f) {
+		var row = $("mode_section"), first = !groupThumb;
+		if (first) {
+			groupThumb = mk("span", "seg_thumb", row);
+			GROUPS.forEach(function (g) {
+				var b = mk("span", "seg_button non_selectable", row);
+				b.textContent = g;
+				b.onclick = function () { if (g !== fmt.group) setFormat(lastInGroup[g] || FORMATS.filter(function (x) { return x.group === g; })[0]); };
+				groupBtns[g] = b;
+			});
+		}
+		GROUPS.forEach(function (g) { groupBtns[g].classList.toggle("on", g === f.group); });
+		moveThumb(groupThumb, groupBtns[f.group], !first);
+	}
+
+	/* Second row: the formats of the group, grouped by exponent/mantissa width (e4m3, e5m2, ...).
+	   The selected family is outlined and lists its variants; the variant label is the name suffix after "eXmY".
+	   The row keeps its DOM while the group stays the same, so opening and closing a family can use a width transition. */
+	var lastInGroup = {}, lastInFamily = {}, famRow = { group: null, fams: {} }, famScrollTimer;
+	function family(f) { return "e" + f.e + "m" + f.m; }
+	function variantLabel(f) {
+		var i = f.name.indexOf(family(f)), suffix = i < 0 ? "" : f.name.slice(i + family(f).length);
+		return suffix || "标准";
+	}
+	function buildFamilies(f) {
+		var row = $("sub_mode_section");
+		if (famRow.group !== f.group) {
+			row.innerHTML = "";
+			famRow = { group: f.group, fams: {} };
+			var track = mk("div", "fam_track", row), keys = [], byFam = {};
+			FORMATS.forEach(function (x) {
+				if (x.group !== f.group) return;
+				var k = family(x);
+				if (!byFam[k]) { byFam[k] = []; keys.push(k); }
+				byFam[k].push(x);
+			});
+			keys.forEach(function (k) {
+				var list = byFam[k], box = mk("span", "fam", track);
+				var lab = mk("span", "fam_button fam_label non_selectable", box);
+				lab.textContent = k;
+				lab.onclick = function () { if (family(fmt) !== k) setFormat(lastInFamily[famRow.group + ":" + k] || list[0]); };
+				var vars = null, btns = [];
+				if (list.length > 1) {
+					vars = mk("span", "fam_vars", box);
+					list.forEach(function (x) {
+						var b = mk("span", "fam_button non_selectable", vars);
+						b.textContent = variantLabel(x);
+						b.onclick = function () { if (fmt !== x) setFormat(x); };
+						btns.push({ f: x, el: b });
+					});
+				}
+				famRow.fams[k] = { box: box, lab: lab, vars: vars, btns: btns };
+			});
+			famRow.track = track;
+		}
+		var opened = null;
+		for (var k in famRow.fams) {
+			var e = famRow.fams[k], on = k === family(f);
+			e.box.classList.toggle("open", on);
+			e.lab.classList.toggle("on", on && !e.vars);
+			e.lab.classList.toggle("current", on && !!e.vars);
+			if (e.vars) {
+				e.vars.style.maxWidth = on ? e.vars.scrollWidth + "px" : "0px";
+				e.btns.forEach(function (b) { b.el.classList.toggle("on", b.f === f); });
+			}
+			if (on) opened = e.box;
+		}
+		/* narrow screens: the row scrolls horizontally; once the width transition ends, bring the opened family to the left edge */
+		clearTimeout(famScrollTimer);
+		famScrollTimer = setTimeout(function () {
+			if (row.scrollWidth > row.clientWidth + 1) row.scrollTo({ left: famRow.track.offsetLeft + opened.offsetLeft - 8, behavior: "smooth" });
+		}, 170);
+	}
+
+	/* One line under the dtype name: how a variant differs from the standard (IEEE-style) format of its family.
+	   Standard variants, e3m4, float16, bfloat16 and float32 get no line. */
+	/* Each note is a list of tags; the one starting with "!" is the key trait and is emphasized. */
+	var FMT_NOTES = {
+		float8_e4m3fn:      ["no inf", "2 NaN", "!larger max"],
+		float8_e4m3fnuz:    ["no inf", "no −0", "1 NaN", "!finer near 0"],
+		float8_e4m3b11fnuz: ["no inf", "no −0", "1 NaN", "!finest near 0", "!max 30"],
+		float8_e5m2fnuz:    ["no inf", "no −0", "1 NaN", "!finer near 0"],
+		float8_e8m0fnu:     ["!powers of two only", "no zero", "no sign"],
+		float4_e2m1fn:      ["no inf", "no NaN", "!overflow → max"],
+		float6_e2m3fn:      ["no inf", "no NaN", "!overflow → max"],
+		float6_e3m2fn:      ["no inf", "no NaN", "!overflow → max"],
+	};
 
 	function setFormat(f, initialCode) {
 		var prev = fmt ? decode(fmt, code) : null;
 		fmt = f;
+		lastInGroup[f.group] = f;
+		lastInFamily[f.group + ":" + family(f)] = f;
 		if (initialCode !== undefined) code = initialCode;
 		else if (!prev) code = encode(f, 3.5);
 		else code = prev.cls === "nan" ? nanCode(f) : encode(f, prev.value);
 
-		tabs($("mode_section"), GROUPS, f.group, function (g) {
-			setFormat(FORMATS.filter(function (x) { return x.group === g; })[0]);
+		updateGroups(f);
+		buildFamilies(f);
+		$("fmt_name").textContent = f.name;
+		var note = $("fmt_note"); note.innerHTML = "";
+		(FMT_NOTES[f.name] || []).forEach(function (t) {
+			var key = t[0] === "!";
+			mk("span", "fmt_tag" + (key ? " key" : ""), note).textContent = key ? t.slice(1) : t;
 		});
-		tabs($("sub_mode_section"), FORMATS.filter(function (x) { return x.group === f.group; }).map(function (x) { return x.name; }), f.name, function (n) { setFormat(fmtByName(n)); });
-
-		var mx = decode(f, maxFiniteCode(f)), tiny = decode(f, join(f, 0, 1, 0)), sub = decode(f, 1);
-		$("fmt_note").innerHTML =
-			"<b>" + f.name + "</b> &middot; " + f.bits + " bits &middot; E" + f.e + "M" + f.m + " &middot; bias " + f.bias +
-			" &middot; max " + mx.value + (f.kind === "e8m0" ? " (2<sup>127</sup>) &middot; min 2<sup>&minus;127</sup>" :
-			" &middot; min normal " + tiny.value + " &middot; min subnormal " + sub.value) +
-			"<br>" + KIND_NOTES[f.kind];
 
 		buildBits();
 		$("narrow_only").classList.toggle("hidden", fmt.bits > 8);   /* the 2^bits grid only */
 		if (fmt.bits <= 8) buildGrid(); else $("grid").innerHTML = "";
 		buildLine();
-		rows.sign.wrap.classList.toggle("field_row_disabled", !hasSign(f));
-		rows.mant.wrap.classList.toggle("field_row_disabled", f.m === 0);
+		zoomKey = null;
 		reload();
 	}
 
@@ -57,68 +184,37 @@
 		var c = $("bits_container"); c.innerHTML = ""; bitLabels = [];
 		var byte;
 		for (var i = fmt.bits - 1; i >= 0; i--) {
-			if ((i + 1) % 8 === 0 || i === fmt.bits - 1) { byte = document.createElement("div"); byte.className = "byte"; c.appendChild(byte); }
-			var span = document.createElement("span"); span.className = "bit_container"; span.title = "Bit " + i;
-			var lab = document.createElement("div"); lab.className = "bit_label monospace";
-			var mark = document.createElement("div");
-			mark.className = "bit_marker " + (hasSign(fmt) && i === fmt.bits - 1 ? "float_sign" : i >= fmt.m ? "float_exponent" : "float_mantissa");
-			span.appendChild(lab); span.appendChild(mark); byte.appendChild(span);
+			if ((i + 1) % 8 === 0 || i === fmt.bits - 1) byte = mk("div", "byte", c);
+			var span = mk("span", "bit_container", byte); span.title = "Bit " + i;
+			var lab = mk("div", "bit_label monospace", span);
+			mk("div", "bit_marker " + (hasSign(fmt) && i === fmt.bits - 1 ? "float_sign" : i >= fmt.m ? "float_exponent" : "float_mantissa"), span);
 			span.onmousedown = function (e) { e.preventDefault(); };
 			span.onclick = (function (bit) { return function () { var b = pow2(bit); code += Math.floor(code / b) % 2 ? -b : b; reload(); }; })(i);
 			bitLabels.push(lab);
 		}
 	}
 
-	/* ---------- rows ---------- */
-	function buildRows() {
-		ROWS.forEach(function (r, i) {
-			var col = $("column" + (i < 3 ? 0 : 1));
-			var title = document.createElement("div"); title.className = "field_title"; title.textContent = r.title; col.appendChild(title);
-			var wrap = document.createElement("div"); col.appendChild(wrap);
-			var input = document.createElement("input"); input.className = "field monospace" + (r.cls ? " " + r.cls : ""); input.maxLength = 64; input.spellcheck = false;
-			wrap.appendChild(input);
-			var bc = document.createElement("div"); bc.className = "button_container"; wrap.appendChild(bc);
-			var btns = {};
-			["plus", "minus"].forEach(function (k) {
-				var b = document.createElement("div"); b.className = "field_button non_selectable button_" + k;
-				var s = document.createElement("div"); s.className = "sign_" + k; b.appendChild(s); bc.appendChild(b);
-				b.onmousedown = function (e) { e.preventDefault(); };
-				b.onclick = function () { setRow(r.id, rowValue(r.id) + (k === "plus" ? 1 : -1)); };
-				btns[k] = b;
-			});
-			input.oninput = function () { input.classList.toggle("invalid_number", parseRow(r.id, input.value) === undefined); };
-			input.onkeydown = function (e) {
-				var v = parseRow(r.id, input.value);
-				if (e.key === "Enter" && v !== undefined) setRow(r.id, v);
-				else if (e.key === "ArrowUp" && v !== undefined) { e.preventDefault(); setRow(r.id, v + 1); }
-				else if (e.key === "ArrowDown" && v !== undefined) { e.preventDefault(); setRow(r.id, v - 1); }
-			};
-			input.onblur = function () { var v = parseRow(r.id, input.value); if (v !== undefined) setRow(r.id, v); else reload(); };
-			rows[r.id] = { input: input, btns: btns, wrap: wrap };
-		});
-	}
+	/* ---------- raw code fields (hex / dec) ---------- */
+	var CODE_FIELDS = [
+		{ input: $("hex_field"), parse: function (s) { return /^(0x)?[0-9a-f]+$/.test(s) ? parseInt(s.replace(/^0x/, ""), 16) : NaN; }, show: function (c) { return "0x" + c.toString(16).padStart(Math.ceil(fmt.bits / 4), "0"); } },
+		{ input: $("dec_field"), parse: function (s) { return /^\d+$/.test(s) ? parseInt(s, 10) : NaN; }, show: function (c) { return String(c); } },
+	];
+	function sizeField(input) { input.style.width = Math.max(2, input.value.length) + 0.6 + "ch"; }
+	CODE_FIELDS.forEach(function (cf) {
+		var input = cf.input;
+		var parse = function () { var v = cf.parse(input.value.trim().toLowerCase()); return isNaN(v) || v > maxCode(fmt) ? undefined : v; };
+		var set = function (v) { code = Math.max(0, Math.min(maxCode(fmt), v)); reload(); };
+		input.oninput = function () { sizeField(input); input.classList.toggle("invalid_number", parse() === undefined); };
+		input.onkeydown = function (e) {
+			var v = parse();
+			if (e.key === "Enter" && v !== undefined) { set(v); input.select(); }
+			else if (e.key === "ArrowUp" && v !== undefined) { e.preventDefault(); set(v + 1); }
+			else if (e.key === "ArrowDown" && v !== undefined) { e.preventDefault(); set(v - 1); }
+		};
+		input.onblur = function () { var v = parse(); if (v !== undefined) set(v); else reload(); };
+	});
 
-	function rowMax(id) {
-		return { sign: hasSign(fmt) ? 1 : 0, exp: maxExp(fmt), mant: maxMant(fmt), hex: maxCode(fmt), dec: maxCode(fmt) }[id];
-	}
-	function rowValue(id) {
-		var f = fields(fmt, code);
-		return { sign: f.sign, exp: f.exp, mant: f.mant, hex: code, dec: code }[id];
-	}
-	function parseRow(id, s) {
-		s = s.trim().toLowerCase();
-		var v = id === "hex" ? (/^(0x)?[0-9a-f]+$/.test(s) ? parseInt(s, 16) : NaN) : (/^\d+$/.test(s) ? parseInt(s, 10) : NaN);
-		return isNaN(v) || v > rowMax(id) ? undefined : v;
-	}
-	function setRow(id, v) {
-		v = Math.max(0, Math.min(rowMax(id), v));
-		var f = fields(fmt, code);
-		if (id === "hex" || id === "dec") code = v;
-		else { f[id] = v; code = join(fmt, f.sign, f.exp, f.mant); }
-		reload();
-	}
-
-	/* ---------- number line ---------- */
+	/* ---------- number line (log₂ axis) ---------- */
 	var lineGeom;
 	function moveMarker() {
 		if (!lineGeom) return;
@@ -129,8 +225,9 @@
 		g.marker.setAttribute("cy", sel.cls === "nan" ? g.yNaN : g.y);
 	}
 	function buildLine() {
-		var svg = $("number_line"), NS = "http://www.w3.org/2000/svg";
+		var svg = $("number_line");
 		svg.innerHTML = "";
+		var el = function (tag, attrs, text) { return svgEl(svg, tag, attrs, text); };
 		var hasInf = fmt.kind === "ieee", hasZero = fmt.kind !== "e8m0", hasNaN = fmt.kind !== "mx";
 		var W = svg.clientWidth || 800, H = 110, y = 50, x0 = 34, x1 = W - 12 - (hasInf ? 26 : 0) - (hasNaN ? 30 : 0);
 		var xInf = x1 + 22, xNaN = W - 16, yNaN = y - 18;   /* NaN sits off the axis, top-right */
@@ -142,38 +239,38 @@
 		var ranges = fmt.kind === "e8m0" ? [[0, maxFin, 90]] : [[1, subEnd, 24], [subEnd + 1, maxFin, 90]];
 		var pers = ranges.map(function (r) { return fmt.bits > 8 ? Math.max(1, Math.ceil((r[1] - r[0] + 1) / r[2])) : 1; });
 		var X = function (v) { return x0 + (Math.log2(v) - lo) / (hi - lo) * (x1 - x0); };
-		var el = function (tag, attrs, text) { var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; svg.appendChild(e); return e; };
 		var every = Math.ceil((hi - lo) / 16);
 		for (var k = lo; k <= hi; k++) {
 			var x = X(pow2(k));
 			el("line", { x1: x, y1: y - 22, x2: x, y2: y + 22, class: "binade" });
-			if ((k - lo) % every === 0) el("text", { x: x, y: y + 40, class: "tick" }, "2^" + k);
+			if ((k - lo) % every === 0) texAt(svg, "2^{" + k + "}", x, y + 42, "middle", 13);
 		}
 		el("line", { x1: x0, y1: y, x2: x1, y2: y, class: "axis" });
 		/* landmarks: subnormal/normal boundary 2^(1-bias) and 1 = 2^0 */
 		var kMin = 1 - fmt.bias;
 		if (fmt.kind !== "e8m0" && kMin > lo) {
-			el("line", { x1: X(pow2(kMin)), y1: y - 30, x2: X(pow2(kMin)), y2: y + 22, class: "landmark" });
 			var lx = X(pow2(kMin)), nearLeft = lx < x0 + 110;   /* keep clear of the axis name at the top-left */
-			el("text", { x: lx + (nearLeft ? 5 : 0), y: y - 34, class: "tick landmark_label", style: nearLeft ? "text-anchor:start" : "" }, "min normal 2^" + kMin);
+			el("line", { x1: lx, y1: y - 30, x2: lx, y2: y + 22, class: "landmark" });
+			texAt(svg, "\\text{min normal } 2^{" + kMin + "}", lx + (nearLeft ? 5 : 0), y - 35, nearLeft ? "start" : "middle", 13, C_EXP);
 		}
-		if (lo < 0 && hi > 0 && kMin !== 0) {   /* fp4/fp6 e2m3: min normal is 1, one label is enough */
+		var minLabelEnd = fmt.kind !== "e8m0" && kMin > lo ? X(pow2(kMin)) + (X(pow2(kMin)) < x0 + 110 ? 120 : 60) : -Infinity;
+		if (lo < 0 && hi > 0 && kMin !== 0 && X(1) - 10 > minLabelEnd) {   /* fp4/fp6 e2m3: min normal is 1, one label is enough; skip "1" when it would collide */
 			el("line", { x1: X(1), y1: y - 30, x2: X(1), y2: y + 22, class: "landmark one" });
-			el("text", { x: X(1), y: y - 34, class: "tick" }, "1");
+			texAt(svg, "1", X(1), y - 35, "middle", 13);
 		}
-		var binned = false, curSign = function () { return decode(fmt, code).sign * sb; };
+		var curSign = function () { return decode(fmt, code).sign * sb; };
 		if (hasZero) {
 			el("line", { x1: 8, y1: y, x2: x0 - 2, y2: y, class: "zero_gap" });
-			el("text", { x: 8, y: y + 40, class: "tick" }, "0");
+			texAt(svg, "0", 8, y + 42, "middle", 13);
 			el("circle", { cx: 8, cy: y, r: 3.5, class: "dot cls_zero" }).onclick = function () { code = curSign(); reload(); };
 		}
 		if (hasInf) {
 			el("line", { x1: x1 + 2, y1: y, x2: xInf, y2: y, class: "zero_gap" });
-			el("text", { x: xInf, y: y + 40, class: "tick" }, "∞");
+			texAt(svg, "\\infty", xInf, y + 42, "middle", 13);
 			el("circle", { cx: xInf, cy: y, r: 3.5, class: "dot cls_inf" }).onclick = function () { code = join(fmt, 0, maxExp(fmt), 0) + curSign(); reload(); };
 		}
 		if (hasNaN) {
-			el("text", { x: xNaN, y: yNaN - 10, class: "tick" }, "NaN");
+			texAt(svg, "\\text{NaN}", xNaN, yNaN - 9, "middle", 13);
 			el("circle", { cx: xNaN, cy: yNaN, r: 3.5, class: "dot cls_nan" }).onclick = function () {
 				code = fmt.kind === "fnuz" || fmt.kind === "e8m0" ? nanCode(fmt) : nanCode(fmt) + curSign(); reload();
 			};
@@ -184,11 +281,11 @@
 			for (var c = r[0]; c <= r[1]; c += per) (function (c) {
 				var d = decode(fmt, c);
 				var dot = el("circle", { cx: X(d.value), cy: y, r: per > 1 ? 2.5 : 3.5, class: "dot cls_" + d.cls });
-				var t = document.createElementNS(NS, "title"); t.textContent = "0x" + c.toString(16) + " = " + d.value + (per > 1 ? "  (+" + (per - 1) + " more)" : ""); dot.appendChild(t);
+				svgEl(dot, "title", {}, "0x" + c.toString(16) + " = " + d.value + (per > 1 ? "  (+" + (per - 1) + " more)" : ""));
 				dot.onclick = function () { code = c + curSign(); reload(); };
 			})(c);
 		});
-		binned = pers.some(function (p) { return p > 1; });
+		var binned = pers.some(function (p) { return p > 1; });
 		/* persistent selected marker: moved (with a CSS transition) by moveMarker() on every reload */
 		var marker = el("circle", { cx: x0, cy: y, r: 5, class: "dot sel", "pointer-events": "none" });
 		var win = el("rect", { x: x0, y: y - 4, width: 0, height: 8, rx: 4, class: "band" });   /* zoom window band on the axis, sized by buildZoom */
@@ -199,10 +296,10 @@
 		moveMarker();
 		void marker.getBoundingClientRect();
 		marker.style.transition = "";
-		$("line_note").textContent = binned ? " — binned: each subnormal dot = " + pers[0].toLocaleString() + " values, each normal dot = " + pers[1].toLocaleString() + " values (drawn at the first one)" : "";
+		$("line_note").textContent = binned ? "The log₂ axis is binned: each subnormal dot stands for " + pers[0].toLocaleString() + " values, each normal dot for " + pers[1].toLocaleString() + " values (drawn at the first one)." : "";
 	}
 
-	/* ---------- linear zoom (B): three binades around |value|, real (or evenly binned) points ---------- */
+	/* ---------- linear zoom: three binades around |value|, real (or evenly binned) points ---------- */
 	var zoomGeom, zoomKey;
 	function binadeStart(k) {   /* code of the positive value exactly 2^k */
 		if (fmt.kind === "e8m0") return k + fmt.bias;
@@ -218,49 +315,50 @@
 		return { k: k, lo: lo, hi: hi, kMin: kMin, maxFin: maxFin, kTop: kTop };
 	}
 	function buildZoom() {
-		var svg = $("zoom"), NS = "http://www.w3.org/2000/svg", w = zoomWindow();
+		var svg = $("zoom"), w = zoomWindow();
 		zoomKey = fmt.name + ":" + w.k;
 		svg.innerHTML = "";
+		var el = function (tag, attrs, text) { return svgEl(svg, tag, attrs, text); };
 		var W = svg.clientWidth || 800, H = 100, y = 44, x0 = 40, x1 = W - 40;
 		svg.setAttribute("viewBox", "0 0 " + W + " " + H);
-		var el = function (tag, attrs, text) { var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; svg.appendChild(e); return e; };
 		var X = function (v) { return x0 + (v - w.lo) / (w.hi - w.lo) * (x1 - x0); };
 		var sb = hasSign(fmt) ? signBit(fmt) : 0, curSign = function () { return decode(fmt, code).sign * sb; };
 		/* binade boundaries inside the window */
 		for (var k = w.k - 1; k <= w.k + 2; k++) {
-			var b = pow2(k);
+			var b = pow2(k), isMin = fmt.kind !== "e8m0" && k === w.kMin;
 			if (b < w.lo || b > w.hi) continue;
-			el("line", { x1: X(b), y1: y - 22, x2: X(b), y2: y + 22, class: fmt.kind !== "e8m0" && k === w.kMin ? "landmark" : "binade" });
-			el("text", { x: X(b), y: y + 36, class: "tick" + (fmt.kind !== "e8m0" && k === w.kMin ? " landmark_label" : "") }, "2^" + k + (fmt.kind !== "e8m0" && k === w.kMin ? " min normal" : ""));
+			el("line", { x1: X(b), y1: y - 22, x2: X(b), y2: y + 22, class: isMin ? "landmark" : "binade" });
+			texAt(svg, "2^{" + k + "}", X(b), y + 40, "middle", 13, isMin ? C_EXP : null);
+			if (isMin) texAt(svg, "\\text{min normal}", X(b) + 5, y - 26, "start", 13, C_EXP);
 		}
-		if (w.lo === 0) el("text", { x: x0, y: y + 36, class: "tick" }, "0");
-		if (w.hi < pow2(w.k + 2)) el("text", { x: x1, y: y + 36, class: "tick" }, "max");
+		if (w.lo === 0) texAt(svg, "0", x0, y + 40, "middle", 13);
+		if (w.hi < pow2(w.k + 2)) texAt(svg, "\\text{max}", x1, y + 40, "middle", 13);
 		el("line", { x1: x0, y1: y, x2: x1, y2: y, class: "axis" });
 		/* points: contiguous code range, evenly binned by code when too many */
-		var c0 = w.lo === 0 ? (fmt.kind === "e8m0" ? 0 : 0) : binadeStart(w.k - 1);
+		var c0 = w.lo === 0 ? 0 : binadeStart(w.k - 1);
 		var c1 = w.hi < pow2(w.k + 2) ? w.maxFin : binadeStart(w.k + 2) - 1;
 		var n = c1 - c0 + 1, per = Math.max(1, Math.ceil(n / 120));
 		for (var c = c0; c <= c1; c += per) (function (c) {
 			var d = decode(fmt, c);
 			var dot = el("circle", { cx: X(d.value), cy: y, r: per > 1 ? 2.5 : 3.5, class: "dot cls_" + d.cls });
-			var t = document.createElementNS(NS, "title"); t.textContent = "0x" + c.toString(16) + " = " + d.value + (per > 1 ? "  (+" + (per - 1) + " more)" : ""); dot.appendChild(t);
+			svgEl(dot, "title", {}, "0x" + c.toString(16) + " = " + d.value + (per > 1 ? "  (+" + (per - 1) + " more)" : ""));
 			dot.onclick = function () { code = c + curSign(); reload(); };
 		})(c);
 		var marker = el("circle", { cx: x0, cy: y, r: 5, class: "dot sel", "pointer-events": "none" });
 		el("text", { x: 2, y: 14, class: "axis_name" }, "linear axis");
-		zoomGeom = { X: X, marker: marker, lo: w.lo, hi: w.hi };
+		zoomGeom = { X: X, marker: marker, lo: w.lo, hi: w.hi, y: y };
 		/* magnifier links: window edges on the log axis → both ends of the linear axis, drawn on the overlay behind both charts */
 		var lg = lineGeom, bx0 = w.lo === 0 ? 8 : lg.X(w.lo), bx1 = lg.X(w.hi);
 		var ov = $("overlay"), wrap = $("line_wrap"), OH = wrap.clientHeight;
 		var zt = svg.getBoundingClientRect().top - wrap.getBoundingClientRect().top;   /* SVG has no offsetTop */
 		ov.innerHTML = "";
 		ov.setAttribute("viewBox", "0 0 " + W + " " + OH);
-		var oel = function (tag, attrs) { var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); ov.appendChild(e); return e; };
-		oel("line", { x1: bx0, y1: lg.y + 4, x2: x0, y2: zt + y - 4, class: "link" });
-		oel("line", { x1: bx1, y1: lg.y + 4, x2: x1, y2: zt + y - 4, class: "link" });
+		svgEl(ov, "line", { x1: bx0, y1: lg.y + 4, x2: x0, y2: zt + y - 4, class: "link" });
+		svgEl(ov, "line", { x1: bx1, y1: lg.y + 4, x2: x1, y2: zt + y - 4, class: "link" });
 		var band = el("rect", { x: x0, y: y - 4, width: x1 - x0, height: 8, rx: 4, class: "band" });
 		svg.insertBefore(band, svg.firstChild);
-		el("text", { x: W - 2, y: 14, class: "note" }, "|value| ∈ [" + (w.lo === 0 ? "0" : "2^" + (w.k - 1)) + ", " + (w.hi < pow2(w.k + 2) ? "max" : "2^" + (w.k + 2)) + ")" + (per > 1 ? " · each dot = " + per.toLocaleString() + " values" : ""));
+		var range = "|x| \\in [" + (w.lo === 0 ? "0" : "2^{" + (w.k - 1) + "}") + ",\\ " + (w.hi < pow2(w.k + 2) ? "\\text{max}" : "2^{" + (w.k + 2) + "}") + (w.hi < pow2(w.k + 2) ? "]" : ")");
+		texAt(svg, range + (per > 1 ? "\\quad\\text{each dot} = " + per.toLocaleString().replace(/,/g, "{,}") + "\\text{ values}" : ""), W - 2, 16, "end", 12);
 		lg.win.setAttribute("x", bx0); lg.win.setAttribute("width", Math.max(0, bx1 - bx0));
 		marker.style.transition = "none";
 		moveZoomMarker();
@@ -290,27 +388,204 @@
 	function buildGrid() {
 		var g = $("grid"); g.innerHTML = "";
 		var n = 1 << fmt.bits, cols = 16;
-		var lab = function (t) { var e = document.createElement("div"); e.className = "collab"; e.textContent = t; g.appendChild(e); };
+		var lab = function (t) { mk("div", "collab", g).textContent = t; };
 		lab("");
 		for (var j = 0; j < cols; j++) lab("_" + j.toString(16));
 		for (var c = 0; c < n; c++) {
-			if (c % cols === 0) { var r = document.createElement("div"); r.className = "rowlab"; r.textContent = (c >> 4).toString(16) + "_"; g.appendChild(r); }
+			if (c % cols === 0) mk("div", "rowlab", g).textContent = (c >> 4).toString(16) + "_";
 			var d = decode(fmt, c);
-			var cell = document.createElement("div"); cell.className = "cell cls_" + d.cls; cell.dataset.code = c;
+			var cell = mk("div", "cell cls_" + d.cls, g); cell.dataset.code = c;
 			cell.innerHTML = "<div class='hex'>0x" + c.toString(16).padStart(2, "0") + "</div><div class='val'>" + shortVal(d) + "</div>";
 			cell.title = "0x" + c.toString(16) + " = " + d.value;
 			cell.onclick = (function (cc) { return function () { code = cc; reload(); }; })(c);
-			g.appendChild(cell);
 		}
+	}
+
+	/* ---------- evaluation ---------- */
+	function pad(n, w) { return n.toString(2).padStart(w, "0"); }
+	function mantFrac(d) { return d.value === 0 && fmt.m ? "0" : exactDecimal(d.sig % pow2(fmt.m), -fmt.m).replace(/^0\.?/, "") || "0"; }
+	function col(c, t) { return "\\mmlToken{mn}[mathcolor=\"" + c + "\"]{" + t + "}"; }
+	/* Evaluation as a grid: one column per field, base 2 above base 10, so each factor sits over its decoded value. */
+	function renderEval(d) {
+		var special = d.cls === "nan" || d.cls === "inf", g = $("eval");
+		var cols, rows;
+		if (fmt.kind === "e8m0") {
+			cols = [["exponent", C_EXP]];
+			rows = [
+				["base 2",  ["2^{" + col(C_EXP, pad(d.exp, fmt.e)) + "_2 - " + pad(fmt.bias, fmt.e) + "_2}"]],
+				["base 10", ["2^{" + col(C_EXP, d.exp) + " - " + fmt.bias + "}"]],
+			];
+		} else {
+			var normal = d.cls === "normal" || (special && d.exp > 0), lead = normal ? "1" : "0";
+			var frac = mantFrac(d), m10 = frac === "0" ? lead : lead + "." + frac;
+			cols = [["sign", C_SIGN], ["exponent", C_EXP], ["mantissa", C_MANT]];
+			rows = [
+				["base 2", [
+					"(-1)^{" + col(C_SIGN, d.sign) + "}",
+					"2^{" + (normal ? col(C_EXP, pad(d.exp, fmt.e)) + "_2" : "1") + " - " + pad(fmt.bias, fmt.e) + "_2}",
+					lead + "." + col(C_MANT, pad(d.mant, fmt.m)) + "_2"]],
+				["base 10", [
+					d.sign ? "-1" : "+1",
+					"2^{" + (normal ? col(C_EXP, d.exp) : "1") + " - " + fmt.bias + "}",
+					col(C_MANT, m10)]],
+			];
+		}
+		g.innerHTML = "";
+		g.style.gridTemplateColumns = "auto" + cols.map(function (c, i) { return (i ? " auto" : "") + " auto"; }).join("");
+		var cell = function (cls) { return mk("div", cls, g); };
+		cell("eg_lab");
+		cols.forEach(function (c, i) {
+			if (i) cell("eg_op");
+			var h = cell("eg_head"); h.textContent = c[0]; h.style.color = c[1];
+		});
+		rows.forEach(function (r) {
+			cell("eg_lab").textContent = r[0];
+			r[1].forEach(function (t, i) {
+				if (i) texInto(cell("eg_op eg_math"), "\\times");
+				texInto(cell("eg_math"), t);
+			});
+		});
+		g.classList.toggle("eg_special", special);
+	}
+
+	/* ---------- neighbours, gaps and round-trip interval ---------- */
+	/* Exact signed values as {n: BigInt, p}: value = n × 2^p. */
+	function raw(d) { var n = BigInt(d.sig); return { n: d.sign ? -n : n, p: d.pow }; }
+	function rAlign(a, b) { var p = Math.min(a.p, b.p); return { A: a.n << BigInt(a.p - p), B: b.n << BigInt(b.p - p), p: p }; }
+	function rMid(a, b) { var r = rAlign(a, b); return { n: r.A + r.B, p: r.p - 1 }; }
+	function rSub(a, b) { var r = rAlign(a, b); return { n: r.A - r.B, p: r.p }; }
+	function rAbs(x) { return { n: x.n < 0n ? -x.n : x.n, p: x.p }; }
+	function rNum(x) { return Number(x.n) * pow2(x.p); }
+	function rFmt(x) {
+		if (x.n === 0n) return { dec: "0", pow2: "0" };
+		var neg = x.n < 0n, o = bigForm(neg ? -x.n : x.n, x.p);
+		o.pow2 = o.pow2.replace(/^(\d+)×2\^0$/, "$1");
+		if (neg) { o.dec = "−" + o.dec; o.pow2 = "−" + o.pow2; }
+		return o;
+	}
+	function tP(x) { return tx(rFmt(x).pow2); }   /* exact value as TeX, power-of-two form */
+	function tD(x) { return tx(rFmt(x).dec); }    /* exact value as TeX, decimal form */
+
+	/* Neighbours by value: next = toward +∞, prev = toward −∞ (codes carry the sign bit). */
+	function neighbours(d) {
+		var sb = hasSign(fmt) ? signBit(fmt) : 0, mag = sb ? code % sb : code;
+		function fin(c) { if (c === null || c > maxCode(fmt)) return null; var x = decode(fmt, c); return x.cls === "nan" || x.cls === "inf" ? null : x; }
+		var up, dn;
+		if (!d.sign) { up = fin(mag + 1); dn = fin(mag > 0 ? mag - 1 : sb ? sb + 1 : null); }
+		else { up = fin(mag > 1 ? sb + mag - 1 : mag === 1 ? 0 : 1); dn = fin(sb + mag + 1); }
+		return { up: up, dn: dn, mag: mag };
+	}
+
+	/* Inputs that round to this code: the midpoints to both neighbours.
+	   - A missing neighbour past max is the virtual "one past max" code (the overflow threshold); mx saturates instead ⇒ unbounded.
+	   - Round half to even: a tie goes to the even mantissa ⇒ even sig gives closed ends.
+	   - Signed zero: +0 only takes inputs ≥ 0 and −0 only inputs ≤ −0 (fnuz has a single zero, which takes both sides). */
+	var curIv = null;
+	function roundInterval(d, nb) {
+		var mx = fmt.kind === "mx";
+		var virt = function (sign) { var m = rawMag(fmt, nb.mag + 1); return { sign: sign, sig: m.sig, pow: m.pow, virtual: true }; };
+		var nUp = nb.up || (mx ? null : virt(0)), nDn = nb.dn || (mx ? null : virt(1));
+		var v = raw(d), even = d.sig % 2 === 0;
+		var iv = {
+			d: d, v: v, nUp: nUp, nDn: nDn, even: even,
+			lo: nDn ? rMid(raw(nDn), v) : null, hi: nUp ? rMid(v, raw(nUp)) : null,   /* null = unbounded */
+			gapDn: nDn ? rSub(v, raw(nDn)) : null, gapUp: nUp ? rSub(raw(nUp), v) : null,
+			closedLo: even, closedHi: even, zeroSide: null,
+		};
+		if (d.cls === "zero" && fmt.kind !== "fnuz") {
+			iv.zeroSide = d.sign ? "hi" : "lo";
+			if (d.sign) { iv.hi = { n: 0n, p: 0 }; iv.closedHi = true; } else { iv.lo = { n: 0n, p: 0 }; iv.closedLo = true; }
+		}
+		return iv;
+	}
+	function brk(iv) { return [iv.lo && iv.closedLo ? "[" : "(", iv.hi && iv.closedHi ? "]" : ")"]; }
+	/* C: local axis with previous / this / next */
+	function bracketPath(svg, x, y, h, side, closed) {
+		var dir = side === "l" ? 1 : -1;
+		var d = closed
+			? "M" + (x + dir * 5) + "," + (y - h) + " L" + x + "," + (y - h) + " L" + x + "," + (y + h) + " L" + (x + dir * 5) + "," + (y + h)
+			: "M" + (x + dir * 5) + "," + (y - h) + " Q" + (x - dir * 3) + "," + y + " " + (x + dir * 5) + "," + (y + h);
+		svgEl(svg, "path", { d: d, class: "iv_bracket" });
+	}
+	function renderLocal(body, iv) {
+		if (!body.firstChild) body.innerHTML = "<svg class='iv_local non_selectable'></svg>";
+		var svg = body.firstChild; svg.innerHTML = "";
+		var el = function (tag, attrs, text) { return svgEl(svg, tag, attrs, text); };
+		var W = svg.clientWidth || 800, H = 176, y = 74, x0 = 80, x1 = W - 80;
+		svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+		var v = rNum(iv.v), dn = iv.nDn ? rNum(raw(iv.nDn)) : null, up = iv.nUp ? rNum(raw(iv.nUp)) : null;
+		var L = dn !== null ? dn : v - (up - v), R = up !== null ? up : v + (v - dn);
+		var X = function (t) { return x0 + (t - L) / (R - L) * (x1 - x0); };
+		el("line", { x1: x0 - 50, y1: y, x2: x1 + 50, y2: y, class: "axis" });
+		var lo = iv.lo ? rNum(iv.lo) : null, hi = iv.hi ? rNum(iv.hi) : null;
+		var bx0 = lo === null ? x0 - 50 : X(lo), bx1 = hi === null ? x1 + 50 : X(hi);
+		el("rect", { x: bx0, y: y - 8, width: bx1 - bx0, height: 16, class: "iv_band" });
+		if (lo !== null) bracketPath(svg, bx0, y, 11, "l", iv.closedLo);
+		else texAt(svg, "\\leftarrow\\ \\text{saturates to }{-\\text{max}}", bx0 + 4, y - 16, "start", 12);
+		if (hi !== null) bracketPath(svg, bx1, y, 11, "r", iv.closedHi);
+		else texAt(svg, "\\text{saturates to max}\\ \\rightarrow", bx1 - 4, y - 16, "end", 12);
+		/* interval ends below the axis */
+		[[iv.lo, lo], [iv.hi, hi]].forEach(function (p) {
+			if (!p[0]) return;
+			texAt(svg, tD(p[0]), X(p[1]), y + 30, "middle", 13, "#555");
+			el("text", { x: X(p[1]), y: y + 44, class: "iv_cap" }, p[0].n === 0n ? "sign boundary" : "midpoint");
+		});
+		/* points, with role and value above */
+		var pt = function (t, d, role, sel) {
+			el("circle", { cx: X(t), cy: y, r: sel ? 5 : 3.5, class: "dot " + (d.virtual ? "iv_virtual" : "cls_" + d.cls) + (sel ? " sel" : "") });
+			el("text", { x: X(t), y: y - 38, class: "iv_cap" }, role);
+			texAt(svg, d.virtual ? (d.sign ? "-" : "") + tx(bigForm(BigInt(d.sig), d.pow).pow2) : tD(raw(d)), X(t), y - 18, "middle", 13, sel ? "#191919" : "#555");
+		};
+		if (iv.nDn) pt(dn, iv.nDn, iv.nDn.virtual ? "overflow threshold" : "previous");
+		if (iv.nUp) pt(up, iv.nUp, iv.nUp.virtual ? "overflow threshold" : "next");
+		pt(v, iv.d, "this value", true);
+		/* gaps to the neighbours */
+		var gap = function (t, g, name) {
+			var a = Math.min(X(t), X(v)), c = Math.max(X(t), X(v)), yy = y + 70;
+			el("line", { x1: a, y1: yy, x2: c, y2: yy, class: "iv_dim" });
+			el("line", { x1: a, y1: yy - 4, x2: a, y2: yy + 4, class: "iv_dim" });
+			el("line", { x1: c, y1: yy - 4, x2: c, y2: yy + 4, class: "iv_dim" });
+			texAt(svg, "\\Delta_{\\text{" + name + "}} = " + tP(g), (a + c) / 2, yy + 22, "middle", 13, "#555");
+		};
+		if (iv.nDn) gap(dn, iv.gapDn, "prev");
+		if (iv.nUp) gap(up, iv.gapUp, "next");
+	}
+
+	/* One short line under the chart: why the ends are open or closed, and the special cases. */
+	function ivReasons(iv) {
+		var d = iv.d, notes = [], mbits = pad(d.mant, fmt.m);
+		notes.push(iv.even
+			? "Ends included: the mantissa " + mbits + " is even, and a tie rounds to the even neighbour."
+			: "Ends excluded: the mantissa " + mbits + " is odd, so a tie rounds to the neighbour.");
+		if (iv.gapDn && iv.gapUp && rFmt(iv.gapDn).dec !== rFmt(iv.gapUp).dec && d.cls !== "zero")
+			notes.push("At a binade boundary the gap below is half the gap above.");
+		if (iv.zeroSide) notes.push((d.sign ? "Positive inputs round to +0" : "Negative inputs round to −0") + ", so this side ends at 0.");
+		if ((iv.nUp && iv.nUp.virtual) || (iv.nDn && iv.nDn.virtual))
+			notes.push("Past the overflow threshold's midpoint, inputs become " + (fmt.kind === "ieee" ? "infinity" : "NaN") + ".");
+		if (!iv.lo || !iv.hi) notes.push("mx conversion saturates, so every larger input becomes max.");
+		return notes.join(" ");
+	}
+	function renderNeighbours(d) {
+		var special = d.cls === "nan" || d.cls === "inf";
+		var showIv = !special && fmt.kind !== "e8m0";
+		$("iv_chart").classList.toggle("hidden", !showIv);
+		$("iv_reasons").classList.toggle("hidden", !showIv);
+		$("interval_na").classList.toggle("hidden", showIv);
+		var nb = neighbours(d);
+		curIv = showIv ? roundInterval(d, nb) : null;
+		if (curIv) { renderLocal($("iv_chart"), curIv); $("iv_reasons").textContent = ivReasons(curIv); return; }
+		if (special) { $("interval_na").textContent = "Not defined for " + (d.cls === "nan" ? "NaN" : "infinity") + "."; return; }
+		/* e8m0: neighbours exist, but rounding works on the fraction of log₂, not on midpoints */
+		var g = function (n) { return n ? tP(rAbs(rSub(raw(n), raw(d)))) : "\\text{none}"; };
+		rich($("interval_na"), "e8m0 rounds on the fraction of $\\log_2 x$, not at midpoints between neighbours, so no interval is shown. " +
+			"Gaps: $\\Delta_{\\text{prev}} = " + g(nb.dn) + "$, $\\Delta_{\\text{next}} = " + g(nb.up) + "$.");
 	}
 
 	/* ---------- render ---------- */
 	function pop(e) { e.classList.remove("pop"); void e.offsetWidth; e.classList.add("pop"); }   /* restart the CSS animation */
-	function pad(n, w) { return n.toString(2).padStart(w, "0"); }
-	function mantFrac(d) { return d.value === 0 && fmt.m ? "0" : exactDecimal(d.sig % pow2(fmt.m), -fmt.m).replace(/^0\.?/, "") || "0"; }
 
 	function reload() {
-		var d = decode(fmt, code), special = d.cls === "nan" || d.cls === "inf";
+		var d = decode(fmt, code);
 		var vs = valueString(fmt, code);
 		if (mainField.value !== vs) { mainField.value = vs; pop(mainField); }
 		mainField.classList.remove("invalid_number");
@@ -320,65 +595,21 @@
 			var b = String(Math.floor(code / pow2(fmt.bits - 1 - i)) % 2);
 			if (bitLabels[i].textContent !== b) { bitLabels[i].textContent = b; pop(bitLabels[i]); }
 		}
-		$("cls_badge").textContent = { zero: "zero", sub: "subnormal", normal: "normal", inf: "infinity", nan: "NaN" }[d.cls];
-
-		ROWS.forEach(function (r) {
-			var v = rowValue(r.id), row = rows[r.id];
-			row.input.value = r.id === "hex" ? "0x" + v.toString(16) : String(v);
-			row.input.classList.remove("invalid_number");
-			row.btns.plus.classList.toggle("inactive_buton", v >= rowMax(r.id));
-			row.btns.minus.classList.toggle("inactive_buton", v <= 0);
+		CODE_FIELDS.forEach(function (cf) {
+			if (document.activeElement !== cf.input || cf.parse(cf.input.value.trim().toLowerCase()) !== code) cf.input.value = cf.show(code);
+			cf.input.classList.remove("invalid_number");
+			sizeField(cf.input);
 		});
+		$("cls_badge").textContent = { zero: "zero", sub: "subnormal", normal: "normal", inf: "infinity", nan: "NaN" }[d.cls];
+		$("cls_badge").className = "cls_badge cls_" + d.cls;
 
-		var implicit = d.cls === "normal" ? 1 : 0;
-		var unbiased = fmt.kind === "e8m0" ? d.pow : (d.cls === "normal" ? d.exp - fmt.bias : 1 - fmt.bias);
-		var e2 = fmt.kind === "e8m0"
-			? "10<sub>2</sub><sup>(<span class='float_exponent'>" + pad(d.exp, fmt.e) + "</span><sub>2</sub> &minus; " + pad(fmt.bias, fmt.e) + "<sub>2</sub>)</sup>"
-			: "(&minus;1<sub>2</sub>)<sup><span class='float_sign'>" + d.sign + "</span><sub>2</sub></sup><span class='times'>&times;</span>" +
-			  "10<sub>2</sub><sup>(<span class='float_exponent'>" + pad(d.cls === "normal" ? d.exp : 1, fmt.e) + "</span><sub>2</sub> &minus; " + pad(fmt.bias, fmt.e) + "<sub>2</sub>)</sup>" +
-			  "<span class='times'>&times;</span>" + implicit + "." + "<span class='float_mantissa'>" + pad(d.mant, fmt.m) + "</span><sub>2</sub>";
-		$("eval2").innerHTML = e2;
-		$("eval10").innerHTML = fmt.kind === "e8m0"
-			? "2<sup>" + unbiased + "</sup>"
-			: (d.sign ? "-1" : "1") + "<span class='times'>&times;</span>2<sup>" + unbiased + "</sup><span class='times'>&times;</span>" + implicit + "." + mantFrac(d);
-		$("eval2").style.opacity = $("eval10").style.opacity = special ? 0.2 : 1;
-		$("exact_10").textContent = special ? (d.cls === "nan" ? "NaN" : d.sign ? "−∞" : "∞") : (d.sign ? "−" : "") + exactDecimal(d.sig, d.pow);
-
-		/* neighbours by value: next = toward +∞, prev = toward −∞ (codes carry the sign bit) */
-		var sb = hasSign(fmt) ? signBit(fmt) : 0, mag = sb ? code % sb : code;
-		function fin(c) { if (c === null || c > maxCode(fmt)) return null; var x = decode(fmt, c); return x.cls === "nan" || x.cls === "inf" ? null : x; }
-		var up, dn;
-		if (!d.sign) { up = fin(mag + 1); dn = fin(mag > 0 ? mag - 1 : sb ? sb + 1 : null); }
-		else { up = fin(mag > 1 ? sb + mag - 1 : mag === 1 ? 0 : 1); dn = fin(sb + mag + 1); }
-		var dNext = up && !special ? exactDelta(up, d) : null, dPrev = dn && !special ? exactDelta(dn, d) : null;
-		var same = dNext !== null && dPrev !== null && dNext.dec === dPrev.dec;
-		var fmtDelta = function (x) { return x === null ? "—" : x.pow2.replace(/2\^(-?\d+)/, "2<sup>$1</sup>") + " <span class='delta_dec'>(" + x.dec + ")</span>"; };
-		$("delta_pm").classList.toggle("hidden", !same);
-		$("delta_n").classList.toggle("hidden", same);
-		$("delta_p").classList.toggle("hidden", same);
-		$("delta_pm_v").innerHTML = "±" + fmtDelta(dNext);
-		$("delta_n_v").innerHTML = fmtDelta(dNext);
-		$("delta_p_v").innerHTML = fmtDelta(dPrev);
-
-		/* inputs that round to this code: midpoints to the neighbours; a missing neighbour is the virtual "one past max" code (overflow threshold).
-		   RNE: a tie goes to the even mantissa, so even sig ⇒ closed ends. mx saturates ⇒ open to ∞. e8m0 rounds on the fraction, not midpoints ⇒ skip. */
-		var showIv = !special && fmt.kind !== "e8m0";
-		$("interval").classList.toggle("hidden", !showIv);
-		if (showIv) {
-			var virt = function (c, sign) { var m = rawMag(fmt, c); return { sign: sign, sig: m.sig, pow: m.pow }; };
-			var even = d.sig % 2 === 0, mx = fmt.kind === "mx";
-			var inf = { dec: "∞", pow2: "∞" }, ninf = { dec: "−∞", pow2: "−∞" };
-			var lo = mx && !dn ? ninf : exactMid(dn || virt(mag + 1, 1), d), hi = mx && !up ? inf : exactMid(d, up || virt(mag + 1, 0));
-			var open = even && !(mx && !dn) ? "[" : "(", close = even && !(mx && !up) ? "]" : ")";
-			var sup = function (x) { return x.replace("-", "−").replace(/2\^(-?\d+)/, "2<sup>$1</sup>"); };
-			$("interval_v").innerHTML = open + sup(lo.pow2) + ", " + sup(hi.pow2) + close +
-				" <span class='delta_dec'>" + open + sup(lo.dec) + ", " + sup(hi.dec) + close + "</span>";
-		}
+		renderEval(d);
 
 		var cells = $("grid").children;
 		for (var k = 0; k < cells.length; k++) cells[k].classList.toggle("sel", cells[k].dataset.code == code);
 		moveMarker();
 		updateZoom();
+		renderNeighbours(d);
 		history.replaceState(null, "", "#" + fmt.name + ":0x" + code.toString(16).padStart(fmt.bits / 4, "0"));
 	}
 
@@ -387,11 +618,14 @@
 	function commitMain() { var v = parseValue(mainField.value); if (v !== undefined) code = encode(fmt, v); reload(); }
 	mainField.onkeydown = function (e) { if (e.key === "Enter") commitMain(); };
 	mainField.onblur = commitMain;
-	window.addEventListener("resize", function () { buildLine(); buildZoom(); });
 
-	buildRows();
-	/* deep link: #float8_e5m2:0x7b */
-	var h = /^#(\w+)(?::0x([0-9a-f]+))?$/i.exec(location.hash), f0 = h && fmtByName(h[1]);
-	setFormat(f0 || fmtByName("float8_e4m3fn"), f0 && h[2] ? Math.min(maxCode(f0), parseInt(h[2], 16)) : undefined);
-	mainField.focus();
+	function start() {
+		document.head.appendChild(MathJax.svgStylesheet());
+		window.addEventListener("resize", function () { moveThumb(groupThumb, groupBtns[fmt.group], false); buildLine(); buildZoom(); reload(); });
+		/* deep link: #float8_e5m2:0x7b */
+		var h = /^#(\w+)(?::0x([0-9a-f]+))?$/i.exec(location.hash), f0 = h && fmtByName(h[1]);
+		setFormat(f0 || fmtByName("float8_e4m3fn"), f0 && h[2] ? Math.min(maxCode(f0), parseInt(h[2], 16)) : undefined);
+		mainField.focus();
+	}
+	MathJax.startup.promise.then(start);
 })();

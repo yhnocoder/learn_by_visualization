@@ -680,45 +680,246 @@ text-decoration:underline;
 
 /* ---------- additions for the ml_dtypes narrow-float explorer ---------- */
 
+/* ---------- format selector ---------- */
+/* Both rows: a light track; the selected item is a white thumb with a soft shadow. */
+#mode_section.seg {
+    position: relative;
+    display: flex;
+    width: fit-content;
+    margin: 22px auto 10px auto;
+    padding: 3px;
+    border-radius: 11px;
+    background: #e9e9e9;
+}
+.seg_button {
+    position: relative;
+    z-index: 1;
+    padding: 0 20px;
+    height: 30px;
+    line-height: 30px;
+    border-radius: 8px;
+    font-family: monospace;
+    font-weight: bold;
+    font-size: 15px;
+    color: #777;
+    cursor: pointer;
+    transition: color 0.15s;
+}
+.seg_button:hover { color: #333; }
+.seg_button.on { color: #191919; cursor: default; }
+.seg_thumb {
+    position: absolute;
+    left: 0;
+    top: 3px;
+    height: 30px;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Second row: one line; scrolls horizontally when it does not fit. */
 #sub_mode_section {
-    width: 100%;
-    text-align: center;
-    margin: -12px auto 8px auto;
+    position: relative;
     max-width: 900px;
+    margin: 0 auto;
+    overflow-x: auto;
+    scrollbar-width: none;
+    font-family: monospace;
+    font-weight: bold;
+    font-size: 13px;
+}
+#sub_mode_section::-webkit-scrollbar { display: none; }
+.fam_track {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: max-content;
+    margin: 0 auto;
+    padding: 2px 8px;
+    white-space: nowrap;
+}
+.fam {
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    margin: 0 3px;
+    padding: 3px;
+    border-radius: 10px;
+    background: transparent;
+    transition: background 0.15s;
+}
+.fam.open { background: #e9e9e9; }
+.fam_vars {
+    display: inline-flex;
+    overflow: hidden;
+    max-width: 0;
+    opacity: 0;
+    visibility: hidden;
+    transition: max-width 0.15s ease, opacity 0.15s ease, visibility 0s linear 0.15s;
+}
+.fam.open .fam_vars { opacity: 1; visibility: visible; transition: max-width 0.15s ease, opacity 0.15s ease, visibility 0s; }
+.fam_button {
+    flex: none;
+    padding: 0 10px;
+    height: 24px;
+    line-height: 24px;
+    border-radius: 7px;
+    color: #999;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.fam_button:hover { color: #333; }
+.fam_button.current { color: #191919; cursor: default; padding-right: 6px; }
+.fam_button.on {
+    color: #191919;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+    cursor: default;
 }
 
-#sub_mode_section .mode_button {
-    width: auto;
+.fmt_line {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    min-height: 22px;
+    margin: 10px auto 0 auto;
     padding: 0 12px;
-    font-size: 13px;
-    height: 26px;
-    line-height: 27px;
-    margin-bottom: 4px;
 }
-
-#mode_section .mode_button {
-    width: 18%;
-}
-
-.fmt_note {
-    text-align: center;
+.fmt_name { font-size: 13px; color: #aaa; }
+.fmt_note { display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+.fmt_note:empty { display: none; }
+.fmt_tag {
     font-family: Helvetica, Arial, Sans-Serif;
-    font-size: 13px;
-    color: #888;
-    width: 85%;
-    max-width: 800px;
-    margin: 0 auto 8px auto;
-    line-height: 1.5;
+    font-size: 11px;
+    line-height: 18px;
+    padding: 0 8px;
+    border-radius: 9px;
+    border: 1px solid #e2e2e2;
+    color: #999;
+}
+.fmt_tag.key {
+    border-color: transparent;
+    background: #e9e9e9;
+    color: #333;
 }
 
-.fmt_note b { color: #555; font-weight: normal; }
+/* ---------- value, bits, raw code, evaluation ---------- */
+#value_section { margin-top: 18px; }
+#bits_container { margin: 2px auto 4px auto; }
 
+/* meta row under the bits: hex | dec | class, thin dividers between */
+.code_line {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 14px;
+    margin: 2px auto 0 auto;
+}
+.code_line label { display: inline-flex; align-items: baseline; gap: 6px; cursor: text; }
+.code_lab {
+    font-family: Helvetica, Arial, Sans-Serif;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #b0b0b0;
+}
+.code_sep { width: 1px; height: 12px; background: #dcdcdc; }
+.code_field {
+    font-size: 13px;
+    font-weight: bold;
+    color: #555;
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed transparent;
+    outline: none;
+    padding: 1px 0;
+    text-align: left;
+    transition: border-color 0.15s, color 0.15s;
+}
+.code_field:hover { border-bottom-color: #ccc; color: #191919; }
+.code_field:focus { border-bottom: 1px solid #888; color: #191919; }
+.code_field.invalid_number { color: rgba(25, 25, 25, 0.3); }
 .cls_badge {
     font-family: monospace;
-    font-size: 13px;
-    color: #888;
-    margin-top: -6px;
+    font-size: 11px;
+    padding: 1px 8px;
+    border-radius: 9px;
+    color: #555;
 }
+.cls_badge.cls_normal { color: #2e8a48; }
+.cls_badge.cls_sub    { color: #3b5f9e; }
+.cls_badge.cls_zero   { color: #777; }
+.cls_badge.cls_inf    { color: #a12840; }
+.cls_badge.cls_nan    { color: #6e1a2b; }
+
+/* evaluation grid: label | sign | × | exponent | × | mantissa */
+.eval_grid {
+    display: grid;
+    justify-content: center;
+    align-items: baseline;
+    column-gap: 14px;
+    row-gap: 4px;
+    width: fit-content;
+    max-width: 92%;
+    margin: 30px auto 34px auto;
+    padding: 14px 26px 16px 26px;
+    border-top: 1px solid #e7e7e7;
+    border-bottom: 1px solid #e7e7e7;
+    overflow-x: auto;
+    font-size: 21px;
+    color: #191919;
+    transition: opacity 0.15s;
+}
+.eval_grid.eg_special { opacity: 0.25; }
+.eg_head {
+    text-align: center;
+    font-family: Helvetica, Arial, Sans-Serif;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding-bottom: 2px;
+}
+.eg_lab {
+    text-align: right;
+    font-family: Helvetica, Arial, Sans-Serif;
+    font-size: 11px;
+    color: #b0b0b0;
+    white-space: nowrap;
+    padding-right: 6px;
+}
+.eg_math { text-align: center; white-space: nowrap; }
+.eg_op { text-align: center; color: #999; }
+
+.line_note {
+    text-align: center;
+    font-family: Helvetica, Arial, Sans-Serif;
+    font-size: 12px;
+    color: #aaa;
+    margin-top: 2px;
+}
+
+/* ---------- neighbours and round-trip interval ---------- */
+.iv_intro {
+    text-align: center;
+    font-family: Helvetica, Arial, Sans-Serif;
+    font-size: 12px;
+    color: #999;
+    max-width: 640px;
+    margin: 0 auto 6px auto;
+    line-height: 1.6;
+}
+.iv_body { width: 85%; max-width: 900px; margin: 0 auto; overflow-x: auto; color: #191919; }
+.iv_local .iv_band { fill: rgba(25, 25, 25, 0.09); }
+.iv_local { display: block; width: 100%; height: 176px; }
+.iv_local .axis { stroke: #bbb; stroke-width: 1; }
+.iv_local .dot.sel { stroke: #191919; stroke-width: 2.5; }
+.iv_local .iv_virtual { fill: #F7F7F7; stroke: #999; stroke-width: 1.5; stroke-dasharray: 2 2; }
+.iv_local .iv_bracket { fill: none; stroke: #191919; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
+.iv_local .iv_cap { font-family: Helvetica, Arial, Sans-Serif; font-size: 11px; fill: #aaa; text-anchor: middle; }
+.iv_local .iv_dim { stroke: #c4c4c4; stroke-width: 1; }
 
 #line_wrap {
     position: relative;
@@ -837,4 +1038,6 @@ text-decoration:underline;
 #overlay .link { stroke: #c4c4c4; stroke-width: 1.2; }
 #number_line .band, #zoom .band { fill: rgba(0, 0, 0, 0.06); }
 #number_line .tick, #zoom .tick { paint-order: stroke; stroke: #F7F7F7; stroke-width: 4px; stroke-linejoin: round; }
+#zoom .hidden_marker { display: none; }
+#zoom .dot.sel { stroke: #191919; stroke-width: 2.5; transition: cx 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
 #zoom .note { font-family: Helvetica, Arial, Sans-Serif; font-size: 11px; fill: #999; text-anchor: end; }
